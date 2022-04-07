@@ -1,5 +1,5 @@
 format: jb-book
-root: 00_preface
+root: index
 options:
   numbered: 3
 parts:

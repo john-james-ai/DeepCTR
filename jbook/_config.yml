@@ -6,7 +6,7 @@
 author: John James
 copyright: "2022"
 logo: "figures/deepctr_logo.png"
-root: 00_deepctr
+root: index
 options:
   numbered: true
 only_build_toc_files: true
