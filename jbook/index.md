@@ -10,9 +10,9 @@ kernelspec:
   language: python
   name: python3
 ---
-# AI and Digital Advertising
+# Deep Learning and Neural Architecture Search in Digital Advertising CTR Prediction
 ## Cutting-Edge Research From Academia to Industry
-### Barriers to Repoducibility
+## Barriers to Repoducibility
 Standing on the feet of giants
 ## Objectives o
 ## Contributions
