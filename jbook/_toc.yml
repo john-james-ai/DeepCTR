@@ -1,0 +1,25 @@
+format: jb-book
+root: 00_preface
+options:
+  numbered: 3
+parts:
+  - caption: 1. Introduction
+    numbered: 3
+    chapters:
+      - file: 1_introduction/1_introduction
+  - caption: 2. Background
+    numbered: 3
+    chapters:
+      - file: 2_background/1_digital_advertising
+      - file: 2_background/2_deep_learning_sota
+      - file: 2_background/3_neural_architecture_search
+  - caption: 3. Data
+    numbered: 3
+    chapters:
+      - file: 3_data/1_criteo
+      - file: 3_data/2_avazu
+      - file: 3_data/3_alibaba
+
+  - caption: References
+    chapters:
+      - file: 99_references
