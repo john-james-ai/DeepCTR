@@ -14,9 +14,7 @@ kernelspec:
 - digital advertising
 - deep_learning in digital advertising
 - nas in digital advertising
-- contribution
- - comparison of sota deep learning models
- - evaluation of nas vis-a-vis sota
- - modular, extendable, framework for digital advertising predictive analytics
+- evaluation of nas vis-a-vis sota
+- modular, extendable, framework for digital advertising predictive analytics
 
 
