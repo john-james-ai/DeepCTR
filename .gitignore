@@ -23,6 +23,29 @@ var/
 .installed.cfg
 *.egg
 
+# Config
+*.*yaml
+**/.*yaml
+
+
+# Credentials
+**/credentials.*
+
+# Data
+data/**/*.csv
+**/tests/data/*
+
+# Notes and internal documents
+notes/*.*
+*/_build/
+*/lab/*
+
+# Logs
+**/logs*
+
+# Installation files
+**/*.deb
+
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
