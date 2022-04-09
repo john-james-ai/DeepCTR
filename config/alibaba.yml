@@ -1,0 +1,64 @@
+---
+# ================================================================================================ #
+#                                         ALIBABA                                                  #
+# ================================================================================================ #
+#                                       PRODUCTION                                                 #
+# ------------------------------------------------------------------------------------------------ #
+production:
+  dag_no: alibaba_1.0
+  dag_name: alibaba_etl
+  dag_description: Extracts, transforms and loads the Alibaba Display Ad Data (Production) from Amazon S3
+  tasks:
+    1:
+      task: ExtractS3
+      module: deepctr.data.alibaba
+      task_no: 1
+      task_name: extract_alibaba_production
+      task_description: Extracts Alibaba Display Ad Data (Production) from Amazon S3
+      task_params:
+        bucket: deepctr
+        folder: data/alibaba/production/external
+        destination: data/alibaba/production/external
+        force: False
+    2:
+      task: Expand
+      module: deepctr.data.alibaba
+      task_no: 2
+      task_name: expand_alibaba_production
+      task_description: Expands Alibaba Display Ad Data (Production) to raw directory
+      task_params:
+        source: data/alibaba/production/external
+        destination: data/alibaba/production/raw
+        force: False
+
+# ------------------------------------------------------------------------------------------------ #
+#                                       DEVELOPMENT                                                #
+# ------------------------------------------------------------------------------------------------ #
+
+development:
+  dag_no: alibaba_1.0
+  dag_name: alibaba_etl
+  dag_description: Extracts, transforms and loads the Alibaba Display Ad Data (Development) from Amazon S3
+  tasks:
+    1:
+      task: ExtractS3
+      module: deepctr.data.alibaba
+      task_no: 1
+      task_name: extract_alibaba_development
+      task_description: Extracts Alibaba Display Ad Data (Development) from Amazon S3
+      task_params:
+        bucket: deepctr
+        folder: data/alibaba/development/external
+        destination: data/alibaba/development/external
+        force: False
+
+    2:
+      task: Expand
+      module: deepctr.data.alibaba
+      task_no: 2
+      task_name: expand_alibaba_development
+      task_description: Expands Alibaba Display Ad Data (Development) to raw directory
+      task_params:
+        source: data/alibaba/development/external
+        destination: data/alibaba/development/raw
+        force: False

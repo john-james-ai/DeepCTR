@@ -4,10 +4,7 @@
 # Learn more at https://jupyterbook.org/customize/config.html
 
 title: |
-  <p style="text-align:left"><span style="font-size:36px"><span style="font-family:Lato"><span style="color:#041c32">DeepCTR</span></span></span></p>
-
-  <hr />
-  <p style="text-align:left"><span style="font-size:18px"><span style="color:#556e53"><span style="font-family:Lato">Deep Learning &amp;&nbsp;Neural Architecture Search in&nbsp;</span></span></span><span style="font-size:18px"><span style="color:#556e53"><span style="font-family:Lato">Digital Advertising CTR Prediction</span></span></span></p>
+  <p style="text-align:left"><span style="color:#407192"><span style="font-size:18px"><span style="font-family:Lato">Deep Learning &amp;&nbsp;Neural Architecture Search in&nbsp;</span></span><span style="font-size:18px"><span style="font-family:Lato">Digital Advertising CTR Prediction</span></span></span></p>
 
 author: John James
 copyright: "2022"

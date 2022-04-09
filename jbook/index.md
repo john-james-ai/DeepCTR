@@ -10,11 +10,12 @@ kernelspec:
   language: python
   name: python3
 ---
-# Deep Learning and Neural Architecture Search in Digital Advertising CTR Prediction
-## Cutting-Edge Research From Academia to Industry
-## Barriers to Repoducibility
+# Preface
+## Deep Learning in Digital Advertising
+## Academia / Industry Knowledge Transfer Gap
+## Barriers to Reproducibility
 Standing on the feet of giants
-## Objectives o
+## Objectives
 ## Contributions
  - Deep Learning State-of-the-Art Review
  - Neural Architecture Search Survey

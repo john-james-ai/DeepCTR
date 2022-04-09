@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project  : DeepCVR: Deep Learning for Conversion Rate Prediction                                 #
+# Project  : Deepctr: Deep Learning for Conversion Rate Prediction                                 #
 # Version  : 0.1.0                                                                                 #
 # File     : /notebooks.py                                                                         #
 # Language : Python 3.8.12                                                                         #
 # ------------------------------------------------------------------------------------------------ #
 # Author   : John James                                                                            #
 # Email    : john.james.ai.studio@gmail.com                                                        #
-# URL      : https://github.com/john-james-ai/cvr                                                  #
+# URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Tuesday, February 15th 2022, 5:11:34 pm                                               #
-# Modified : Thursday, April 7th 2022, 5:34:15 am                                                  #
+# Modified : Friday, April 8th 2022, 3:24:50 pm                                                    #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 def prepare_notebooks():
     # Collect a list of all notebooks in the designated folder
-    logging.info("\n\tPreparing Notebook Metadata")
+    logging.info("\tPreparing Notebook Metadata")
     notebooks = glob("./**/*.ipynb", recursive=True)
 
     # Userful tags

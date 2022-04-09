@@ -1,7 +1,7 @@
 #!/bin/sh
 # Delete prior build
-echo "Removing prior jupyter-book build artifacts..."
-rm -r jbook/_build/
+#echo "Removing prior jupyter-book build artifacts..."
+#rm -r jbook/_build/
 #Prepare notebook display customizations
 echo "Preparing notebook tags..."
 python3 jbook/prep_notebooks.py
