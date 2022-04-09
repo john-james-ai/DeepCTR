@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Saturday, February 26th 2022, 6:41:17 pm                                              #
-# Modified : Saturday, April 9th 2022, 3:00:45 am                                                  #
+# Modified : Saturday, April 9th 2022, 6:08:21 am                                                  #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -20,7 +20,7 @@
 """Reading and writing dataframes with progress bars"""
 from abc import ABC, abstractmethod
 import os
-import load_dotenv
+from dotenv import load_dotenv
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -218,10 +218,54 @@ class YamlIO(IO):
 
 
 # ------------------------------------------------------------------------------------------------ #
+class SparkIO(IO):
+    """Reads and writes data from a csv to a Spark DataFrame
+
+    Source: https://sparkbyexamples.com/pyspark/pyspark-read-csv-file-into-dataframe/
+
+    """
+
+    def read(self, filepath: str, **kwargs) -> pyspark.sql.DataFrame:
+        """Reads a csv file into a Spark DataFrame and returns it."""
+
+        # Extract options
+
+        header = kwargs.get("header", True)
+        delimiter = kwargs.get("delimiter", ",")
+        inferschema = kwargs.get("inferschema", True)
+        schema = kwargs.get("schema", None)
+
+        spark = SparkSession.builder.master("local[12]").appName("SparkIO.com").getOrCreate()
+
+        if schema is None:
+
+            df = spark.read.options(
+                header=header, inferSchema=inferschema, delimiter=delimiter
+            ).csv(filepath)
+        else:
+            df = spark.read.format("csv").option("header", header).schema(schema).load(filepath)
+
+        spark.stop()
+
+        return df
+
+    def write(self, data: pyspark.sql.DataFrame, filepath: str, **kwargs) -> None:
+        """Writes a Spark DataFrame to a csv file"""
+
+        header = kwargs.get("header", True)
+
+        data.write.option("header", header).csv(filepath)
+
+
+# ------------------------------------------------------------------------------------------------ #
 
 
 class SparkS3(IO):
-    """Read/Write utility between Spark and AWS S3"""
+    """Read/Write utility between Spark and AWS S3
+
+    Source: https://towardsai.net/p/programming/pyspark-aws-s3-read-write-operations
+
+    """
 
     def read(self, filepath: str, **kwargs) -> pyspark.sql.DataFrame:
 
@@ -260,6 +304,8 @@ class SparkS3(IO):
         spark = SparkSession(sc)
 
         df = spark.read.csv(f"s3a://{bucket}/{filepath}", header=True, inferSchema=True)
+
+        sc.stop()
 
         return df
 
@@ -300,3 +346,5 @@ class SparkS3(IO):
         data.write.format("csv").option("header", "true").save(
             f"s3a://{bucket}/{filepath}", mode="overwrite"
         )
+
+        sc.stop()

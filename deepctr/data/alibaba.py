@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Monday, February 14th 2022, 12:32:13 pm                                               #
-# Modified : Friday, April 8th 2022, 6:52:41 pm                                                    #
+# Modified : Saturday, April 9th 2022, 4:18:42 am                                                  #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -20,8 +20,10 @@
 #%%
 """Alibaba data acquisition and preparation module. """
 import os
+import inspect
 import boto3
 import pandas as pd
+import logging
 import progressbar
 import tarfile
 from botocore.exceptions import NoCredentialsError
@@ -30,6 +32,9 @@ from dotenv import load_dotenv
 from deepctr.data.base import Operator
 from deepctr.utils.decorators import operator
 
+# ------------------------------------------------------------------------------------------------ #
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
 
@@ -63,6 +68,8 @@ class ExtractS3(Operator):
     @operator
     def execute(self, data: pd.DataFrame = None, context: dict = None) -> pd.DataFrame:
 
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
         load_dotenv()
         s3access = os.getenv("S3ACCESS")
         s3password = os.getenv("S3PASSWORD")
@@ -78,8 +85,12 @@ class ExtractS3(Operator):
             if not os.path.exists(destination) or self._force:
                 self._download(object_key, destination)
 
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
     def _list_bucket_contents(self) -> list:
         """Returns a list of objects in the designated bucket"""
+
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
         objects = []
         s3 = boto3.resource("s3")
@@ -88,10 +99,14 @@ class ExtractS3(Operator):
             if not object.key.endswith("/"):  # Skip objects that are just the folder name
                 objects.append(object.key)
 
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
         return objects
 
     def _download(self, object_key: str, destination: str) -> None:
         """Downloads object designated by the object ke if not exists or force is True"""
+
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
         response = self._s3.head_object(Bucket=self._bucket, Key=object_key)
         size = response["ContentLength"]
@@ -107,6 +122,8 @@ class ExtractS3(Operator):
         except NoCredentialsError:
             msg = "Credentials not available for {} bucket".format(self._bucket)
             raise NoCredentialsError(msg)
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
     def _download_callback(self, size):
         self._progressbar.update(self._progressbar.currval + size)
@@ -145,6 +162,8 @@ class Expand(Operator):
             context (dict): None. This method takes no parameter
         """
 
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
         # Create destination if it doesn't exist
         os.makedirs(self._destination, exist_ok=True)
 
@@ -156,6 +175,8 @@ class Expand(Operator):
                 tar = tarfile.open(filepath, "r:gz")
                 tar.extractall(self._destination)
                 tar.close()
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
     def _destination_empty_or_force(self) -> bool:
         """Returns true if the file doesn't exist or force is True."""
