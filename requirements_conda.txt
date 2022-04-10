@@ -1,0 +1,22 @@
+name: deepctr
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.7
+  - pandas
+  - python-dotenv
+  - pytest
+  - flake8
+  - tqdm
+  - pyyaml
+  - findspark
+  - coverage
+  - yamlordereddictloader
+  - progressbar
+  - boto3
+  - black
+  - pyarrow
+  - pytest-cov
+  - ipykernel
+prefix: /home/john/anaconda3/envs/deepctr
