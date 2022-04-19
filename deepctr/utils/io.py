@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Saturday, February 26th 2022, 6:41:17 pm                                              #
-# Modified : Saturday, April 9th 2022, 6:08:21 am                                                  #
+# Modified : Tuesday, April 19th 2022, 4:22:37 pm                                                  #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -20,19 +20,19 @@
 """Reading and writing dataframes with progress bars"""
 from abc import ABC, abstractmethod
 import os
-from dotenv import load_dotenv
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
 import yaml
 import yamlordereddictloader
-import findspark
 import pyspark
-from pyspark.sql import SparkSession
+import findspark
 from pyspark import SparkContext, SparkConf
+from pyspark.sql import SparkSession
+from deepctr.utils.spark import to_spark
+from deepctr.utils.config import Credentials
 
 findspark.init()
-
 
 # ------------------------------------------------------------------------------------------------ #
 
@@ -47,6 +47,87 @@ class IO(ABC):
     @abstractmethod
     def write(self, data: pd.DataFrame, filepath: str, **kwargs) -> None:
         pass
+
+
+# ------------------------------------------------------------------------------------------------ #
+
+
+class SparkS3(IO):
+    """Read/Write utility between Spark and AWS S3
+
+    Source: https://towardsai.net/p/programming/pyspark-aws-s3-read-write-operations
+
+    """
+
+    def read(self, filepath: str, **kwargs) -> pyspark.sql.DataFrame:
+        """Reads a csv file from Amazon S3 bucket via Spark and returns pandas DataFrame
+
+        Args:
+            filepath (str): The path to the resource within the bucket, i.e. path/to/file.csv
+            kwargs (dict): Contains the key/value pair 'bucket': 'bucket_name'
+
+        Returns:
+            pandas DataFrame
+        """
+
+        bucket = kwargs.get("bucket", None)
+        spark = self._create_spark_session()
+        sdf = spark.read.csv(f"s3a://{bucket}/{filepath}", header=True, inferSchema=True)
+        spark.stop()
+        pdf = sdf.toPandas()
+        return pdf
+
+    def write(self, data: pd.DataFrame, filepath: str, **kwargs) -> None:
+        """Writes a pandas DataFrame to Amazon S3 via SparkSession
+
+        Args:
+            data (pd.DataFrame): The pandas Dataframe to write
+            filepath (str): The path to the resource within the bucket, i.e. path/to/file.csv
+            kwargs (dict): Contains the key/value pair 'bucket': 'bucket_name'
+        """
+
+        bucket = kwargs.get("bucket", None)
+        # Convert pandas DataFrame to a Spark DataFrame object
+        sdf = to_spark(data)
+        sdf.write.format("csv").option("header", "true").save(
+            f"s3a://{bucket}/{filepath}", mode="overwrite"
+        )
+
+    def _create_spark_session(self) -> pyspark.sql.SparkSession:
+
+        # Set up Spark session on Spark Standalone Cluster
+        os.environ["PYSPARK_SUBMIT_ARGS"] = (
+            "-- packages com.amazonaws:aws-java-sdk:1.7.4,org."
+            "apache.hadoop:hadoop-aws:2.7.3 pyspark-shell"
+        )
+
+        # Spark Configuration
+        conf = (
+            SparkConf()
+            .set("spark.executor.extraJavaOptions", "-Dcom.amazonaws.services.s3.enableV4=true")
+            .set("spark.driver.extraJavaOptions", "-Dcom.amazonaws.services.s3.enableV4=true")
+            .setAppName("pyspark_aws")
+            .setMaster("local[*]")
+        )
+
+        sc = SparkContext(conf=conf).getOrCreate()
+        sc.setSystemProperty("com.amazonaws.services.s3.enableV4", "true")
+
+        # Obtain credentials for Amazon S3
+        credentials = Credentials().get_cloud_credentials(provider="amazon")
+        AWS_ACCESS_KEY_ID = credentials.get("key")
+        AWS_SECRET_ACCESS_KEY = credentials.get("password")
+
+        # Set Spark Hadoop properties for all worker nodes
+        hadoopConf = sc._jsc.hadoopConfiguration()
+        hadoopConf.set("fs.s3a.access.key", AWS_ACCESS_KEY_ID)
+        hadoopConf.set("fs.s3a.secret.key", AWS_SECRET_ACCESS_KEY)
+        hadoopConf.set("fs.s3a.endpoint", "s3-us-east-1.amazonaws.com")
+        hadoopConf.set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+
+        spark = SparkSession(sc)
+
+        return spark
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -203,7 +284,6 @@ class CsvIO(IO):
 class YamlIO(IO):
     """Reads and writes from and to Yaml files."""
 
-    @abstractmethod
     def read(self, filepath: str, **kwargs) -> dict:
         if os.path.exists(filepath):
             with open(filepath, "r") as f:
@@ -211,140 +291,6 @@ class YamlIO(IO):
         else:
             return {}
 
-    @abstractmethod
     def write(self, data: dict, filepath: str, **kwargs) -> None:
         with open(filepath, "r") as f:
             yaml.dump(data, f)
-
-
-# ------------------------------------------------------------------------------------------------ #
-class SparkIO(IO):
-    """Reads and writes data from a csv to a Spark DataFrame
-
-    Source: https://sparkbyexamples.com/pyspark/pyspark-read-csv-file-into-dataframe/
-
-    """
-
-    def read(self, filepath: str, **kwargs) -> pyspark.sql.DataFrame:
-        """Reads a csv file into a Spark DataFrame and returns it."""
-
-        # Extract options
-
-        header = kwargs.get("header", True)
-        delimiter = kwargs.get("delimiter", ",")
-        inferschema = kwargs.get("inferschema", True)
-        schema = kwargs.get("schema", None)
-
-        spark = SparkSession.builder.master("local[12]").appName("SparkIO.com").getOrCreate()
-
-        if schema is None:
-
-            df = spark.read.options(
-                header=header, inferSchema=inferschema, delimiter=delimiter
-            ).csv(filepath)
-        else:
-            df = spark.read.format("csv").option("header", header).schema(schema).load(filepath)
-
-        spark.stop()
-
-        return df
-
-    def write(self, data: pyspark.sql.DataFrame, filepath: str, **kwargs) -> None:
-        """Writes a Spark DataFrame to a csv file"""
-
-        header = kwargs.get("header", True)
-
-        data.write.option("header", header).csv(filepath)
-
-
-# ------------------------------------------------------------------------------------------------ #
-
-
-class SparkS3(IO):
-    """Read/Write utility between Spark and AWS S3
-
-    Source: https://towardsai.net/p/programming/pyspark-aws-s3-read-write-operations
-
-    """
-
-    def read(self, filepath: str, **kwargs) -> pyspark.sql.DataFrame:
-
-        # Extract bucket from kwargs
-        bucket = kwargs.get("bucket", None)
-
-        # Set up Spark session on Spark Standalone Cluster
-        os.environ["PYSPARK_SUBMIT_ARGS"] = (
-            "-- packages com.amazonaws:aws-java-sdk:1.7.4,org."
-            "apache.hadoop:hadoop-aws:2.7.3 pyspark-shell"
-        )
-
-        # Spark Configuration
-        conf = (
-            SparkConf()
-            .set("spark.executor.extraJavaOptions", "-Dcom.amazonaws.services.s3.enableV4=true")
-            .set("spark.driver.extraJavaOptions", "-Dcom.amazonaws.services.s3.enableV4=true")
-            .setAppName("pyspark_aws")
-            .setMaster("local[*]")
-        )
-
-        sc = SparkContext(conf=conf)
-        sc.setSystemProperty("com.amazonaws.services.s3.enableV4", "true")
-
-        # Set Spark Hadoop properties for all worker nodes
-        load_dotenv()
-        AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-        AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-
-        hadoopConf = sc._jsc.hadoopConfiguration()
-        hadoopConf.set("fs.s3a.access.key", AWS_ACCESS_KEY_ID)
-        hadoopConf.set("fs.s3a.secret.key", AWS_SECRET_ACCESS_KEY)
-        hadoopConf.set("fs.s3a.endpoint", "s3-us-east-1.amazonaws.com")
-        hadoopConf.set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
-
-        spark = SparkSession(sc)
-
-        df = spark.read.csv(f"s3a://{bucket}/{filepath}", header=True, inferSchema=True)
-
-        sc.stop()
-
-        return df
-
-    def write(self, data: pyspark.sql.DataFrame, filepath: str, **kwargs) -> None:
-
-        # Extract bucket from kwargs
-        bucket = kwargs.get("bucket", None)
-
-        # Set up Spark session on Spark Standalone Cluster
-        os.environ["PYSPARK_SUBMIT_ARGS"] = (
-            "-- packages com.amazonaws:aws-java-sdk:1.7.4,org."
-            "apache.hadoop:hadoop-aws:2.7.3 pyspark-shell"
-        )
-
-        # Spark Configuration
-        conf = (
-            SparkConf()
-            .set("spark.executor.extraJavaOptions", "-Dcom.amazonaws.services.s3.enableV4=true")
-            .set("spark.driver.extraJavaOptions", "-Dcom.amazonaws.services.s3.enableV4=true")
-            .setAppName("pyspark_aws")
-            .setMaster("local[*]")
-        )
-
-        sc = SparkContext(conf=conf)
-        sc.setSystemProperty("com.amazonaws.services.s3.enableV4", "true")
-
-        # Set Spark Hadoop properties for all worker nodes
-        load_dotenv()
-        AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-        AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-
-        hadoopConf = sc._jsc.hadoopConfiguration()
-        hadoopConf.set("fs.s3a.access.key", AWS_ACCESS_KEY_ID)
-        hadoopConf.set("fs.s3a.secret.key", AWS_SECRET_ACCESS_KEY)
-        hadoopConf.set("fs.s3a.endpoint", "s3-us-east-1.amazonaws.com")
-        hadoopConf.set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
-
-        data.write.format("csv").option("header", "true").save(
-            f"s3a://{bucket}/{filepath}", mode="overwrite"
-        )
-
-        sc.stop()

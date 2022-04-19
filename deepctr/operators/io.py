@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project  : Deepctr: Deep Learning for Conversion Rate Prediction                                 #
+# Project  : DeepCTR: Deep Learning and Neural Architecture Selection for CTR Prediction           #
 # Version  : 0.1.0                                                                                 #
 # File     : /io.py                                                                                #
-# Language : Python 3.8.12                                                                         #
+# Language : Python 3.7.12                                                                         #
 # ------------------------------------------------------------------------------------------------ #
 # Author   : John James                                                                            #
 # Email    : john.james.ai.studio@gmail.com                                                        #
-# URL      : https://github.com/john-james-ai/deepctr                                              #
+# URL      : https://github.com/john-james-ai/DeepCTR                                              #
 # ------------------------------------------------------------------------------------------------ #
-# Created  : Tuesday, March 22nd 2022, 4:02:42 am                                                  #
-# Modified : Saturday, April 16th 2022, 9:48:44 am                                                 #
+# Created  : Friday, April 15th 2022, 11:00:20 pm                                                  #
+# Modified : Saturday, April 16th 2022, 8:04:37 am                                                 #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -20,10 +20,12 @@
 from abc import ABC, abstractmethod
 import pandas as pd
 from typing import Any
+import shutil
 
 from deepctr.utils.io import CsvIO
 from deepctr.operators.base import Operator
 from deepctr.utils.decorators import operator
+
 
 # ------------------------------------------------------------------------------------------------ #
 #                                           IO                                                     #
@@ -39,7 +41,7 @@ class IO(Operator, ABC):
         )
 
     @abstractmethod
-    def execute(self, data: Any = None, context: Any = None) -> pd.DataFrame:
+    def execute(self, data: pd.DataFrame = None, context: Any = None) -> pd.DataFrame:
         pass
 
 
@@ -57,17 +59,17 @@ class CSVReader(IO):
         )
 
     @operator
-    def execute(self, data: Any = None, context: Any = None) -> pd.DataFrame:
+    def execute(self, data: pd.DataFrame = None, context: Any = None) -> pd.DataFrame:
         """Reads from the designated resource"""
         io = CsvIO()
         if self._params.get("usecols", None):
-            data = io.load(
+            data = io.read(
                 filepath=self._params["source"],
                 header=0,
                 usecols=self._params["usecols"],
             )
         else:
-            data = io.load(filepath=self._params["source"], header=0)
+            data = io.read(filepath=self._params["source"], header=0)
 
         return data
 
@@ -84,11 +86,30 @@ class CSVWriter(IO):
         )
 
     @operator
-    def execute(self, data: Any = None, context: Any = None) -> pd.DataFrame:
+    def execute(self, data: pd.DataFrame = None, context: Any = None) -> pd.DataFrame:
         """Reads from the designated resource"""
         io = CsvIO()
-        io.write(
-            data=data,
-            filepath=self._params["destination"],
+        io.write(data=data, filepath=self._params["destination"])
+        return None
+
+
+# ------------------------------------------------------------------------------------------------ #
+
+
+class CopyOperator(Operator):
+    """Write operator for DAGS"""
+
+    def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
+        super(CopyOperator, self).__init__(
+            task_no=task_no, task_name=task_name, task_description=task_description, params=params
         )
+
+    @operator
+    def execute(self, data: pd.DataFrame = None, context: Any = None) -> pd.DataFrame:
+        """Copies a file from source to destination"""
+
+        source = self._params["source"]
+        destination = self._params["destination"]
+        shutil.copy(source, destination)
+
         return None

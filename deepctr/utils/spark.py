@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Saturday, February 26th 2022, 6:41:17 pm                                              #
-# Modified : Sunday, April 10th 2022, 3:45:11 pm                                                   #
+# Modified : Sunday, April 10th 2022, 5:42:25 pm                                                   #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -41,9 +41,10 @@ def to_spark(df: pd.DataFrame) -> pyspark.sql.DataFrame:
     Returns:
         pyspark.sql.DataFrame
     """
-    spark = SparkSession.builder.master("local[6]").appName("DeepCTR: to_spark").getOrCreate()
+    spark = SparkSession.builder.master("local[1]").appName("DeepCTR: to_spark").getOrCreate()
     # Enable Apache Arrow to convert Pandas to PySpark DataFrame
     spark.conf.set("spark.sql.execution.arrow.enabled", "true")
     # Create PySpark DataFrame from Pandas
     sparkDF = spark.createDataFrame(df)
+    spark.stop()
     return sparkDF

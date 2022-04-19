@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Monday, March 14th 2022, 7:53:27 pm                                                   #
-# Modified : Friday, April 8th 2022, 12:31:12 pm                                                   #
+# Modified : Friday, April 15th 2022, 6:48:57 pm                                                   #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -43,7 +43,7 @@ def event(func):
             logger_builder.reset()
             .set_events_logfile()
             .set_operations_logfile()
-            .set_level(level="info")
+            .set_level(level="ERROR")
             .build(name=func.__module__)
             .logger
         )
@@ -73,7 +73,7 @@ def operator(func):
             logger_builder.reset()
             .set_events_logfile()
             .set_operations_logfile()
-            .set_level(level="info")
+            .set_level(level="ERROR")
             .build(name=func.__module__)
             .logger
         )
@@ -100,7 +100,7 @@ def print_result(module: str, classname: str, self: str, start: datetime, end: d
     duration = end - start
     duration = duration.total_seconds()
     module = module.split(".")[2]
-    msg = "Module: {}\t\tTask {}:\t{}\tComplete.\tDuration:{} seconds.".format(
+    msg = "Module: {}\t\tTask {}:\t{}\tComplete.\tDuration: {} seconds.".format(
         str(module), str(task_no), task_name, str(round(duration, 2))
     )
     print(msg)

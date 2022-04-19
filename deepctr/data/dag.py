@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project  : DeepNeuralCTR: Deep Learning and Neural Architecture Selection for CTR Prediction     #
+# Project  : DeepCTR: Deep Learning and Neural Architecture Selection for CTR Prediction     #
 # Version  : 0.1.0                                                                                 #
 # File     : /base.py                                                                              #
 # Language : Python 3.10.4                                                                         #
 # ------------------------------------------------------------------------------------------------ #
 # Author   : John James                                                                            #
 # Email    : john.james.ai.studio@gmail.com                                                        #
-# URL      : https://github.com/john-james-ai/DeepNeuralCTR                                        #
+# URL      : https://github.com/john-james-ai/DeepCTR                                        #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Thursday, April 7th 2022, 3:13:25 pm                                                  #
-# Modified : Saturday, April 9th 2022, 2:04:18 am                                                  #
+# Modified : Tuesday, April 19th 2022, 4:37:19 pm                                                  #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -20,8 +20,10 @@
 """Defines the interfaces for classes involved in the construction and implementation of DAGS."""
 from abc import ABC, abstractmethod
 import importlib
-import pandas as pd
 from typing import Any
+
+
+from deepctr.utils.config import Credentials
 
 # ------------------------------------------------------------------------------------------------ #
 
@@ -74,32 +76,21 @@ class Dag(AbstractDAG):
             context=context,
         )
 
-    def run(self) -> None:
+    def run(self, start: int = 0) -> None:
         data = None
         for task in self._tasks:
-            result = task.execute(data=data, context=self._context)
-            data = result if result is not None else data
+            if task.task_no >= start:
+                result = task.execute(data=data, context=self._context)
+                data = result if result is not None else data
 
 
 # ------------------------------------------------------------------------------------------------ #
 
 
 class DagBuilder:
-    """Constructs a DAG from a configuration dictionary
+    """Constructs a pipeline, a.k.a. a directed acyclic graph (DAG)"""
 
-    Args:
-        config (dict): Nested dictionary of tasks defined by a dag_no, dag_name,
-        dag_description and a nested dictionary of tasks, where each task is defined by:
-          task_no: Sequence number of task
-          task: Name of the class that executes the task
-          module: The module containing the task
-          task_name: A name for the task
-          task_params: Any parameters required by the task
-    """
-
-    def __init__(self, config: dict, context: dict = None) -> None:
-        self._config = config
-        self._context = context
+    def __init__(self) -> None:
         self.reset()
 
     def reset(self) -> None:
@@ -111,15 +102,44 @@ class DagBuilder:
         self.reset()
         return dag
 
-    def build(self) -> Dag:
+    def build(self, config: dict) -> Dag:
 
-        dag_no = self._config["dag_no"]
-        dag_name = self._config["dag_name"]
-        dag_description = self._config["dag_description"]
+        dag_no = config["dag_no"]
+        dag_name = config["dag_name"]
+        dag_description = config["dag_description"]
+
+        context = self._build_context(config)
+
+        tasks = self._build_tasks(config)
+
+        self._dag = Dag(
+            dag_no=dag_no,
+            dag_name=dag_name,
+            dag_description=dag_description,
+            tasks=tasks,
+            context=context,
+        )
+
+        return self._dag
+
+    def _build_context(self, config: dict = None) -> dict:
+        """Builds context for the dag 'resources'"""
+
+        context = {}
+        resources = config.get("resources", None)
+
+        if resources:
+            config = Credentials()
+            for resource_type, resource in resources.items():
+                context[resource_type] = config.get_credentials(resource_type, resource)
+        return context
+
+    def _build_tasks(self, config: dict = None) -> list:
+        """Iterates through task and returns a list of task objects."""
 
         tasks = []
 
-        for _, task_config in self._config["tasks"].items():
+        for _, task_config in config["tasks"].items():
 
             # Create task object from string using importlib
             module = importlib.import_module(name=task_config["module"])
@@ -134,65 +154,4 @@ class DagBuilder:
 
             tasks.append(task_instance)
 
-        self._dag = Dag(
-            dag_no=dag_no,
-            dag_name=dag_name,
-            dag_description=dag_description,
-            tasks=tasks,
-            context=self._context,
-        )
-
-        return self._dag
-
-
-# ------------------------------------------------------------------------------------------------ #
-
-
-class Operator(ABC):
-    """Abstract class for operator classes
-
-    Args:
-        task_no (int): A number, typically used to indicate the sequence of the task within a DAG
-        task_name (str): String name
-        params (Any): Parameters for the task
-
-    """
-
-    def __init__(
-        self,
-        task_no: int,
-        task_name: str,
-        task_description: str,
-        params: list,
-    ) -> None:
-        self._task_no = task_no
-        self._task_name = task_name
-        self._task_description = task_description
-        self._params = params
-
-    def __str__(self) -> str:
-        return str(
-            "Task #: {}\tTask name: {}\tTask Description: {}\tParams: {}".format(
-                self._task_no, self._task_name, self._task_description, self._params
-            )
-        )
-
-    @property
-    def task_no(self) -> int:
-        return self._task_no
-
-    @property
-    def task_name(self) -> str:
-        return self._task_name
-
-    @property
-    def task_description(self) -> str:
-        return self._task_description
-
-    @property
-    def params(self) -> Any:
-        return self._params
-
-    @abstractmethod
-    def execute(self, data: pd.DataFrame = None, context: dict = None) -> Any:
-        pass
+        return tasks

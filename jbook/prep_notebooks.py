@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Tuesday, February 15th 2022, 5:11:34 pm                                               #
-# Modified : Friday, April 8th 2022, 3:24:50 pm                                                    #
+# Modified : Friday, April 15th 2022, 8:33:45 pm                                                   #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -50,6 +50,7 @@ def prepare_notebooks():
     # Text to look for in adding tags
     text_search_dict = {
         "# Imports": "hide-cell",  # Removes the 'module not found' error from output
+        "# FILEPATHS": "hide-cell",  # Removes the 'module not found' error from output
         "# GLUE": "remove-cell",  # Removes the cell (input/output) which declares glue variables
         "# HIDE-INPUT": "hide-input",  # Collapse input with toggle to display
         "# Constants": "hide-input",  # Collapses input with toggle to display
