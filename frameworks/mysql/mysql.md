@@ -32,14 +32,6 @@ sudo mysql_secure_installation
 7. Open MySQL Prompt
 sudo mysql -u root -p
 
-# Bailout
-airflow db reset
-
-# Installing mysql from docs
-# 1 Adding the MySQL APT Repository
-sudo dpkg -i setup/MySQL/mysql-apt-config_0.8.22-1_all.deb
-sudo apt-get update
-sudo apt-get install mysql-server
 
 # Start and login
 sudo /etc/init.d/mysql start

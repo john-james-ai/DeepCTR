@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/DeepCTR                                        #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Friday, April 15th 2022, 3:02:54 pm                                                   #
-# Modified : Tuesday, April 19th 2022, 2:10:28 pm                                                  #
+# Modified : Wednesday, April 20th 2022, 1:24:04 am                                                #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -45,10 +45,16 @@ echo $'\nInstalling MySQL Server...'
 sudo apt-get install mysql-server
 
 echo $'\nStarting MySQL Server...'
-sudo /etc/init.d/mysql start fails, try:
+sudo /etc/init.d/mysql start
 
 echo $'\nRunning secure installation...'
 sudo mysql_secure_installation
+
+echo $'\nOpen MySQL Prompt...'
+sudo mysql -u root -p < frameworks/mysql/auth.sql
+
+echo $'\nRestarting MySQL..'
+sudo /etc/init.d/mysql restart
 
 echo $'\nOpen MySQL Prompt...'
 sudo mysql -u root

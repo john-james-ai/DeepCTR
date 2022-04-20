@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Monday, February 14th 2022, 12:32:13 pm                                               #
-# Modified : Tuesday, April 19th 2022, 8:08:15 pm                                                  #
+# Modified : Tuesday, April 19th 2022, 11:50:02 pm                                                 #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -28,9 +28,9 @@ from botocore.exceptions import NoCredentialsError
 
 from deepctr.operators.base import Operator
 from deepctr.utils.decorators import operator
+from deepctr.data.dag import Context
 
 # ------------------------------------------------------------------------------------------------ #
-CREDENTIALS_FILEPATH = "config/credentials.yml"
 
 
 class ExtractS3(Operator):
@@ -56,20 +56,22 @@ class ExtractS3(Operator):
         self._bucket = params["bucket"]
         self._folder = params["folder"]
         self._destination = params["destination"]
-        self._resource = params["resource"]
         self._force = params["force"]
 
         self._progressbar = None
 
     @operator
-    def execute(self, data: Any = None, context: dict = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
 
         if len(os.listdir(self._destination)) != 4 or self._force:
 
-            resource_type, resource = self._params['resource']
+            resource_type = self._params["context"].get("resource_type")
+            resource = self._params["context"].get("resource")
 
-            s3access = context.get(self._resource_type).get("key")
-            s3password = context.get(self._resource_type).get("password")
+            credentials = context.get_context(resource_type=resource_type, resource=resource)
+
+            s3access = credentials.get("key")
+            s3password = credentials.get("password")
 
             object_keys = self._list_bucket_contents()
             self._s3 = boto3.client(

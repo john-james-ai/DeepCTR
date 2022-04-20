@@ -30,6 +30,7 @@ var/
 
 # Credentials
 **/credentials.*
+**/auth*.*
 
 # Data
 data/**/*.csv

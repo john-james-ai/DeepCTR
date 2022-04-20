@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project  : DeepCTR: Deep Learning and Neural Architecture Selection for CTR Prediction     #
+# Project  : DeepCTR: Deep Learning and Neural Architecture Selection for CTR Prediction           #
 # Version  : 0.1.0                                                                                 #
 # File     : /test_alibaba_etl.py                                                                  #
-# Language : Python 3.10.4                                                                         #
+# Language : Python 3.7.12                                                                         #
 # ------------------------------------------------------------------------------------------------ #
 # Author   : John James                                                                            #
 # Email    : john.james.ai.studio@gmail.com                                                        #
-# URL      : https://github.com/john-james-ai/DeepCTR                                        #
+# URL      : https://github.com/john-james-ai/DeepCTR                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Friday, April 8th 2022, 3:48:38 pm                                                    #
-# Modified : Tuesday, April 19th 2022, 11:22:08 am                                                 #
+# Modified : Wednesday, April 20th 2022, 2:00:35 am                                                #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -19,8 +19,8 @@
 # ================================================================================================ #
 import os
 import inspect
-from dotenv import load_dotenv
 import pytest
+from dotenv import load_dotenv
 import logging
 from deepctr.data.dag import DagBuilder
 from deepctr.utils.io import YamlIO
@@ -41,19 +41,13 @@ class TestAlibabaETL:
         destination = "data/alibaba/production/raw"
         transformed = "data/alibaba/production/transformed"
 
+        load_dotenv()
+
         yaml = YamlIO()
         config = yaml.read(config_filepath)
 
-        context = {}
-        load_dotenv()
-        context["USER"] = os.getenv("USER")
-        context["PASSWORD"] = os.getenv("PASSWORD")
-        context["HOST"] = os.getenv("HOST")
-        context["DATABASE"] = os.getenv("DATABASE")
-        context["DB_URI"] = os.getenv("DB_URI")
-
-        builder = DagBuilder(config=config[mode], context=context)
-        dag = builder.build()
+        builder = DagBuilder()
+        dag = builder.build(config=config[mode])
         dag.run(start=20)
 
         assert len(os.listdir(destination)) == 4, "Files did not make it to destination"

@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/DeepCTR                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Saturday, April 16th 2022, 7:00:56 am                                                 #
-# Modified : Saturday, April 16th 2022, 11:32:41 pm                                                #
+# Modified : Wednesday, April 20th 2022, 12:16:32 am                                               #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -20,8 +20,13 @@
 from abc import ABC, abstractmethod
 from typing import Any
 import pandas as pd
+import logging
 
+from deepctr.data.dag import Context
 
+# ------------------------------------------------------------------------------------------------ #
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
 
@@ -54,6 +59,25 @@ class Operator(ABC):
                 self._task_no, self._task_name, self._task_description, self._params
             )
         )
+
+    def get_credentials(self, external_resource: dict, context: Context) -> dict:
+        """Obtains credentials for an external resource from the context
+
+        Args:
+            external_resource (dict): Resource and type for an external resource
+            context (Context): Object containing context credentials for external resources
+
+        Returns dictionary containing requests context.
+
+        """
+        resource_type = external_resource.get("resource_type")
+        resource = external_resource.get("resource")
+
+        credentials = context.get_context(resource_type=resource_type, resource=resource)
+
+        logging.debug("\nCREDENTIALS\n{}".format(credentials))
+
+        return credentials
 
     @property
     def task_no(self) -> int:
@@ -89,7 +113,7 @@ class Dependency(Operator):
             task_no=task_no, task_name=task_name, task_description=task_description, params=params
         )
 
-    def execute(self, data: pd.DataFrame = None, context: Any = None) -> dict:
+    def execute(self, data: pd.DataFrame = None, context: Context = None) -> dict:
         from deepctr.database.ddl import ALIBABA_DDL
 
         return ALIBABA_DDL

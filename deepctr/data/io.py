@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/deepctr                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Tuesday, March 22nd 2022, 4:02:42 am                                                  #
-# Modified : Saturday, April 16th 2022, 9:48:44 am                                                 #
+# Modified : Tuesday, April 19th 2022, 11:48:09 pm                                                 #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -39,7 +39,7 @@ class IO(Operator, ABC):
         )
 
     @abstractmethod
-    def execute(self, data: Any = None, context: Any = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         pass
 
 
@@ -57,7 +57,7 @@ class CSVReader(IO):
         )
 
     @operator
-    def execute(self, data: Any = None, context: Any = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         """Reads from the designated resource"""
         io = CsvIO()
         if self._params.get("usecols", None):
@@ -84,7 +84,7 @@ class CSVWriter(IO):
         )
 
     @operator
-    def execute(self, data: Any = None, context: Any = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         """Reads from the designated resource"""
         io = CsvIO()
         io.write(

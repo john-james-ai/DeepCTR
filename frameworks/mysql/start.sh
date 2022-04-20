@@ -11,10 +11,13 @@
 # URL      : https://github.com/john-james-ai/DeepCTR                                        #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Friday, April 15th 2022, 2:59:34 pm                                                   #
-# Modified : Tuesday, April 19th 2022, 3:09:35 pm                                                  #
+# Modified : Wednesday, April 20th 2022, 1:38:50 am                                                #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
 # Copyright: (c) 2022 Bryant St. Labs                                                              #
 # ================================================================================================ #
+echo $'\nStarting MySQL...'
 sudo /etc/init.d/mysql start
+echo $'\nLogging in a root...'
+sudo mysql -u root

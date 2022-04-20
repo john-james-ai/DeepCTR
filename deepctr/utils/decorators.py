@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Monday, March 14th 2022, 7:53:27 pm                                                   #
-# Modified : Friday, April 15th 2022, 6:48:57 pm                                                   #
+# Modified : Wednesday, April 20th 2022, 2:47:03 am                                                #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -82,9 +82,12 @@ def operator(func):
             module = func.__module__
             classname = func.__qualname__
             start = datetime.now()
+            print_start(module, classname, self, start)
+
             result = func(self, *args, **kwargs)
             end = datetime.now()
-            print_result(module, classname, self, start, end)
+
+            print_end(module, classname, self, start, end)
             return result
 
         except Exception as e:
@@ -94,7 +97,17 @@ def operator(func):
     return wrapper
 
 
-def print_result(module: str, classname: str, self: str, start: datetime, end: datetime):
+def print_start(module: str, classname: str, self: str, start: datetime):
+    task_no = self.__dict__["_task_no"]
+    task_name = self.__dict__["_task_name"]
+    module = module.split(".")[2]
+    msg = "Module: {}\t\tTask {}:\t{}\tStarted\tDatetime:{}.".format(
+        str(module), str(task_no), task_name, start
+    )
+    print(msg)
+
+
+def print_end(module: str, classname: str, self: str, start: datetime, end: datetime):
     task_no = self.__dict__["_task_no"]
     task_name = self.__dict__["_task_name"]
     duration = end - start

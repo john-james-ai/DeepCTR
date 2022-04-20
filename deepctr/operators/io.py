@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/DeepCTR                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Friday, April 15th 2022, 11:00:20 pm                                                  #
-# Modified : Saturday, April 16th 2022, 8:04:37 am                                                 #
+# Modified : Tuesday, April 19th 2022, 11:50:10 pm                                                 #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -19,12 +19,12 @@
 # ================================================================================================ #
 from abc import ABC, abstractmethod
 import pandas as pd
-from typing import Any
 import shutil
 
 from deepctr.utils.io import CsvIO
 from deepctr.operators.base import Operator
 from deepctr.utils.decorators import operator
+from deepctr.data.dag import Context
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -41,7 +41,7 @@ class IO(Operator, ABC):
         )
 
     @abstractmethod
-    def execute(self, data: pd.DataFrame = None, context: Any = None) -> pd.DataFrame:
+    def execute(self, data: pd.DataFrame = None, context: Context = None) -> pd.DataFrame:
         pass
 
 
@@ -59,7 +59,7 @@ class CSVReader(IO):
         )
 
     @operator
-    def execute(self, data: pd.DataFrame = None, context: Any = None) -> pd.DataFrame:
+    def execute(self, data: pd.DataFrame = None, context: Context = None) -> pd.DataFrame:
         """Reads from the designated resource"""
         io = CsvIO()
         if self._params.get("usecols", None):
@@ -86,7 +86,7 @@ class CSVWriter(IO):
         )
 
     @operator
-    def execute(self, data: pd.DataFrame = None, context: Any = None) -> pd.DataFrame:
+    def execute(self, data: pd.DataFrame = None, context: Context = None) -> pd.DataFrame:
         """Reads from the designated resource"""
         io = CsvIO()
         io.write(data=data, filepath=self._params["destination"])
@@ -105,7 +105,7 @@ class CopyOperator(Operator):
         )
 
     @operator
-    def execute(self, data: pd.DataFrame = None, context: Any = None) -> pd.DataFrame:
+    def execute(self, data: pd.DataFrame = None, context: Context = None) -> pd.DataFrame:
         """Copies a file from source to destination"""
 
         source = self._params["source"]

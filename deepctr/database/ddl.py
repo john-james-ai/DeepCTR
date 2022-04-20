@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Saturday, March 12th 2022, 5:34:59 am                                                 #
-# Modified : Sunday, April 17th 2022, 5:10:19 am                                                   #
+# Modified : Wednesday, April 20th 2022, 1:40:21 am                                                #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -36,13 +36,13 @@ ALIBABA_DDL["drop_tables"] = """DROP TABLE IF EXISTS user, impression, behavior,
 # ------------------------------------------------------------------------------------------------ #
 #                                  DROP DATABASES                                                  #
 # ------------------------------------------------------------------------------------------------ #
-ALIBABA_DDL["drop_deepctr"] = """DROP DATABASE IF EXISTS deepctr;"""
+ALIBABA_DDL["drop_deepctr"] = """DROP DATABASE IF EXISTS alibaba;"""
 
 
 # ------------------------------------------------------------------------------------------------ #
 #                                 CREATE DATABASES                                                 #
 # ------------------------------------------------------------------------------------------------ #
-ALIBABA_DDL["create_deepctr"] = """CREATE DATABASE deepctr;"""
+ALIBABA_DDL["create_deepctr"] = """CREATE DATABASE alibaba;"""
 
 
 # ------------------------------------------------------------------------------------------------ #

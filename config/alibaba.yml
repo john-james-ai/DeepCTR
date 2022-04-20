@@ -9,12 +9,15 @@ production:
   dag_name: alibaba_etl
   dag_description: Extracts, transforms and loads the Alibaba Display Ad Data (Production) from Amazon S3
   resources:
-    database: alibaba
-    cloud: amazon
+    database:
+      - mysql
+      - alibaba
+    cloud:
+      - amazon
   tasks:
-    # ================================================================================================ #
-    #                                         EXTRACT                                                  #
-    # ================================================================================================ #
+    # ============================================================================================ #
+    #                                     EXTRACT                                                  #
+    # ============================================================================================ #
     1:
       task: ExtractS3
       module: deepctr.operators.remote
@@ -25,7 +28,9 @@ production:
         bucket: deepctr
         folder: data/alibaba/production/external
         destination: data/alibaba/production/external
-        resource: cloud
+        external_resource:
+          resource_type: cloud
+          resource: amazon
         force: False
     2:
       task: ExpandGZ
@@ -265,6 +270,9 @@ production:
       task_name: create_alibaba_database
       task_description: Create Alibaba Database
       task_params:
+        external_resource:
+          resource_type: database
+          resource: mysql
 
     # -------------------------------------------------------------------------------------------- #
     #                                    IMPRESSION TABLE                                          #
@@ -285,6 +293,9 @@ production:
       task_name: load_alibaba_impression_table
       task_description: Load Alibaba Impression Table
       task_params:
+        external_resource:
+          resource_type: database
+          resource: alibaba
         table: impression
         dtypes:
           user_id: Integer
@@ -312,6 +323,9 @@ production:
       task_name: load_alibaba_user_table
       task_description: Load Alibaba User Table
       task_params:
+        external_resource:
+          resource_type: database
+          resource: alibaba
         table: user
         dtypes:
           user_id: Integer
@@ -343,6 +357,9 @@ production:
       task_name: load_alibaba_ad_table
       task_description: Load Alibaba Ad Table
       task_params:
+        external_resource:
+          resource_type: database
+          resource: alibaba
         table: ad
         dtypes:
           adgroup_id: Integer
@@ -371,6 +388,9 @@ production:
       task_name: load_alibaba_behavior_table
       task_description: Load Alibaba Behavior Table
       task_params:
+        external_resource:
+          resource_type: database
+          resource: alibaba
         table: behavior
         dtypes:
           user_id: Integer
