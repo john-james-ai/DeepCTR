@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Monday, February 14th 2022, 12:32:13 pm                                               #
-# Modified : Tuesday, April 19th 2022, 4:56:49 pm                                                  #
+# Modified : Tuesday, April 19th 2022, 8:08:15 pm                                                  #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -56,7 +56,7 @@ class ExtractS3(Operator):
         self._bucket = params["bucket"]
         self._folder = params["folder"]
         self._destination = params["destination"]
-        self._resource_type = params["resource_type"]
+        self._resource = params["resource"]
         self._force = params["force"]
 
         self._progressbar = None
@@ -65,6 +65,8 @@ class ExtractS3(Operator):
     def execute(self, data: Any = None, context: dict = None) -> pd.DataFrame:
 
         if len(os.listdir(self._destination)) != 4 or self._force:
+
+            resource_type, resource = self._params['resource']
 
             s3access = context.get(self._resource_type).get("key")
             s3password = context.get(self._resource_type).get("password")

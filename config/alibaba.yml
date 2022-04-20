@@ -25,7 +25,7 @@ production:
         bucket: deepctr
         folder: data/alibaba/production/external
         destination: data/alibaba/production/external
-        resource_type: cloud
+        resource: cloud
         force: False
     2:
       task: ExpandGZ

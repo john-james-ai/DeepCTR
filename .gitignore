@@ -38,7 +38,7 @@ data/**/*.csv
 # Notes and internal documents
 notes/*.*
 */_build/
-*/lab/*
+lab/*
 
 # Logs
 **/logs*

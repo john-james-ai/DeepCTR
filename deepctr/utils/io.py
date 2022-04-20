@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Saturday, February 26th 2022, 6:41:17 pm                                              #
-# Modified : Tuesday, April 19th 2022, 4:22:37 pm                                                  #
+# Modified : Tuesday, April 19th 2022, 9:06:52 pm                                                  #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -20,6 +20,7 @@
 """Reading and writing dataframes with progress bars"""
 from abc import ABC, abstractmethod
 import os
+from dotenv import load_dotenv
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -30,7 +31,6 @@ import findspark
 from pyspark import SparkContext, SparkConf
 from pyspark.sql import SparkSession
 from deepctr.utils.spark import to_spark
-from deepctr.utils.config import Credentials
 
 findspark.init()
 
@@ -114,9 +114,13 @@ class SparkS3(IO):
         sc.setSystemProperty("com.amazonaws.services.s3.enableV4", "true")
 
         # Obtain credentials for Amazon S3
-        credentials = Credentials().get_cloud_credentials(provider="amazon")
-        AWS_ACCESS_KEY_ID = credentials.get("key")
-        AWS_SECRET_ACCESS_KEY = credentials.get("password")
+        load_dotenv()
+        credentials_filepath = os.getenv("credentials_filepath")
+        io = YamlIO()
+        credentials = io.read(filepath=credentials_filepath)
+        aws_credentials = credentials["cloud"].get("amazon")
+        AWS_ACCESS_KEY_ID = aws_credentials.get("key")
+        AWS_SECRET_ACCESS_KEY = aws_credentials.get("password")
 
         # Set Spark Hadoop properties for all worker nodes
         hadoopConf = sc._jsc.hadoopConfiguration()

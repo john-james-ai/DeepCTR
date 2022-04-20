@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/DeepCTR                                        #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Thursday, April 7th 2022, 3:13:25 pm                                                  #
-# Modified : Tuesday, April 19th 2022, 4:37:19 pm                                                  #
+# Modified : Tuesday, April 19th 2022, 9:44:53 pm                                                  #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -19,11 +19,12 @@
 # ================================================================================================ #
 """Defines the interfaces for classes involved in the construction and implementation of DAGS."""
 from abc import ABC, abstractmethod
+import os
 import importlib
 from typing import Any
-
-
-from deepctr.utils.config import Credentials
+from dotenv import load_dotenv
+from pprint import pprint
+from deepctr.utils.io import YamlIO
 
 # ------------------------------------------------------------------------------------------------ #
 
@@ -125,13 +126,12 @@ class DagBuilder:
     def _build_context(self, config: dict = None) -> dict:
         """Builds context for the dag 'resources'"""
 
-        context = {}
+        context = Context()
         resources = config.get("resources", None)
 
         if resources:
-            config = Credentials()
             for resource_type, resource in resources.items():
-                context[resource_type] = config.get_credentials(resource_type, resource)
+                context.add_context(resource_type, resource)
         return context
 
     def _build_tasks(self, config: dict = None) -> list:
@@ -155,3 +155,68 @@ class DagBuilder:
             tasks.append(task_instance)
 
         return tasks
+
+
+# ------------------------------------------------------------------------------------------------ #
+
+
+class Context:
+    """DAG Context object containing credentials for resources shared among tasks w/in DAG
+
+    The underlying context data structure is a nested dictionary as illustrated below:
+
+    context = {
+        'database': {
+            'mysql': {
+                user: username,
+                pwd: somepwd,
+                ...
+            },
+            'somedb': {
+                user: anotheruser,
+                pwd: anotherpwd,
+                ...
+            }
+        },
+        'cloud': {
+            'aws': {
+                key: somekey,
+                pwd: somepwd
+                }
+            }
+        }
+    }
+    """
+
+    def __init__(self) -> None:
+        self._context = {}
+
+    def add_context(self, resource_type: str, resource: str) -> None:
+        """Adds context for a given resource and resource type
+
+        Args:
+            resource_type (str): Type of resource, i.e. 'database' or 'cloud'
+            resource (str): Name of the resource
+        """
+        # Filepath for credentials is stored in environment variable
+        load_dotenv()
+        filepath = os.getenv("credentials_filepath")
+
+        io = YamlIO()
+        credentials_data = io.read(filepath)
+        credentials = credentials_data[resource_type].get(resource)
+
+        self._context[resource_type] = self._context.get(resource_type, {})
+        self._context[resource_type][resource] = credentials
+
+    def get_context(self, resource_type: str, resource: str) -> dict:
+        """Gets context for a given resource and resource type from context object
+
+        Args:
+            resource_type (str): Type of resource, i.e. 'database' or 'cloud'
+            resource (str): Name of the resource
+        """
+        return self._context[resource_type].get(resource)
+
+    def print_context(self) -> None:
+        pprint(self._context)
