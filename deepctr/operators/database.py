@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Saturday, March 12th 2022, 5:34:59 am                                                 #
-# Modified : Thursday, April 21st 2022, 12:51:16 am                                                #
+# Modified : Thursday, April 21st 2022, 2:49:35 am                                                 #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -117,6 +117,7 @@ class TableLoader(Operator):
             name=self._params["table"],
             chunksize=10000,
             con=engine,
+            method="multi",
             index=False,
             if_exists="append",
             dtype=dtypes,

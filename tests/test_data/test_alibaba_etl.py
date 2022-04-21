@@ -11,19 +11,20 @@
 # URL      : https://github.com/john-james-ai/DeepCTR                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Friday, April 8th 2022, 3:48:38 pm                                                    #
-# Modified : Wednesday, April 20th 2022, 3:00:51 am                                                #
+# Modified : Thursday, April 21st 2022, 11:27:39 am                                                #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
 # Copyright: (c) 2022 Bryant St. Labs                                                              #
 # ================================================================================================ #
-import os
 import inspect
 import pytest
-from dotenv import load_dotenv
 import logging
-from deepctr.data.dag import DagBuilder
-from deepctr.utils.io import YamlIO
+from deepctr.data.dag import DagRunner
+
+from deepctr.database.sequel import AlibabaDatabaseExists, AdTableExists, UserTableExists
+from deepctr.database.sequel import BehaviorTableExists, ImpressionTableExists
+from deepctr.database.access import DAO
 
 # ---------------------------------------------------------------------------- #
 logging.basicConfig(level=logging.DEBUG)
@@ -31,26 +32,29 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------- #
 
 
-@pytest.mark.alibaba_etl
-class TestAlibabaETL:
-    def test_extract(self, caplog) -> None:
+@pytest.mark.alibaba_db
+class TestAlibabaDatabaseDAG:
+    def test_database(self, caplog) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-        mode = "production"
+
         config_filepath = "config/alibaba.yml"
-        destination = "data/alibaba/production/raw"
-        transformed = "data/alibaba/production/transformed"
 
-        load_dotenv()
+        dr = DagRunner()
+        dr.run(config_filepath=config_filepath)
 
-        yaml = YamlIO()
-        config = yaml.read(config_filepath)
+        queries = [
+            AlibabaDatabaseExists(),
+            UserTableExists(),
+            AdTableExists(),
+            BehaviorTableExists(),
+            ImpressionTableExists(),
+        ]
 
-        builder = DagBuilder()
-        dag = builder.build(config=config[mode])
-        dag.run()
+        dao = DAO("alibaba")
+        for query in queries:
+            assert dao.exists(query), "{}: {} does not exist.".format(query.database, query.table)
 
-        assert len(os.listdir(destination)) == 4, "Files did not make it to destination"
-        assert len(os.listdir(transformed)) == 4, "Files did not make it to destination"
+        dao.close()
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))

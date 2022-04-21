@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/DeepCTR                                        #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Thursday, April 7th 2022, 3:13:25 pm                                                  #
-# Modified : Wednesday, April 20th 2022, 1:33:30 am                                                #
+# Modified : Thursday, April 21st 2022, 1:14:03 am                                                 #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -222,3 +222,24 @@ class DagBuilder:
             tasks.append(task_instance)
 
         return tasks
+
+
+# ------------------------------------------------------------------------------------------------ #
+
+
+class DagRunner:
+    """Builds and executes a DAG"""
+
+    def run(self, config_filepath: str) -> None:
+        """Builds and executes a DAG
+
+        Args:
+            config_filepath (str): Path to file containing the DAG configuration.
+        """
+
+        yaml = YamlIO()
+        config = yaml.read(config_filepath)
+
+        builder = DagBuilder()
+        dag = builder.build(config=config)
+        dag.run()

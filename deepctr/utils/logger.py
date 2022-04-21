@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Sunday, March 13th 2022, 1:41:40 pm                                                   #
-# Modified : Friday, April 8th 2022, 12:31:12 pm                                                   #
+# Modified : Thursday, April 21st 2022, 4:24:06 am                                                 #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -29,25 +29,19 @@ class LoggerBuilder:
     """Builds a logger to specification"""
 
     __level = {
-        "info": logging.INFO,
-        "debug": logging.DEBUG,
-        "warn": logging.WARN,
-        "error": logging.ERROR,
+        "i": logging.INFO,
+        "d": logging.DEBUG,
+        "w": logging.WARN,
+        "e": logging.ERROR,
     }
 
     def __init__(self) -> None:
-        self._logger = None
-        self._logger = None
-        self._level = "info"
-        self._operations_logfile = "logs/operations.log"
-        self._events_logfile = "logs/events.log"
         self.reset()
 
     def reset(self):
         self._logger = None
-        self._level = "info"
-        self._operations_logfile = "logs/operations.log"
-        self._events_logfile = "logs/events.log"
+        self._level = (logging.INFO,)
+        self._logfile = "logs/deepctr.log"
         return self
 
     @property
@@ -57,15 +51,11 @@ class LoggerBuilder:
         return logger
 
     def set_level(self, level: str = "info") -> None:
-        self._level = level
+        self._level = LoggerBuilder.__level.get(level[0], logging.INFO)
         return self
 
-    def set_operations_logfile(self, logfile: str = "logs/operations.log") -> None:
-        self._operations_logfile = logfile
-        return self
-
-    def set_events_logfile(self, logfile: str = "logs/events.log") -> None:
-        self._events_logfile = logfile
+    def set_logfile(self, logfile: str = "logs/deepctr.log") -> None:
+        self._logfile = logfile
         return self
 
     def build_console_handler(self):
@@ -82,7 +72,7 @@ class LoggerBuilder:
         """Formats the operations file handler and sets logger"""
         os.makedirs(os.path.dirname(logfile), exist_ok=True)
         # Time rotating file handler is preferred
-        handler = TimedRotatingFileHandler(filename=self._operations_logfile)
+        handler = TimedRotatingFileHandler(filename=self._logfile)
         # Configure formatter for files to include time
         format = logging.Formatter("%(asctime)s %(name)-12s %(levelname)-8s %(message)s")
         # Set format on handler
@@ -92,8 +82,7 @@ class LoggerBuilder:
     def build(self, name: str):
         # Instantiate logger with 'info' level. User can override
         self._logger = logging.getLogger(name)
-        self._logger.setLevel(LoggerBuilder.__level.get(self._level, logging.INFO))
+        self._logger.setLevel(self._level)
         self._logger.addHandler(self.build_console_handler())
-        self._logger.addHandler(self.build_file_handler(self._operations_logfile))
-        self._logger.addHandler(self.build_file_handler(self._events_logfile))
+        self._logger.addHandler(self.build_file_handler(self._logfile))
         return self

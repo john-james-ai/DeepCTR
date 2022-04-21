@@ -27,6 +27,8 @@ var/
 *.*yaml
 **/.*yaml
 
+# Project Setup/Bootstrap
+**/setup*.sql
 
 # Credentials
 **/credentials.*
