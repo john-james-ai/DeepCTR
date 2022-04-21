@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Saturday, March 12th 2022, 5:34:59 am                                                 #
-# Modified : Thursday, April 21st 2022, 2:49:35 am                                                 #
+# Modified : Thursday, April 21st 2022, 12:39:40 pm                                                #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -27,7 +27,7 @@ from typing import Any
 
 from deepctr.data.dag import Context
 from deepctr.operators.base import Operator
-from deepctr.utils.decorators import operator
+from deepctr.utils.decorators import operator, profiled
 
 # ------------------------------------------------------------------------------------------------ #
 logging.basicConfig(level=logging.INFO)
@@ -113,15 +113,16 @@ class TableLoader(Operator):
 
         # 4/20/2022: Setting chunksize to 10,000
         # Source: https://acepor.github.io/2017/08/03/using-chunksize/
-        data.to_sql(
-            name=self._params["table"],
-            chunksize=10000,
-            con=engine,
-            method="multi",
-            index=False,
-            if_exists="append",
-            dtype=dtypes,
-        )
+        with profiled():
+            data.to_sql(
+                name=self._params["table"],
+                chunksize=10000,
+                con=engine,
+                method="multi",
+                index=False,
+                if_exists="append",
+                dtype=dtypes,
+            )
 
     def _get_engine(self, context: dict) -> sqlalchemy.engine:
         """Return an SQLAlchemy Database Engine"""
@@ -130,5 +131,8 @@ class TableLoader(Operator):
             external_resource=self.params["external_resource"], context=context
         )
 
-        engine = sqlalchemy.create_engine(credentials["uri"])
+        engine = sqlalchemy.create_engine(
+            credentials["uri"],
+            echo=False,
+        )
         return engine

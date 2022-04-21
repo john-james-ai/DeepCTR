@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Monday, March 14th 2022, 7:53:27 pm                                                   #
-# Modified : Thursday, April 21st 2022, 7:43:16 am                                                 #
+# Modified : Thursday, April 21st 2022, 12:20:21 pm                                                #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -21,6 +21,10 @@
 import functools
 from datetime import datetime
 import pandas as pd
+import cProfile
+import io
+import pstats
+import contextlib
 from deepctr.utils.logger import LoggerBuilder
 from deepctr.database.sequel import Query
 
@@ -30,7 +34,8 @@ pd.set_option("display.width", 1000)
 pd.set_option("display.colheader_justify", "center")
 pd.set_option("display.precision", 2)
 
-
+# ------------------------------------------------------------------------------------------------ #
+#                                    QUERY DECORATOR                                               #
 # ------------------------------------------------------------------------------------------------ #
 ERROR_LOGFILE = "logs/error.log"
 DEBUG_LOGFILE = "logs/debug.log"
@@ -143,6 +148,9 @@ def format_msg(start: datetime, end: datetime, query: Query, params: tuple = Non
     return msg
 
 
+# ------------------------------------------------------------------------------------------------ #
+#                                   OPERATOR DECORATOR                                             #
+# ------------------------------------------------------------------------------------------------ #
 def operator(func):
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
@@ -198,3 +206,22 @@ def print_end(module: str, classname: str, self: str, start: datetime, end: date
         str(module), str(task_no), task_name, str(round(duration, 2))
     )
     print(msg)
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                  PROFILE DECORATOR                                               #
+# ------------------------------------------------------------------------------------------------ #
+
+
+@contextlib.contextmanager
+def profiled():
+    pr = cProfile.Profile()
+    pr.enable()
+    yield
+    pr.disable()
+    s = io.StringIO()
+    ps = pstats.Stats(pr, stream=s).sort_stats("cumulative")
+    ps.print_stats()
+    # uncomment this to see who's calling what
+    ps.print_callers()
+    print(s.getvalue())
