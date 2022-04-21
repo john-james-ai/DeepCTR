@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/DeepCTR                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Friday, April 8th 2022, 3:48:38 pm                                                    #
-# Modified : Wednesday, April 20th 2022, 2:00:35 am                                                #
+# Modified : Wednesday, April 20th 2022, 3:00:51 am                                                #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -48,7 +48,7 @@ class TestAlibabaETL:
 
         builder = DagBuilder()
         dag = builder.build(config=config[mode])
-        dag.run(start=20)
+        dag.run()
 
         assert len(os.listdir(destination)) == 4, "Files did not make it to destination"
         assert len(os.listdir(transformed)) == 4, "Files did not make it to destination"

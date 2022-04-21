@@ -11,25 +11,25 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Saturday, March 12th 2022, 5:34:59 am                                                 #
-# Modified : Wednesday, April 20th 2022, 1:59:28 am                                                #
+# Modified : Thursday, April 21st 2022, 12:51:16 am                                                #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
 # Copyright: (c) 2022 Bryant St. Labs                                                              #
 # ================================================================================================ #
 """Tasks that complete the Load phase of the ETL DAG"""
-import pandas as pd
 import logging
 from pymysql import connect
 from pymysql.cursors import DictCursor
 import sqlalchemy
 from sqlalchemy.types import Integer, BigInteger, Float, String  # noqa: F401
+from typing import Any
 
 from deepctr.data.dag import Context
 from deepctr.operators.base import Operator
 from deepctr.utils.decorators import operator
 
-# ---------------------------------------------------------------------------- #
+# ------------------------------------------------------------------------------------------------ #
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -38,8 +38,8 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
 
-class DatabaseFactory(Operator):
-    """Creates a Database
+class SQLEngine(Operator):
+    """Executes SQL Statements
 
     Args:
         task_id: Sequence number for the task in its dag
@@ -50,18 +50,17 @@ class DatabaseFactory(Operator):
     """
 
     def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
-        super(DatabaseFactory, self).__init__(
+        super(SQLEngine, self).__init__(
             task_no=task_no, task_name=task_name, task_description=task_description, params=params
         )
 
     @operator
-    def execute(self, data: pd.DataFrame = None, context: Context = None) -> None:
+    def execute(self, data: Any = None, context: Context = None) -> None:
 
         connection = self._get_connection(context=context)
 
         with connection.cursor() as cursor:
-            for _, statement in data.items():
-                cursor.execute(statement)
+            cursor.execute(self._params["query"])
             connection.commit()
 
         connection.close()
@@ -98,7 +97,7 @@ class TableLoader(Operator):
         )
 
     @operator
-    def execute(self, data: pd.DataFrame = None, context: Context = None) -> None:
+    def execute(self, data: Any = None, context: Context = None) -> None:
 
         engine = self._get_engine(context=context)
 

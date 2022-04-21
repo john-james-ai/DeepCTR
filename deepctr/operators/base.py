@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/DeepCTR                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Saturday, April 16th 2022, 7:00:56 am                                                 #
-# Modified : Wednesday, April 20th 2022, 12:16:32 am                                               #
+# Modified : Wednesday, April 20th 2022, 11:31:49 pm                                               #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -113,7 +113,7 @@ class Dependency(Operator):
             task_no=task_no, task_name=task_name, task_description=task_description, params=params
         )
 
-    def execute(self, data: pd.DataFrame = None, context: Context = None) -> dict:
+    def execute(self, data: Any = None, context: Context = None) -> dict:
         from deepctr.database.ddl import ALIBABA_DDL
 
         return ALIBABA_DDL

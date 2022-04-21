@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/DeepCTR                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Friday, April 15th 2022, 11:00:20 pm                                                  #
-# Modified : Tuesday, April 19th 2022, 11:50:10 pm                                                 #
+# Modified : Wednesday, April 20th 2022, 11:32:02 pm                                               #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -20,6 +20,7 @@
 from abc import ABC, abstractmethod
 import pandas as pd
 import shutil
+from typing import Any
 
 from deepctr.utils.io import CsvIO
 from deepctr.operators.base import Operator
@@ -41,7 +42,7 @@ class IO(Operator, ABC):
         )
 
     @abstractmethod
-    def execute(self, data: pd.DataFrame = None, context: Context = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         pass
 
 
@@ -59,7 +60,7 @@ class CSVReader(IO):
         )
 
     @operator
-    def execute(self, data: pd.DataFrame = None, context: Context = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         """Reads from the designated resource"""
         io = CsvIO()
         if self._params.get("usecols", None):
@@ -86,7 +87,26 @@ class CSVWriter(IO):
         )
 
     @operator
-    def execute(self, data: pd.DataFrame = None, context: Context = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
+        """Reads from the designated resource"""
+        io = CsvIO()
+        io.write(data=data, filepath=self._params["destination"])
+        return None
+
+
+# ------------------------------------------------------------------------------------------------ #
+
+
+class SQLReader(IO):
+    """Reads an SQL file and returns a list of sql statements."""
+
+    def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
+        super(SQLReader, self).__init__(
+            task_no=task_no, task_name=task_name, task_description=task_description, params=params
+        )
+
+    @operator
+    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         """Reads from the designated resource"""
         io = CsvIO()
         io.write(data=data, filepath=self._params["destination"])
@@ -105,7 +125,7 @@ class CopyOperator(Operator):
         )
 
     @operator
-    def execute(self, data: pd.DataFrame = None, context: Context = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         """Copies a file from source to destination"""
 
         source = self._params["source"]

@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Saturday, February 26th 2022, 6:41:17 pm                                              #
-# Modified : Tuesday, April 19th 2022, 9:06:52 pm                                                  #
+# Modified : Wednesday, April 20th 2022, 11:31:49 pm                                               #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -45,7 +45,7 @@ class IO(ABC):
         pass
 
     @abstractmethod
-    def write(self, data: pd.DataFrame, filepath: str, **kwargs) -> None:
+    def write(self, data: Any, filepath: str, **kwargs) -> None:
         pass
 
 
@@ -77,7 +77,7 @@ class SparkS3(IO):
         pdf = sdf.toPandas()
         return pdf
 
-    def write(self, data: pd.DataFrame, filepath: str, **kwargs) -> None:
+    def write(self, data: Any, filepath: str, **kwargs) -> None:
         """Writes a pandas DataFrame to Amazon S3 via SparkSession
 
         Args:

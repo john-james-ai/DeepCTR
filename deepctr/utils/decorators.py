@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Monday, March 14th 2022, 7:53:27 pm                                                   #
-# Modified : Wednesday, April 20th 2022, 2:47:03 am                                                #
+# Modified : Wednesday, April 20th 2022, 3:09:32 am                                                #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -101,8 +101,10 @@ def print_start(module: str, classname: str, self: str, start: datetime):
     task_no = self.__dict__["_task_no"]
     task_name = self.__dict__["_task_name"]
     module = module.split(".")[2]
-    msg = "Module: {}\t\tTask {}:\t{}\tStarted\tDatetime:{}.".format(
-        str(module), str(task_no), task_name, start
+    date = start.strftime("%d/%m/%y")
+    time = start.strftime("%I:%M %p")
+    msg = "Module: {}\t\tTask {}:\t{}\tStarted {} at {}.".format(
+        str(module), str(task_no), task_name, date, time
     )
     print(msg)
 

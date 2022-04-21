@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/DeepNeuralCTR                                        #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Saturday, April 16th 2022, 12:50:46 am                                                #
-# Modified : Tuesday, April 19th 2022, 11:49:15 pm                                                 #
+# Modified : Wednesday, April 20th 2022, 11:31:49 pm                                               #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -46,7 +46,7 @@ class ReplaceColumnNames(Operator):
         )
 
     @operator
-    def execute(self, data: pd.DataFrame = None, context: Context = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         """Replaces the columns in the DataFrame according to the params['columns'] object."""
 
         data.rename(columns=self._params["columns"], inplace=True)
@@ -73,7 +73,7 @@ class ExtractCreate(Operator):
         )
 
     @operator
-    def execute(self, data: pd.DataFrame = None, context: Context = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         """Extracts data from input and returns a DataFrame."""
 
         df = data[self._params["columns"]]
@@ -116,7 +116,7 @@ class MergeReplaceFK(Operator):
         )
 
     @operator
-    def execute(self, data: pd.DataFrame = None, context: Context = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         """Reads, merges, and replaces attributes with foreign key references."""
 
         io = CsvIO()
