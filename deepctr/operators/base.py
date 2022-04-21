@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/DeepCTR                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Saturday, April 16th 2022, 7:00:56 am                                                 #
-# Modified : Wednesday, April 20th 2022, 11:31:49 pm                                               #
+# Modified : Thursday, April 21st 2022, 11:55:15 am                                                #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -19,7 +19,6 @@
 # ================================================================================================ #
 from abc import ABC, abstractmethod
 from typing import Any
-import pandas as pd
 import logging
 
 from deepctr.data.dag import Context
