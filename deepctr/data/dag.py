@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/DeepCTR                                        #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Thursday, April 7th 2022, 3:13:25 pm                                                  #
-# Modified : Thursday, April 21st 2022, 1:14:03 am                                                 #
+# Modified : Sunday, April 24th 2022, 6:50:25 pm                                                   #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -230,7 +230,7 @@ class DagBuilder:
 class DagRunner:
     """Builds and executes a DAG"""
 
-    def run(self, config_filepath: str) -> None:
+    def run(self, config_filepath: str, start: int = 0, stop: float = float("inf")) -> None:
         """Builds and executes a DAG
 
         Args:
@@ -242,4 +242,4 @@ class DagRunner:
 
         builder = DagBuilder()
         dag = builder.build(config=config)
-        dag.run()
+        dag.run(start=start, stop=stop)

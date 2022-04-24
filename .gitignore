@@ -32,7 +32,7 @@ var/
 
 # Credentials
 **/credentials.*
-**/auth*.*
+**/auth*.sql
 
 # Data
 data/**/*.csv

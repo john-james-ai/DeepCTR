@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/DeepNeuralCTR                                        #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Saturday, April 16th 2022, 12:50:46 am                                                #
-# Modified : Wednesday, April 20th 2022, 11:31:49 pm                                               #
+# Modified : Sunday, April 24th 2022, 7:25:50 pm                                                   #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -49,7 +49,12 @@ class ReplaceColumnNames(Operator):
     def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         """Replaces the columns in the DataFrame according to the params['columns'] object."""
 
+        data.columns = data.columns.str.replace(" ", "")  # Remove any whitespace in column names
+
         data.rename(columns=self._params["columns"], inplace=True)
+
+        print("=" * 40)
+        print(data.head())
 
         return data
 

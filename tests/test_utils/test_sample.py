@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project  : DeepCTR: Deep Learning and Neural Architecture Selection for CTR Prediction           #
+# Project  : DeepCTR: Deep Learning and Neural Architecture Selection for CTR Prediction     #
 # Version  : 0.1.0                                                                                 #
-# File     : /test_alibaba_etl.py                                                                  #
+# File     : /test_io.py                                                                           #
 # Language : Python 3.7.12                                                                         #
 # ------------------------------------------------------------------------------------------------ #
 # Author   : John James                                                                            #
 # Email    : john.james.ai.studio@gmail.com                                                        #
-# URL      : https://github.com/john-james-ai/DeepCTR                                              #
+# URL      : https://github.com/john-james-ai/DeepCTR                                        #
 # ------------------------------------------------------------------------------------------------ #
-# Created  : Friday, April 8th 2022, 3:48:38 pm                                                    #
-# Modified : Sunday, April 24th 2022, 7:00:19 pm                                                   #
+# Created  : Sunday, April 10th 2022, 5:26:12 pm                                                   #
+# Modified : Sunday, April 24th 2022, 5:32:21 pm                                                   #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -20,11 +20,7 @@
 import inspect
 import pytest
 import logging
-from deepctr.data.dag import DagRunner
-
-from deepctr.database.sequel import AlibabaDatabaseExists, AdTableExists, UserTableExists
-from deepctr.database.sequel import BehaviorTableExists, ImpressionTableExists
-from deepctr.database.access import DAO
+from deepctr.utils.sample import sample_from_file
 
 # ---------------------------------------------------------------------------- #
 logging.basicConfig(level=logging.INFO)
@@ -32,29 +28,17 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------- #
 
 
-@pytest.mark.alibaba_db
-class TestAlibabaDatabaseDAG:
-    def test_database(self, caplog) -> None:
+@pytest.mark.sample
+class TestSample:
+    def test_sample_from_file(self, caplog) -> None:
         caplog.set_level(logging.INFO)
+
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        config_filepath = "tests/config/alibaba.yml"
+        source = "data/alibaba/raw/raw_sample.csv"
+        size = 1000
 
-        dr = DagRunner()
-        dr.run(config_filepath=config_filepath, start=3)
+        df = sample_from_file(source=source, size=size, header=True)
+        print(df.head())
 
-        queries = [
-            AlibabaDatabaseExists(),
-            UserTableExists(),
-            AdTableExists(),
-            BehaviorTableExists(),
-            ImpressionTableExists(),
-        ]
-
-        dao = DAO("alibaba")
-        for query in queries:
-            assert dao.exists(query), "{}: {} does not exist.".format(query.database, query.table)
-
-        dao.close()
-
-        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+        assert df.shape[0] == size, logger.error("Sample size incorrect.")

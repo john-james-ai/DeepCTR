@@ -63,7 +63,7 @@ tasks:
     task_name: read_alibaba_raw_sample_csv
     task_description: Read Alibaba Raw Sample CSV
     task_params:
-      source: data/alibaba/raw/raw_sample.csv
+      source: data/alibaba/development/raw_sample.csv
 
   5:
     task: ReplaceColumnNames
@@ -109,7 +109,7 @@ tasks:
     task_name: read_alibaba_user_csv
     task_description: Read Alibaba User CSV
     task_params:
-      source: data/alibaba/raw/user_profile.csv
+      source: data/alibaba/development/user_profile.csv
 
   8:
     task: ReplaceColumnNames
@@ -161,7 +161,7 @@ tasks:
     task_name: read_alibaba_ad_csv
     task_description: Read Alibaba Ad CSV
     task_params:
-      source: data/alibaba/raw/ad_feature.csv
+      source: data/alibaba/development/ad_feature.csv
 
   11:
     task: ReplaceColumnNames
@@ -207,7 +207,7 @@ tasks:
     task_name: read_alibaba_behaviors_csv
     task_description: Read Alibaba Behaviors CSV
     task_params:
-      source: data/alibaba/raw/behavior_log.csv
+      source: data/alibaba/development/behavior_log.csv
 
   14:
     task: ReplaceColumnNames
