@@ -5,7 +5,10 @@
 
 dag_no: 2
 dag_name: alibaba_etl
-dag_description: Extracts, transforms and loads the Alibaba Display Ad Data (Production) from Amazon S3
+dag_description: Extracts, transforms and loads the Alibaba Display Ad Data from Amazon S3
+directories:
+  dev: data/alibaba/development/
+  prod: data/alibaba/raw/
 resources:
   database:
     - alibaba
@@ -40,10 +43,75 @@ tasks:
       destination: data/alibaba/raw
       force: False
 
+  # ============================================================================================ #
+  #                                CREATE DEVELOPMENT SET                                        #
+  # ============================================================================================ #
   3:
+    task: AlibabaDevSet
+    module: deepctr.operators.data
+    task_no: 3
+    task_name: alibaba_devset_impression
+    task_description: Creates impression development set
+    task_params:
+      dataset: impression
+      source: data/alibaba/raw
+      destination: data/alibaba/development
+      sample_size: 20000
+      header: True
+      filename: raw_sample.csv
+      random_state: 504
+      force: False
+
+  4:
+    task: AlibabaDevSet
+    module: deepctr.operators.data
+    task_no: 4
+    task_name: alibaba_devset_user
+    task_description: Creates user development set
+    task_params:
+      dataset: user
+      source: data/alibaba/raw
+      destination: data/alibaba/development
+      header: True
+      filename: user_profile.csv
+      force: False
+
+  5:
+    task: AlibabaDevSet
+    module: deepctr.operators.data
+    task_no: 5
+    task_name: alibaba_devset_ad
+    task_description: Creates ad development set
+    task_params:
+      dataset: ad
+      source: data/alibaba/raw
+      destination: data/alibaba/development
+      header: True
+      filename: ad_feature.csv
+      force: False
+
+  6:
+    task: AlibabaDevSet
+    module: deepctr.operators.data
+    task_no: 6
+    task_name: alibaba_devset_behavior
+    task_description: Creates behavior development set
+    task_params:
+      dataset: behavior
+      source: data/alibaba/raw
+      destination: data/alibaba/development
+      header: True
+      filename: behavior_log.csv
+      force: False
+
+  # ============================================================================================ #
+  #                                  DATABASE REFRESH                                            #
+  # ============================================================================================ #
+
+  7:
     task: SQLEngine
     module: deepctr.operators.database
-    task_no: 3
+    task_no: 7
     task_name: drop_existing_tables
     task_description: Drop tables if exist
     task_params:
@@ -56,19 +124,19 @@ tasks:
   #                            RAW SAMPLES -> IMPRESSIONS                                        #
   # ============================================================================================ #
 
-  4:
+  8:
     task: CSVReader
     module: deepctr.operators.io
-    task_no: 4
+    task_no: 8
     task_name: read_alibaba_raw_sample_csv
     task_description: Read Alibaba Raw Sample CSV
     task_params:
-      source: data/alibaba/raw/raw_sample.csv
+      filename: raw_sample.csv
 
-  5:
+  9:
     task: ReplaceColumnNames
     module: deepctr.operators.data
-    task_no: 5
+    task_no: 9
     task_name: replace_alibaba_raw_sample_column_names
     task_description: Replace Alibaba Raw Sample Column Names
     task_params:
@@ -80,10 +148,10 @@ tasks:
         nonclk: non_click
         clk: click
 
-  6:
+  10:
     task: TableLoader
     module: deepctr.operators.database
-    task_no: 6
+    task_no: 10
     task_name: load_alibaba_impression_table
     task_description: Load Alibaba Impression Table
     task_params:
@@ -102,19 +170,19 @@ tasks:
   #                                       USER                                                   #
   # ============================================================================================ #
 
-  7:
+  11:
     task: CSVReader
     module: deepctr.operators.io
-    task_no: 7
+    task_no: 11
     task_name: read_alibaba_user_csv
     task_description: Read Alibaba User CSV
     task_params:
-      source: data/alibaba/raw/user_profile.csv
+      filename: user_profile.csv
 
-  8:
+  12:
     task: ReplaceColumnNames
     module: deepctr.operators.data
-    task_no: 8
+    task_no: 12
     task_name: replace_alibaba_user_column_names
     task_description: Replace Alibaba User Column Names
     task_params:
@@ -129,10 +197,10 @@ tasks:
         occupation: student
         new_user_class_level: city_level
 
-  9:
+  13:
     task: TableLoader
     module: deepctr.operators.database
-    task_no: 9
+    task_no: 13
     task_name: load_alibaba_user_table
     task_description: Load Alibaba User Table
     task_params:
@@ -154,19 +222,19 @@ tasks:
   # ============================================================================================ #
   #                                         AD                                                   #
   # ============================================================================================ #
-  10:
+  14:
     task: CSVReader
     module: deepctr.operators.io
-    task_no: 10
+    task_no: 14
     task_name: read_alibaba_ad_csv
     task_description: Read Alibaba Ad CSV
     task_params:
-      source: data/alibaba/raw/ad_feature.csv
+      filename: ad_feature.csv
 
-  11:
+  15:
     task: ReplaceColumnNames
     module: deepctr.operators.data
-    task_no: 11
+    task_no: 15
     task_name: transform_alibaba_ad_column_names
     task_description: Transform Alibaba Ad Column Names
     task_params:
@@ -178,10 +246,10 @@ tasks:
         brand: brand_id
         price: price
 
-  12:
+  16:
     task: TableLoader
     module: deepctr.operators.database
-    task_no: 12
+    task_no: 16
     task_name: load_alibaba_ad_table
     task_description: Load Alibaba Ad Table
     task_params:
@@ -200,19 +268,19 @@ tasks:
   # ============================================================================================ #
   #                                  BEHAVIOR                                                    #
   # ============================================================================================ #
-  13:
+  17:
     task: CSVReader
     module: deepctr.operators.io
-    task_no: 13
+    task_no: 17
     task_name: read_alibaba_behaviors_csv
     task_description: Read Alibaba Behaviors CSV
     task_params:
-      source: data/alibaba/raw/behavior_log.csv
+      filename: behavior_log.csv
 
-  14:
+  18:
     task: ReplaceColumnNames
     module: deepctr.operators.data
-    task_no: 14
+    task_no: 18
     task_name: transform_alibaba_behavior_column_names
     task_description: Transform Alibaba Behavior Column Names
     task_params:
@@ -223,10 +291,10 @@ tasks:
         cate: category_id
         brand: brand_id
 
-  15:
+  19:
     task: TableLoader
     module: deepctr.operators.database
-    task_no: 15
+    task_no: 19
     task_name: load_alibaba_behavior_table
     task_description: Load Alibaba Behavior Table
     task_params:

@@ -11,13 +11,14 @@
 # URL      : https://github.com/john-james-ai/DeepCTR                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Friday, April 15th 2022, 11:00:20 pm                                                  #
-# Modified : Sunday, April 24th 2022, 7:05:53 pm                                                   #
+# Modified : Monday, April 25th 2022, 4:26:53 am                                                   #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
 # Copyright: (c) 2022 Bryant St. Labs                                                              #
 # ================================================================================================ #
 from abc import ABC, abstractmethod
+import os
 import pandas as pd
 import shutil
 from typing import Any
@@ -45,6 +46,13 @@ class IO(Operator, ABC):
     def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         pass
 
+    def _get_filepath(self, context: dict) -> str:
+        """Formats the filepath for the context mode and source file"""
+        mode = context.get("mode")
+        directory = context.get(mode)
+        filename = self._params["filename"]
+        return os.path.join(directory, filename)
+
 
 # ------------------------------------------------------------------------------------------------ #
 #                                          CSV                                                     #
@@ -62,6 +70,8 @@ class CSVReader(IO):
     @operator
     def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         """Reads from the designated resource"""
+        filepath = self._get_filepath(context)
+
         io = CsvIO()
         if self._params.get("usecols", None):
             data = io.read(
@@ -70,7 +80,7 @@ class CSVReader(IO):
                 usecols=self._params["usecols"],
             )
         else:
-            data = io.read(filepath=self._params["source"], header=0)
+            data = io.read(filepath=filepath, header=0)
 
         return data
 
@@ -89,8 +99,10 @@ class CSVWriter(IO):
     @operator
     def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         """Reads from the designated resource"""
+        filepath = self._get_filepath(context)
+
         io = CsvIO()
-        io.write(data=data, filepath=self._params["destination"])
+        io.write(data=data, filepath=filepath)
         return None
 
 

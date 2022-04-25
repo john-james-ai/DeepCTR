@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/DeepCTR                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Friday, April 8th 2022, 3:48:38 pm                                                    #
-# Modified : Sunday, April 24th 2022, 7:00:19 pm                                                   #
+# Modified : Monday, April 25th 2022, 2:32:06 am                                                   #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -38,10 +38,10 @@ class TestAlibabaDatabaseDAG:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        config_filepath = "tests/config/alibaba.yml"
+        config_filepath = "config/alibaba.yml"
 
         dr = DagRunner()
-        dr.run(config_filepath=config_filepath, start=3)
+        dr.run(config_filepath=config_filepath, mode="dev")
 
         queries = [
             AlibabaDatabaseExists(),

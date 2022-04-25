@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/DeepCTR                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Saturday, April 16th 2022, 7:00:56 am                                                 #
-# Modified : Thursday, April 21st 2022, 11:55:15 am                                                #
+# Modified : Monday, April 25th 2022, 3:46:35 am                                                   #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -72,7 +72,7 @@ class Operator(ABC):
         resource_type = external_resource.get("resource_type")
         resource = external_resource.get("resource")
 
-        credentials = context.get_context(resource_type=resource_type, resource=resource)
+        credentials = context.get_resource(resource_type=resource_type, resource=resource)
 
         logging.debug("\nCREDENTIALS\n{}".format(credentials))
 

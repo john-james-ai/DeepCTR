@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/bash
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
 # Project  : DeepCTR: Deep Learning and Neural Architecture Selection for CTR Prediction     #
@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/DeepCTR                                        #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Friday, April 15th 2022, 3:01:43 pm                                                   #
-# Modified : Sunday, April 24th 2022, 4:25:12 pm                                                   #
+# Modified : Monday, April 25th 2022, 2:47:54 am                                                   #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #

@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Monday, February 14th 2022, 12:32:13 pm                                               #
-# Modified : Tuesday, April 19th 2022, 11:50:02 pm                                                 #
+# Modified : Monday, April 25th 2022, 3:46:35 am                                                   #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -68,7 +68,7 @@ class ExtractS3(Operator):
             resource_type = self._params["context"].get("resource_type")
             resource = self._params["context"].get("resource")
 
-            credentials = context.get_context(resource_type=resource_type, resource=resource)
+            credentials = context.get_resource(resource_type=resource_type, resource=resource)
 
             s3access = credentials.get("key")
             s3password = credentials.get("password")

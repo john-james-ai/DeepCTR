@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Saturday, February 26th 2022, 6:41:17 pm                                              #
-# Modified : Thursday, April 21st 2022, 6:15:19 am                                                 #
+# Modified : Monday, April 25th 2022, 4:12:22 am                                                   #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -190,6 +190,8 @@ class CsvIO(IO):
 
         rows = sum(1 for _ in open(filepath, "r"))
 
+        header = self._get_read_header(header)
+
         chunksize = int(rows / n_chunks)
 
         chunks = []
@@ -226,6 +228,8 @@ class CsvIO(IO):
     ) -> pd.DataFrame:
 
         rows = sum(1 for _ in open(filepath, "r"))
+
+        header = self._get_read_header(header)
 
         chunksize = int(rows / n_chunks)
 
@@ -283,6 +287,13 @@ class CsvIO(IO):
                     mode="a",
                     index=index,
                 )
+
+    def _get_read_header(self, header: Any) -> Any:
+        """Ensures that the header value for read_csv is 0 or None"""
+        converter = {True: 0, False: None}
+        if isinstance(header, bool):
+            header = converter[header]
+        return header
 
 
 # ------------------------------------------------------------------------------------------------ #
