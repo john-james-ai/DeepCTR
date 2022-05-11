@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/DeepCTR                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Thursday, April 21st 2022, 2:08:33 am                                                 #
-# Modified : Thursday, April 21st 2022, 8:35:34 am                                                 #
+# Modified : Wednesday, May 4th 2022, 12:41:32 am                                                  #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -23,7 +23,7 @@ import logging
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 
-from deepctr.database.sequel import Query
+from deepctr.utils.database import Query
 from deepctr.utils.decorators import query
 
 # ------------------------------------------------------------------------------------------------ #

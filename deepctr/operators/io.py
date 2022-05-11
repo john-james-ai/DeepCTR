@@ -23,7 +23,7 @@ import pandas as pd
 import shutil
 from typing import Any
 
-from deepctr.utils.io import CsvIO
+from deepctr.utils.io import SparkCSV, Parquet
 from deepctr.operators.base import Operator
 from deepctr.utils.decorators import operator
 from deepctr.data.dag import Context
@@ -47,23 +47,23 @@ class IO(Operator, ABC):
         pass
 
     def _get_filepath(self, context: dict) -> str:
-        """Formats the filepath for the context mode and source file"""
-        mode = context.get("mode")
-        directory = context.get(mode)
+        """Returns the data filepath for the specified mode 'dev'/'prod'"""        
+        mode = context.get("mode", 'dev')
+        directory = os.path.join('data',mode)
         filename = self._params["filename"]
         return os.path.join(directory, filename)
 
 
 # ------------------------------------------------------------------------------------------------ #
-#                                          CSV                                                     #
+#                                       PARQUET                                                    #
 # ------------------------------------------------------------------------------------------------ #
 
 
-class CSVReader(IO):
-    """Read operator for DAGS"""
+class ParquetReader(IO):
+    """Parquet file reader operator for DAGS"""
 
     def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
-        super(CSVReader, self).__init__(
+        super(ParquetReader, self).__init__(
             task_no=task_no, task_name=task_name, task_description=task_description, params=params
         )
 
@@ -72,15 +72,10 @@ class CSVReader(IO):
         """Reads from the designated resource"""
         filepath = self._get_filepath(context)
 
-        io = CsvIO()
-        if self._params.get("usecols", None):
-            data = io.read(
-                filepath=self._params["source"],
-                header=0,
-                usecols=self._params["usecols"],
-            )
-        else:
-            data = io.read(filepath=filepath, header=0)
+        io = Parquet()
+        data = io.read(
+                filepath=self._params["source"]                
+            )           
 
         return data
 
@@ -88,11 +83,56 @@ class CSVReader(IO):
 # ------------------------------------------------------------------------------------------------ #
 
 
-class CSVWriter(IO):
-    """Write operator for DAGS"""
+class ParquetWriter(IO):
+    """Writes DataFrames to Parquet file storage"""
 
     def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
-        super(CSVWriter, self).__init__(
+        super(ParquetWriter, self).__init__(
+            task_no=task_no, task_name=task_name, task_description=task_description, params=params
+        )
+
+    @operator
+    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
+        """Reads from the designated resource"""
+        filepath = self._get_filepath(context)
+        partition_by = self._params.get('partition_by', None)
+
+        io = Parquet()
+        io.write(data=data, filepath=filepath, partition_by=partition_by)
+        return data
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                          CSV                                                     #
+# ------------------------------------------------------------------------------------------------ #
+
+
+class SparkCSVReader(IO):
+    """CSV Reader using Spark API"""
+
+    def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
+        super(SparkCSVReader, self).__init__(
+            task_no=task_no, task_name=task_name, task_description=task_description, params=params
+        )
+
+    @operator
+    def execute(self, data: Any = None, context: Context = None) -> Any:
+        """Reads from the designated resource"""
+        filepath = self._get_filepath(context)
+        
+        io = SparkCSV()
+        data = io.read(filepath=self._params["source"])
+        return data
+
+
+# ------------------------------------------------------------------------------------------------ #
+
+
+class SparkCSVWriter(IO):
+    """CSV Writer using Spark API"""
+
+    def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
+        super(SparkCSVWriter, self).__init__(
             task_no=task_no, task_name=task_name, task_description=task_description, params=params
         )
 
@@ -101,9 +141,9 @@ class CSVWriter(IO):
         """Reads from the designated resource"""
         filepath = self._get_filepath(context)
 
-        io = CsvIO()
-        io.write(data=data, filepath=filepath)
-        return None
+        io = SparkCsvIO()
+        io.write(data=data, filepath=filepath, partition_by=self._params('partition_by',None))
+        return data
 
 
 # ------------------------------------------------------------------------------------------------ #

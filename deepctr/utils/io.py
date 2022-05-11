@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/ctr                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Saturday, February 26th 2022, 6:41:17 pm                                              #
-# Modified : Monday, April 25th 2022, 4:12:22 am                                                   #
+# Modified : Tuesday, May 3rd 2022, 8:48:33 pm                                                     #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -30,7 +30,6 @@ import pyspark
 import findspark
 from pyspark import SparkContext, SparkConf
 from pyspark.sql import SparkSession
-from deepctr.utils.spark import to_spark
 from typing import Any
 
 findspark.init()
@@ -50,6 +49,131 @@ class IO(ABC):
         pass
 
 
+# ------------------------------------------------------------------------------------------------ #
+
+
+class Parquet(IO):
+    """Reads, and writes Spark DataFrames to / from Parquet storage format.."""
+
+    def read(self, filepath: str, memory: int = 80, cores: int = 18, **kwargs) -> pyspark.sql.DataFrame:
+        """Reads a Spark DataFrame from Parquet file resource
+
+        Args:
+            filepath (str): The path to the parquet file resource
+            memory (int): The gb of memory allocated to each executor. Defaults to 90Gb
+            cores (int): The number of cores allocated to each executor. Defaults to 18 cores.            
+
+        Returns:
+            Spark DataFrame
+        """
+        # Format resource configuration 
+        cores = self._get_cores(cores)
+        memory = self._get_memory(memory)
+
+        # Set resources available.
+        conf = SparkConf().setAll([('spark.executor.memory', memory),('spark.executor.cores',cores)])
+        
+        # Create spark session
+        spark = SparkSession.builder.config(conf=conf).appName("Read Parquet").getOrCreate()
+        
+        # Read the data
+        sdf = spark.read.parquet(filepath)
+        spark.stop()
+        return sdf
+
+
+    def write(self, data: pyspark.sql.DataFrame, filepath: str, header: bool = True, 
+        partition_by: list = None, mode: str = "overwrite", **kwargs) -> None:
+        """Writes Spark DataFrame to Parquet file resource
+
+        Args:
+            data (pyspark.sql.DataFrame): Spark DataFrame to write
+            filepath (str): The path to the parquet file to be written
+            partition_by (list): List of strings containing partition column names  
+            mode (str): 'overwrite' or 'append'. Default is 'overwrite'.
+        """
+
+        if partition_by is None:
+            data.write.option("header", header) \
+                    .mode(mode) \
+                    .parquet(filepath)
+
+        else:
+            data.write.option("header", header) \
+                    .partitionBy(partition_by) \
+                    .mode(mode) \
+                    .parquet(filepath)
+
+
+    def _get_memory(self, memory: int = 90) -> int:
+        """Returns the number of gigabytes of memory to be allocated to each executor."""
+        return str(memory) + 'g'
+
+    def _get_cores(self, cores: int = 18) -> str:
+        """Returns the number of cores available to executors."""
+        return str(cores)
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                        SPARK                                                     #
+# ------------------------------------------------------------------------------------------------ #
+class SparkCSV(IO):
+    """IO using the Spark API"""
+
+
+    def read(self, filepath: str, memory: int = 80, cores: int = 18, **kwargs) -> pyspark.sql.DataFrame:
+        """Reads a Spark DataFrame from Parquet file resource
+
+        Args:
+            filepath (str): The path to the parquet file resource
+            memory (int): The gb of memory allocated to each executor. Defaults to 90Gb
+            cores (int): The number of cores allocated to each executor. Defaults to 18 cores.            
+
+        Returns:
+            Spark DataFrame
+        """
+        # Format resource configuration 
+        cores = self._get_cores(cores)
+        memory = self._get_memory(memory)
+
+        # Set resources available.
+        conf = SparkConf().setAll([('spark.executor.memory', memory),('spark.executor.cores',cores)])
+        
+        # Create spark session
+        spark = SparkSession.builder.config(conf=conf).appName("Read CSV").getOrCreate()
+        
+        # Read the data
+        sdf = spark.read.csv(filepath, inferSchema=True, header=True, sep=",",)
+        spark.stop()
+        return sdf
+
+
+    def write(self, data: pyspark.sql.DataFrame, filepath: str, header: bool = True, 
+        partition_by: list = None, mode: str = "overwrite", **kwargs) -> None:
+        """Writes Spark DataFrame to Parquet file resource
+
+        Args:
+            data (pyspark.sql.DataFrame): Spark DataFrame to write
+            filepath (str): The path to the parquet file to be written
+            partition_by (list): List of strings containing partition column names  
+            mode (str): 'overwrite' or 'append'. Default is 'overwrite'.
+        """
+
+        data.write.option("header", header) \
+                  .csv(filepath)
+
+
+    def _get_memory(self, memory: int = 90) -> int:
+        """Returns the number of gigabytes of memory to be allocated to each executor."""
+        return str(memory) + 'g'
+
+    def _get_cores(self, cores: int = 18) -> str:
+        """Returns the number of cores available to executors."""
+        return str(cores)
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                      SPARK S3                                                    #
 # ------------------------------------------------------------------------------------------------ #
 
 

@@ -24,6 +24,9 @@ from typing import Any
 import tarfile
 import logging
 
+from pyspark.sql import DataFrame
+from pyspark.sql.functions import timestamp_seconds, year, month, day, hour, dayofmonth, col
+
 from deepctr.utils.decorators import operator
 from deepctr.operators.base import Operator
 from deepctr.utils.io import CsvIO
@@ -35,6 +38,43 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
+class TimeStampDecoder(Operator):
+    """Extracts Year, Month, Day and Hour from Timestamp and adds values as columns.
+
+    Args:
+        task_no (int): A number, typically used to indicate the sequence of the task within a DAG
+        task_name (str): String name
+        task_description (str): A description for the task
+        params (Any): Parameters for the task
+    """
+
+    def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
+        super(TimeStampDecoder, self).__init__(
+            task_no=task_no, task_name=task_name, task_description=task_description, params=params
+        )
+
+    @operator
+    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
+        """Extracts temporal data from timestamp and adds as columns to data."""
+
+        # Extract the name of the timestamp column from the parameter list
+        timestamp_var = self._params.get('timestamp_var',None)
+        
+        # Extract year, month and monthday from the data
+        yr = year(timestamp_seconds(col(timestamp_var)))
+        mth = month(timestamp_seconds(col(timestamp_var)))
+        mthday = dayofmonth(timestamp_seconds(col(timestamp_var)))
+        
+        # Add date data as columns.
+        data = (data
+        .withColumn("year", yr)
+        .withColumn("month", mth)
+        .withColumn("day",mthday)        
+        )
+
+        return data
+
+    
 
 class ReplaceColumnNames(Operator):
     """Replace column names in a DataFrame.
@@ -55,11 +95,27 @@ class ReplaceColumnNames(Operator):
     def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         """Replaces the columns in the DataFrame according to the params['columns'] object."""
 
-        data.columns = data.columns.str.replace(" ", "")  # Remove any whitespace in column names
+        # Dispatch to the appropriate Pandas or Spark operator for the column processing.
+        if isinstance(data, pd.DataFrame):
 
-        data.rename(columns=self._params["columns"], inplace=True)
+            data = self._rename_pandas_cols(data)  
+
+        else:
+            data = self._rename_spark_cols(data)
 
         return data
+
+    def _rename_pandas_cols(self, data: pd.DataFrame) -> pd.DataFrame:
+
+        data.columns = data.columns.str.replace(" ", "")  # Remove any whitespace in column names
+        data.rename(columns=self._params["columns"], inplace=True)
+        return data
+
+    def _rename_spark_cols(self, data: DataFrame) -> DataFrame:
+
+        data = data.toDF(*[x for x in self._params['columns'].values]) 
+        return data
+
 
 
 # ------------------------------------------------------------------------------------------------ #

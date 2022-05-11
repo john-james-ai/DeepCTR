@@ -17,17 +17,46 @@
 # License  : BSD 3-clause "New" or "Revised" License                                               #
 # Copyright: (c) 2022 Bryant St. Labs                                                              #
 # ================================================================================================ #
+import os
 import inspect
+import shutil
 import pytest
 import logging
 import time
+from pyspark.sql import SparkSession
 import pandas as pd
-from deepctr.utils.io import SparkS3
+from deepctr.utils.io import SparkS3, Parquet
 
 # ---------------------------------------------------------------------------- #
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------- #
+@pytest.mark.parquet
+class TestParquet:
+    def test_parquet(self, caplog) -> None:
+        caplog.set_level(logging.INFO)
+
+        filepath1 = "data/alibaba/development/user_profile.csv"
+        filepath2 = "tests/data/test_df1.parquet"
+
+
+        if os.path.exists(filepath2):
+            shutil.rmtree(filepath2)
+
+        spark = SparkSession.builder.master("local[1]") \
+                            .appName("TestSpark") \
+                            .getOrCreate() 
+        df1 = spark.read.csv(filepath1)
+
+        io = Parquet()
+        io.write(df1, filepath2)
+
+        assert os.path.exists(filepath2), "Parquet Error: Write didn't happen"        
+
+        df2 = io.read(filepath2)
+
+        assert df1.schema == df2.schema, "Parquet Read Write Failure"
+        
 
 
 @pytest.mark.s3

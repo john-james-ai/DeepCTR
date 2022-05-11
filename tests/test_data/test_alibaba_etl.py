@@ -11,7 +11,7 @@
 # URL      : https://github.com/john-james-ai/DeepCTR                                              #
 # ------------------------------------------------------------------------------------------------ #
 # Created  : Friday, April 8th 2022, 3:48:38 pm                                                    #
-# Modified : Monday, April 25th 2022, 2:32:06 am                                                   #
+# Modified : Wednesday, May 4th 2022, 12:45:42 am                                                  #
 # Modifier : John James (john.james.ai.studio@gmail.com)                                           #
 # ------------------------------------------------------------------------------------------------ #
 # License  : BSD 3-clause "New" or "Revised" License                                               #
@@ -22,9 +22,10 @@ import pytest
 import logging
 from deepctr.data.dag import DagRunner
 
-from deepctr.database.sequel import AlibabaDatabaseExists, AdTableExists, UserTableExists
-from deepctr.database.sequel import BehaviorTableExists, ImpressionTableExists
-from deepctr.database.access import DAO
+from deepctr.utils.database import AlibabaDatabaseExists, AdTableExists, UserTableExists
+from deepctr.utils.database import BehaviorTableExists, ImpressionTableExists
+
+# from deepctr.database.access import DAO
 
 # ---------------------------------------------------------------------------- #
 logging.basicConfig(level=logging.INFO)
@@ -32,16 +33,16 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------- #
 
 
-@pytest.mark.alibaba_db
+@pytest.mark.alibaba
 class TestAlibabaDatabaseDAG:
     def test_database(self, caplog) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        config_filepath = "config/alibaba.yml"
+        config_filepath = "data/prod/alibaba/alibaba.yml"
 
         dr = DagRunner()
-        dr.run(config_filepath=config_filepath, mode="dev")
+        dr.run(config_filepath=config_filepath, mode="prod")
 
         queries = [
             AlibabaDatabaseExists(),

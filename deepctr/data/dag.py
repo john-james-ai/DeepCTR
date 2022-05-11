@@ -205,9 +205,6 @@ class DagBuilder:
         dag_name = config["dag_name"]
         dag_description = config["dag_description"]
 
-        context = self._build_database_context(config)
-        context = self._build_mode_context(config=config, context=context, mode=mode)
-
         tasks = self._build_tasks(config)
 
         self._dag = Dag(
@@ -219,25 +216,6 @@ class DagBuilder:
         )
 
         return self._dag
-
-    def _build_database_context(self, config: dict = None) -> dict:
-        """Builds context for the dag 'resources'"""
-
-        context = Context()
-        resources = config.get("resources", None)
-
-        if resources:
-            for resource_type, resources in resources.items():
-                for resource in resources:
-                    context.add_resource(resource_type, resource)
-        return context
-
-    def _build_mode_context(self, config: dict, context: dict, mode: str = "dev") -> dict:
-        """Builds context for development or  production modes"""
-        context.add("mode", mode)
-        context.add("dev", config["directories"]["dev"])
-        context.add("prod", config["directories"]["prod"])
-        return context
 
     def _build_tasks(self, config: dict = None) -> list:
         """Iterates through task and returns a list of task objects."""
