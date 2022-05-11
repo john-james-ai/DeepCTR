@@ -24,19 +24,20 @@ from typing import Any
 import tarfile
 import logging
 
-from pyspark.sql import DataFrame
-from pyspark.sql.functions import timestamp_seconds, year, month, days, hour, dayofmonth, col
+from pyspark.sql.functions import timestamp_seconds, year, month, dayofmonth, col
 
 from deepctr.utils.decorators import operator
 from deepctr.operators.base import Operator
 from deepctr.utils.io import CsvIO
 from deepctr.data.dag import Context
+from deepctr.utils.decorators import debugger
 from deepctr.utils.sample import sample_from_file
 
 # ------------------------------------------------------------------------------------------------ #
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
+
 
 class TimeStampDecoder(Operator):
     """Extracts Year, Month, Day and Hour from Timestamp and adds values as columns.
@@ -53,28 +54,24 @@ class TimeStampDecoder(Operator):
             task_no=task_no, task_name=task_name, task_description=task_description, params=params
         )
 
+    @debugger
     @operator
     def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         """Extracts temporal data from timestamp and adds as columns to data."""
 
         # Extract the name of the timestamp column from the parameter list
-        timestamp_var = self._params.get('timestamp_var',None)
-        
+        timestamp_var = self._params.get("timestamp_var", None)
+
         # Extract year, month and monthday from the data
         yr = year(timestamp_seconds(col(timestamp_var)))
         mth = month(timestamp_seconds(col(timestamp_var)))
         mthday = dayofmonth(timestamp_seconds(col(timestamp_var)))
-        
+
         # Add date data as columns.
-        data = (data
-        .withColumn("year", yr)
-        .withColumn("month", mth)
-        .withColumn("day",mthday)        
-        )
+        data = data.withColumn("year", yr).withColumn("month", mth).withColumn("day", mthday)
 
         return data
 
-    
 
 class ReplaceColumnNames(Operator):
     """Replace column names in a DataFrame.
@@ -91,16 +88,16 @@ class ReplaceColumnNames(Operator):
             task_no=task_no, task_name=task_name, task_description=task_description, params=params
         )
 
+    @debugger
     @operator
     def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         """Replaces the columns in the DataFrame according to the params['columns'] object."""
 
-        data = data.toDF(*[x for x in self._params['columns'].values()]) 
+        data = data.toDF(*[x for x in self._params["columns"].values()])
 
         logger.error(data.schema)
 
         return data
-
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -246,9 +243,7 @@ class AlibabaDevSet(Operator):
         )
 
         io = CsvIO()
-        io.write(
-            impression, filepath=destination_filepath, header=self._params["header"], index=False
-        )
+        io.write(impression, filepath=destination_filepath, header=self._params["header"], index=False)
 
         self._end_message(dataset="impression")
         return impression
@@ -311,9 +306,7 @@ class AlibabaDevSet(Operator):
         start_date = self._start.strftime("%A, %B %d %Y")
         start_time = self._start.strftime("I:%M%p")
         logger.info(
-            "Started construction of {} development dataset on {} at {}".format(
-                dataset, start_date, start_time
-            )
+            "Started construction of {} development dataset on {} at {}".format(dataset, start_date, start_time)
         )
 
     def _end_message(self, dataset: str) -> None:

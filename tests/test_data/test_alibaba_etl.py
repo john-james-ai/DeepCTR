@@ -22,8 +22,6 @@ import pytest
 import logging
 from deepctr.data.dag import DagRunner
 
-from deepctr.utils.database import AlibabaDatabaseExists, AdTableExists, UserTableExists
-from deepctr.utils.database import BehaviorTableExists, ImpressionTableExists
 
 # from deepctr.database.access import DAO
 
@@ -40,22 +38,9 @@ class TestAlibabaDatabaseDAG:
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
         config_filepath = "data/prod/alibaba/alibaba.yml"
+        mode = "prod"
 
         dr = DagRunner()
-        dr.run(config_filepath=config_filepath, mode="prod")
-
-        queries = [
-            AlibabaDatabaseExists(),
-            UserTableExists(),
-            AdTableExists(),
-            BehaviorTableExists(),
-            ImpressionTableExists(),
-        ]
-
-        dao = DAO("alibaba")
-        for query in queries:
-            assert dao.exists(query), "{}: {} does not exist.".format(query.database, query.table)
-
-        dao.close()
+        dr.run(config_filepath=config_filepath, mode=mode)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))

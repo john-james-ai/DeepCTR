@@ -20,6 +20,7 @@
 """Reading and writing dataframes with progress bars"""
 from abc import ABC, abstractmethod
 import os
+from datetime import datetime
 from dotenv import load_dotenv
 import pandas as pd
 import numpy as np
@@ -27,13 +28,20 @@ from tqdm import tqdm
 import yaml
 import yamlordereddictloader
 import pyspark
+import logging
 import findspark
 from pyspark import SparkContext, SparkConf
 from pyspark.sql import SparkSession
-from typing import Any
+from typing import Any, Union
+from difflib import get_close_matches
+
+from deepctr.utils.decorators import debugger
 
 findspark.init()
 
+# ------------------------------------------------------------------------------------------------ #
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
 
@@ -55,59 +63,61 @@ class IO(ABC):
 class Parquet(IO):
     """Reads, and writes Spark DataFrames to / from Parquet storage format.."""
 
+    @debugger
     def read(self, filepath: str, memory: int = 80, cores: int = 18, **kwargs) -> pyspark.sql.DataFrame:
         """Reads a Spark DataFrame from Parquet file resource
 
         Args:
             filepath (str): The path to the parquet file resource
             memory (int): The gb of memory allocated to each executor. Defaults to 90Gb
-            cores (int): The number of cores allocated to each executor. Defaults to 18 cores.            
+            cores (int): The number of cores allocated to each executor. Defaults to 18 cores.
 
         Returns:
             Spark DataFrame
         """
-        # Format resource configuration 
+        # Format resource configuration
         cores = self._get_cores(cores)
         memory = self._get_memory(memory)
 
         # Set resources available.
-        conf = SparkConf().setAll([('spark.executor.memory', memory),('spark.executor.cores',cores)])
-        
+        conf = SparkConf().setAll([("spark.executor.memory", memory), ("spark.executor.cores", cores)])
+
         # Create spark session
         spark = SparkSession.builder.config(conf=conf).appName("Read Parquet").getOrCreate()
-        
+
         # Read the data
         sdf = spark.read.parquet(filepath)
         spark.stop()
         return sdf
 
-
-    def write(self, data: pyspark.sql.DataFrame, filepath: str, header: bool = True, 
-        partition_by: list = None, mode: str = "overwrite", **kwargs) -> None:
+    @debugger
+    def write(
+        self,
+        data: pyspark.sql.DataFrame,
+        filepath: str,
+        header: bool = True,
+        partition_by: list = None,
+        mode: str = "overwrite",
+        **kwargs,
+    ) -> None:
         """Writes Spark DataFrame to Parquet file resource
 
         Args:
             data (pyspark.sql.DataFrame): Spark DataFrame to write
             filepath (str): The path to the parquet file to be written
-            partition_by (list): List of strings containing partition column names  
+            partition_by (list): List of strings containing partition column names
             mode (str): 'overwrite' or 'append'. Default is 'overwrite'.
         """
 
         if partition_by is None:
-            data.write.option("header", header) \
-                    .mode(mode) \
-                    .parquet(filepath)
+            data.write.option("header", header).mode(mode).parquet(filepath)
 
         else:
-            data.write.option("header", header) \
-                    .partitionBy(partition_by) \
-                    .mode(mode) \
-                    .parquet(filepath)
-
+            data.write.option("header", header).partitionBy(partition_by).mode(mode).parquet(filepath)
 
     def _get_memory(self, memory: int = 90) -> int:
         """Returns the number of gigabytes of memory to be allocated to each executor."""
-        return str(memory) + 'g'
+        return str(memory) + "g"
 
     def _get_cores(self, cores: int = 18) -> str:
         """Returns the number of cores available to executors."""
@@ -120,53 +130,58 @@ class Parquet(IO):
 class SparkCSV(IO):
     """IO using the Spark API"""
 
-
+    @debugger
     def read(self, filepath: str, memory: int = 80, cores: int = 18, **kwargs) -> pyspark.sql.DataFrame:
         """Reads a Spark DataFrame from Parquet file resource
 
         Args:
             filepath (str): The path to the parquet file resource
             memory (int): The gb of memory allocated to each executor. Defaults to 90Gb
-            cores (int): The number of cores allocated to each executor. Defaults to 18 cores.            
+            cores (int): The number of cores allocated to each executor. Defaults to 18 cores.
 
         Returns:
             Spark DataFrame
         """
-        # Format resource configuration 
+        # Format resource configuration
         cores = self._get_cores(cores)
         memory = self._get_memory(memory)
 
         # Set resources available.
-        conf = SparkConf().setAll([('spark.executor.memory', memory),('spark.executor.cores',cores)])
-        
+        conf = SparkConf().setAll([("spark.executor.memory", memory), ("spark.executor.cores", cores)])
+
         # Create spark session
         spark = SparkSession.builder.config(conf=conf).appName("Read CSV").getOrCreate()
-        
+
         # Read the data
         sdf = spark.read.csv(filepath, inferSchema=True, header=True, sep=",",)
         spark.stop()
         return sdf
 
-
-    def write(self, data: pyspark.sql.DataFrame, filepath: str, header: bool = True, 
-        partition_by: list = None, mode: str = "overwrite", **kwargs) -> None:
+    @debugger
+    def write(
+        self,
+        data: pyspark.sql.DataFrame,
+        filepath: str,
+        header: bool = True,
+        partition_by: list = None,
+        mode: str = "overwrite",
+        **kwargs,
+    ) -> None:
         """Writes Spark DataFrame to Parquet file resource
 
         Args:
             data (pyspark.sql.DataFrame): Spark DataFrame to write
             filepath (str): The path to the parquet file to be written
-            partition_by (list): List of strings containing partition column names  
+            partition_by (list): List of strings containing partition column names
             mode (str): 'overwrite' or 'append'. Default is 'overwrite'.
         """
 
-        data.write.option("header", header) \
-                  .csv(filepath)
+        data.write.option("header", header).csv(filepath)
         return data
-
 
     def _get_memory(self, memory: int = 90) -> int:
         """Returns the number of gigabytes of memory to be allocated to each executor."""
-        return str(memory) + 'g'
+        return str(memory) + "g"
 
     def _get_cores(self, cores: int = 18) -> str:
         """Returns the number of cores available to executors."""
@@ -214,24 +229,21 @@ class SparkS3(IO):
 
         bucket = kwargs.get("bucket", None)
         # Convert pandas DataFrame to a Spark DataFrame object
-        sdf = to_spark(data)
-        sdf.write.format("csv").option("header", "true").save(
-            f"s3a://{bucket}/{filepath}", mode="overwrite"
-        )
+        sdf = data.to_spark()
+        sdf.write.format("csv").option("header", "true").save(f"s3a://{bucket}/{filepath}", mode="overwrite")
 
     def _create_spark_session(self) -> pyspark.sql.SparkSession:
 
         # Set up Spark session on Spark Standalone Cluster
         os.environ["PYSPARK_SUBMIT_ARGS"] = (
-            "-- packages com.amazonaws:aws-java-sdk:1.7.4,org."
-            "apache.hadoop:hadoop-aws:2.7.3 pyspark-shell"
+            "-- packages com.amazonaws:aws-java-sdk:1.7.4,org." "apache.hadoop:hadoop-aws:2.7.3 pyspark-shell"
         )
 
         # Spark Configuration
         conf = (
             SparkConf()
-            .set("spark.executor.extraJavaOptions", "-Dcom.amazonaws.services.s3.enableV4=true")
-            .set("spark.driver.extraJavaOptions", "-Dcom.amazonaws.services.s3.enableV4=true")
+            .set("spark.executor.extraJavaOptions", "-Dcom.amazonaws.services.s3.enableV4=true",)
+            .set("spark.driver.extraJavaOptions", "-Dcom.amazonaws.services.s3.enableV4=true",)
             .setAppName("pyspark_aws")
             .setMaster("local[*]")
         )
@@ -396,21 +408,11 @@ class CsvIO(IO):
         for chunk, subset in enumerate(tqdm(chunks)):
             if chunk == 0:  # Write in 'w' mode
                 data.loc[subset].to_csv(
-                    filepath,
-                    sep=sep,
-                    header=header,
-                    index_label=index_label,
-                    mode="w",
-                    index=index,
+                    filepath, sep=sep, header=header, index_label=index_label, mode="w", index=index,
                 )
             else:
                 data.loc[subset].to_csv(
-                    filepath,
-                    sep=sep,
-                    index_label=index_label,
-                    header=None,
-                    mode="a",
-                    index=index,
+                    filepath, sep=sep, index_label=index_label, header=None, mode="a", index=index,
                 )
 
     def _get_read_header(self, header: Any) -> Any:
@@ -435,3 +437,258 @@ class YamlIO(IO):
     def write(self, data: dict, filepath: str, **kwargs) -> None:
         with open(filepath, "r") as f:
             yaml.dump(data, f)
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                     FileManager                                                    #
+# ------------------------------------------------------------------------------------------------ #
+
+
+class FileManager:
+    """Provides an interface for obtaining and checking filepaths"""
+
+    __stages = ["raw", "staged", "clean", "processed", "complete"]
+    __modes = ["dev", "prod"]
+    __collections = ["alibaba", "avuzo", "criteo"]
+    __asset_types = ["data", "models", "profiles", "visual", "analyses", "experiments"]
+    __fileformats = ["csv", "parquet"]
+
+    def describe(
+        self,
+        asset_type: str = "data",
+        collection: str = "alibaba",
+        item: str = None,
+        stage: str = "raw",
+        fileformat: str = ".parquet",
+        mode: str = "prod",
+        **kwargs,
+    ) -> None:
+        """Returns a dictionary containing file metadata if the file exists.
+
+        Args:
+            asset_type (str): Either 'data', 'model', or valid type of data.
+            collection (str): A collectioning parameter, such as a dataset containing multiple files.
+            item (str): The item comprising the collection.
+            stage (str): Either 'raw', 'staged', or valid step in the process.
+            fileformat (str): Either '.csv', or '.parquet'.
+            mode (str): Either 'dev' or 'prod'
+
+        Raises: FileNotFound Exception if the file is not found.
+        """
+        d = {}
+        filepath = self.make_path(
+            asset_type=asset_type,
+            collection=collection,
+            item=item,
+            stage=stage,
+            fileformat=fileformat,
+            mode=mode,
+            kwargs=kwargs,
+        )
+        try:
+            info = os.stat(filepath)
+            d["user"] = info.st_uid
+            d["directory"] = os.path.dirname(filepath)
+            d["filepath"] = filepath
+            d["filename"] = os.path.basename(filepath)
+            d["size"] = info.st_size
+            d["created"] = datetime.fromtimestamp(os.path.getctime(filepath)).strftime("%Y-%m-%d %H:%M:%S")
+            d["updated"] = datetime.fromtimestamp(os.path.getmtime(filepath)).strftime("%Y-%m-%d %H:%M:%S")
+            d["accessed"] = datetime.fromtimestamp(info.st_atime).strftime("%Y-%m-%d %H:%M:%S")
+            return d
+
+        except FileNotFoundError as e:
+            logger.error("File Exception in {}: File not found. {}".format(self.__class__.__name__, e))
+
+    def exists(
+        self,
+        asset_type: str = "data",
+        collection: str = "alibaba",
+        item: str = None,
+        stage: str = "raw",
+        fileformat: str = "parquet",
+        mode: str = "prod",
+        **kwargs,
+    ) -> bool:
+        """Returns True if the resource specified exists, False otherwise.
+
+        Items are individual files and collections correspond to a non-empty directory of files.
+
+        Args:
+            asset_type (str): Either 'data', 'model', or valid type of data.
+            collection (str): A collectioning parameter, such as a dataset containing multiple files.
+            item (str): The item comprising the collection.
+            stage (str): Either 'raw', 'staged', or valid step in the process.
+            fileformat (str): Either '.csv', or '.parquet'.
+            mode (str): Either 'dev' or 'prod'
+        """
+
+        if item is None:
+            return self._collection_exists(asset_type=asset_type, collection=collection, stage=stage, mode=mode)
+        else:
+            return self._item_exists(
+                asset_type=asset_type, collection=collection, item=item, fileformat=fileformat, stage=stage, mode=mode
+            )
+
+    def collection_exists(
+        self, asset_type: str = "data", collection: str = "alibaba", stage: str = "raw", mode: str = "prod", **kwargs
+    ) -> bool:
+        """Returns True if the collection exists and has items. False otherwise.
+
+        Args:
+            asset_type (str): Either 'data', 'model', or valid type of data.
+            collection (str): A collectioning parameter, such as a dataset containing multiple files.
+            stage (str): Either 'raw', 'staged', or valid step in the process.
+            mode (str): Either 'dev' or 'prod'
+        """
+
+        path = self.make_path(asset_type=asset_type, collection=collection, stage=stage, mode=mode, kwargs=kwargs)
+        if os.path.exists(path):
+            if len(os.listdir(path)) > 0:
+                return True
+        return False
+
+    def item_exists(
+        self,
+        asset_type: str = "data",
+        collection: str = "alibaba",
+        item: str = None,
+        stage: str = "raw",
+        fileformat: str = "parquet",
+        mode: str = "prod",
+        **kwargs,
+    ) -> bool:
+        """Returns True if the item exists. False otherwise.
+
+        Args:
+            asset_type (str): Either 'data', 'model', or valid type of data.
+            collection (str): A collectioning parameter, such as a dataset containing multiple files.
+            item (str): The item comprising the collection.
+            stage (str): Either 'raw', 'staged', or valid step in the process.
+            fileformat (str): Either '.csv', or '.parquet'.
+            mode (str): Either 'dev' or 'prod'
+        """
+
+        path = self.make_path(
+            asset_type=asset_type,
+            collection=collection,
+            stage=stage,
+            item=item,
+            fileformat=fileformat,
+            mode=mode,
+            kwargs=kwargs,
+        )
+        if os.path.exists(path):
+            return True
+        return False
+
+    def get_path(
+        self,
+        asset_type: str = "data",
+        collection: str = "alibaba",
+        item: str = None,
+        stage: str = "raw",
+        fileformat: str = ".parquet",
+        mode: str = "prod",
+        **kwargs,
+    ) -> Union[str, None]:
+        """Returns the path to thee resource specified by the parameters if it exists. It returns None otherwise.
+
+        Args:
+            asset_type (str): Either 'data', 'model', or valid type of data.
+            collection (str): A collectioning parameter, such as a dataset containing multiple files.
+            item (str): The item comprising the collection.
+            stage (str): Either 'raw', 'staged', or valid step in the process.
+            fileformat (str): Either '.csv', or '.parquet'.
+            mode (str): Either 'dev' or 'prod'
+
+        Raises FileNotFound Exception if file is not found.
+        """
+        filepath = self.make_path(
+            asset_type=asset_type,
+            collection=collection,
+            item=item,
+            stage=stage,
+            fileformat=fileformat,
+            mode=mode,
+            kwargs=kwargs,
+        )
+
+        if os.path.exists(filepath):
+            return filepath
+        else:
+            logger.error("File Exception in {}: File not found.".format(self.__class__.__name__))
+            raise FileNotFoundError()
+
+    def make_path(
+        self,
+        asset_type: str = "data",
+        collection: str = "alibaba",
+        item: str = None,
+        stage: str = "raw",
+        fileformat: str = ".parquet",
+        mode: str = "prod",
+        **kwargs,
+    ) -> str:
+        """Returns a path to a file if item is not None. Otherwise, it returns a directory.
+
+        Args:
+            asset_type (str): Either 'data', 'model', or valid type of data.
+            collection (str): A collectioning parameter, such as a dataset containing multiple files.
+            item (str): The item comprising the collection.
+            stage (str): Either 'raw', 'staged', or valid step in the process.
+            fileformat (str): Either '.csv', or '.parquet'.
+            mode (str): Either 'dev' or 'prod'
+
+        Raises: KeyError if unable to interpret the file component parameter
+        """
+        asset_type = self._get_asset_type(asset_type)
+        collection = self._get_dataset(collection)
+        stage = self._get_stage(stage)
+        mode = self._get_mode(mode)
+
+        if item is not None:
+            fileformat = self._get_fileformat(fileformat)
+            return os.path.join(asset_type, mode, collection, stage, item) + fileformat
+        else:
+            return os.path.join(asset_type, mode, collection, stage, "")  # Creates a directory path.
+
+    def _get_stage(self, stage: str) -> str:
+        matches = get_close_matches(stage, FileManager.__stages)
+        try:
+            return matches[0]
+        except IndexError as e:
+            logger.error("No matching stage for {}.".format(stage))
+            raise ValueError(e)
+
+    def _get_mode(self, mode: str) -> str:
+        matches = get_close_matches(mode, FileManager.__modes)
+        try:
+            return matches[0] or mode
+        except IndexError as e:
+            logger.error("No matching mode for {}.".format(mode))
+            raise ValueError(e)
+
+    def _get_dataset(self, dataset: str) -> str:
+        matches = get_close_matches(dataset, FileManager.__collections)
+        try:
+            return matches[0]
+        except IndexError as e:
+            logger.error("No matching dataset for {}.".format(dataset))
+            raise ValueError(e)
+
+    def _get_asset_type(self, asset_type: str) -> str:
+        matches = get_close_matches(asset_type, FileManager.__asset_types)
+        try:
+            return matches[0]
+        except IndexError as e:
+            logger.error("No matching file type for {}.".format(asset_type))
+            raise ValueError(e)
+
+    def _get_fileformat(self, fileformat: str) -> str:
+        matches = get_close_matches(fileformat, FileManager.__fileformats)
+        try:
+            return matches[0]
+        except IndexError as e:
+            logger.error("No matching file extension for {}.".format(fileformat))
+            raise ValueError(e)

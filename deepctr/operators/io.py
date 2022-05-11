@@ -43,19 +43,17 @@ class IO(Operator, ABC):
     """Abstract base class for IO operators."""
 
     def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
-        super(IO, self).__init__(
-            task_no=task_no, task_name=task_name, task_description=task_description, params=params
-        )
+        super(IO, self).__init__(task_no=task_no, task_name=task_name, task_description=task_description, params=params)
 
     @abstractmethod
     def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         pass
 
-    def _get_filepath(self, context: dict) -> str:
-        """Returns the data filepath for the specified mode 'dev'/'prod'"""        
-        mode = context.get("mode", 'dev')
+    def _get_path(self, context: dict) -> str:
+        """Returns the data filepath for the specified mode 'dev'/'prod'"""
+        mode = context.get("mode", "dev")
         dataset = context.get("dataset")
-        directory = os.path.join('data',mode)
+        directory = os.path.join("data", mode)
         filepath = os.path.join(dataset, self._params["filename"])
         return os.path.join(directory, filepath)
 
@@ -76,12 +74,10 @@ class ParquetReader(IO):
     @operator
     def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         """Reads from the designated resource"""
-        filepath = self._get_filepath(context)
+        filepath = self._get_path(context)
 
         io = Parquet()
-        data = io.read(
-                filepath=filepath,
-            )           
+        data = io.read(filepath=filepath,)
 
         return data
 
@@ -100,9 +96,9 @@ class ParquetWriter(IO):
     @operator
     def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         """Reads from the designated resource"""
-        filepath = self._get_filepath(context)
-        partition_by = self._params.get('partition_by', None)
-        
+        filepath = self._get_path(context)
+        partition_by = self._params.get("partition_by", None)
+
         io = Parquet()
         io.write(data=data, filepath=filepath, partition_by=partition_by)
         return data
@@ -124,8 +120,8 @@ class SparkCSVReader(IO):
     @operator
     def execute(self, data: Any = None, context: Context = None) -> Any:
         """Reads from the designated resource"""
-        filepath = self._get_filepath(context)
-                
+        filepath = self._get_path(context)
+
         io = SparkCSV()
         data = io.read(filepath=filepath)
         return data
@@ -145,30 +141,11 @@ class SparkCSVWriter(IO):
     @operator
     def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         """Reads from the designated resource"""
-        filepath = self._get_filepath(context)
+        filepath = self._get_path(context)
 
         io = SparkCSV()
-        io.write(data=data, filepath=filepath, partition_by=self._params('partition_by',None))
+        io.write(data=data, filepath=filepath, partition_by=self._params("partition_by", None))
         return data
-
-
-# ------------------------------------------------------------------------------------------------ #
-
-
-class SQLReader(IO):
-    """Reads an SQL file and returns a list of sql statements."""
-
-    def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
-        super(SQLReader, self).__init__(
-            task_no=task_no, task_name=task_name, task_description=task_description, params=params
-        )
-
-    @operator
-    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
-        """Reads from the designated resource"""
-        io = CsvIO()
-        io.write(data=data, filepath=self._params["destination"])
-        return None
 
 
 # ------------------------------------------------------------------------------------------------ #

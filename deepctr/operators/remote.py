@@ -28,7 +28,7 @@ from botocore.exceptions import NoCredentialsError
 
 from deepctr.operators.base import Operator
 from deepctr.utils.decorators import operator
-from deepctr.data.dag import Context
+from deepctr.utils.io import FileManager, YamlIO
 
 # ------------------------------------------------------------------------------------------------ #
 
@@ -53,38 +53,51 @@ class ExtractS3(Operator):
             task_no=task_no, task_name=task_name, task_description=task_description, params=params
         )
 
-        self._bucket = params["bucket"]
-        self._folder = params["folder"]
-        self._destination = params["destination"]
+        self._task_no = task_no
+        self._task_name = task_name
+        self._task_description = task_description
+
+        self._resource_type = params.get("resource_type")
+        self._resource = params.get("resource")
+        self._bucket = params.get("bucket")
+        self._folder = params.get("folder")
+        self._stage = params.get("stage")
         self._force = params["force"]
+
+        self._credentials_file = "config/credentials.yml"
 
         self._progressbar = None
 
     @operator
-    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: list = None) -> pd.DataFrame:
+        """Extracts data from an Amazon AWS S3 resource and persists it."""
 
-        if len(os.listdir(self._destination)) != 4 or self._force:
+        # Get data asset information from context data
+        asset_type = context.get("asset_type", "data")
+        collection = context.get("dataaset", None)
+        mode = context.get("mode", "prod")
+        stage = self._destination.get("stage", "external")
 
-            resource_type = self._params["context"].get("resource_type")
-            resource = self._params["context"].get("resource")
+        # Obtain the directory path from the FileManager
+        fm = FileManager()
+        destination = fm.make_path(asset_type=asset_type, collection=collection, stage=stage, mode=mode)
 
-            credentials = context.get_resource(resource_type=resource_type, resource=resource)
+        # If the non-empty collection already exists and force is False, this step is skipped.
+        if os.path.exists(destination) and len(os.listdir(destination)) > 0 and not self._force:
 
+            io = YamlIO()
+            credentials = io.read(self._credentials_file)
             s3access = credentials.get("key")
             s3password = credentials.get("password")
 
             object_keys = self._list_bucket_contents()
-            self._s3 = boto3.client(
-                "s3", aws_access_key_id=s3access, aws_secret_access_key=s3password
-            )
+            self._s3 = boto3.client("s3", aws_access_key_id=s3access, aws_secret_access_key=s3password)
 
-            os.makedirs(self._destination, exist_ok=True)
+            os.makedirs(destination, exist_ok=True)
 
             for object_key in object_keys:
-                destination = os.path.join(self._destination, os.path.basename(object_key))
-
-                if not os.path.exists(destination) or self._force:
-                    self._download(object_key, destination)
+                filepath = os.path.join(destination, os.path.basename(object_key))
+                self._download(object_key, filepath)
 
     def _list_bucket_contents(self) -> list:
         """Returns a list of objects in the designated bucket"""
@@ -98,7 +111,7 @@ class ExtractS3(Operator):
 
         return objects
 
-    def _download(self, object_key: str, destination: str) -> None:
+    def _download(self, object_key: str, filepath: str) -> None:
         """Downloads object designated by the object ke if not exists or force is True"""
 
         response = self._s3.head_object(Bucket=self._bucket, Key=object_key)
@@ -108,9 +121,7 @@ class ExtractS3(Operator):
         self._progressbar.start()
 
         try:
-            self._s3.download_file(
-                self._bucket, object_key, destination, Callback=self._download_callback
-            )
+            self._s3.download_file(self._bucket, object_key, filepath, Callback=self._download_callback)
 
         except NoCredentialsError:
             msg = "Credentials not available for {} bucket".format(self._bucket)

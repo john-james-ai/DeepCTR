@@ -25,12 +25,114 @@ import logging
 import time
 from pyspark.sql import SparkSession
 import pandas as pd
-from deepctr.utils.io import SparkS3, Parquet
+from deepctr.utils.io import SparkS3, Parquet, FileManager
 
 # ---------------------------------------------------------------------------- #
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------- #
+
+
+@pytest.mark.FileManager
+class TestFileManager:
+    def test_make_path(self, caplog) -> None:
+        caplog.set_level(logging.INFO)
+        asset_type = "data"
+        collection = "aliba"
+        item = "user_profile"
+        stage = "staged"
+        fileformat = ".csv"
+        mode = "prad"
+
+        lib = FileManager()
+        filepath = lib.make_filepath(asset_type, collection, item, stage, fileformat, mode)
+        assert "data" in filepath, logger.info(
+            "\tFailed in {} {}".format(self.__class__.__name__, inspect.stack()[0][3])
+        )
+        assert "alibaba" in filepath, logger.info(
+            "\tFailed in {} {}".format(self.__class__.__name__, inspect.stack()[0][3])
+        )
+        assert "user" in filepath, logger.info(
+            "\tFailed in {} {}".format(self.__class__.__name__, inspect.stack()[0][3])
+        )
+        assert "staged" in filepath, logger.info(
+            "\tFailed in {} {}".format(self.__class__.__name__, inspect.stack()[0][3])
+        )
+        assert ".csv" in filepath, logger.info(
+            "\tFailed in {} {}".format(self.__class__.__name__, inspect.stack()[0][3])
+        )
+        assert "prod" in filepath, logger.info(
+            "\tFailed in {} {}".format(self.__class__.__name__, inspect.stack()[0][3])
+        )
+
+    def test_get_path_ok(self, caplog) -> None:
+        caplog.set_level(logging.INFO)
+        asset_type = "data"
+        collection = "aliba"
+        item = "user_profile"
+        stage = "raw"
+        fileformat = ".csv"
+        mode = "prad"
+
+        lib = FileManager()
+        filepath = lib.get_path(asset_type, collection, item, stage, fileformat, mode)
+        assert isinstance(filepath, str), logger.info(
+            "\tFailed in {} {}".format(self.__class__.__name__, inspect.stack()[0][3])
+        )
+
+    def test_get_path_fail(self, caplog) -> None:
+        caplog.set_level(logging.INFO)
+        asset_type = "data"
+        collection = "aliba"
+        item = "user"
+        stage = "stage"
+        fileformat = ".csv"
+        mode = "prad"
+
+        lib = FileManager()
+        with pytest.raises(FileNotFoundError):
+            filepath = lib.get_path(asset_type, collection, item, stage, fileformat, mode)
+            assert filepath is None, logger.info(
+                "\tFailed in {} {}".format(self.__class__.__name__, inspect.stack()[0][3])
+            )
+
+    def test_describe_ok(self, caplog) -> None:
+        caplog.set_level(logging.INFO)
+        asset_type = "dat"
+        collection = "aliba"
+        item = "user_profile"
+        stage = "raw"
+        fileformat = ".csv"
+        mode = "prad"
+
+        lib = FileManager()
+        filepath = lib.get_path(asset_type, collection, item, stage, fileformat, mode)
+
+        assert isinstance(filepath, str), logger.info(
+            "\tFailed in {} {}".format(self.__class__.__name__, inspect.stack()[0][3])
+        )
+        description = lib.describe(asset_type, collection, item, stage, fileformat, mode)
+
+        assert isinstance(description, dict), logger.info(
+            "\tFailed in {} {}".format(self.__class__.__name__, inspect.stack()[0][3])
+        )
+
+    def test_describe_fail(self, caplog) -> None:
+        caplog.set_level(logging.INFO)
+        asset_type = "d"
+        collection = "aliba"
+        item = "user"
+        stage = "raw"
+        fileformat = ".csv"
+        mode = "prad"
+
+        lib = FileManager()
+
+        with pytest.raises(ValueError):
+            description = lib.describe(asset_type, collection, item, stage, fileformat, mode)
+            assert not isinstance(description, dict)
+
+
 @pytest.mark.parquet
 class TestParquet:
     def test_parquet(self, caplog) -> None:
@@ -39,24 +141,20 @@ class TestParquet:
         filepath1 = "data/alibaba/development/user_profile.csv"
         filepath2 = "tests/data/test_df1.parquet"
 
-
         if os.path.exists(filepath2):
             shutil.rmtree(filepath2)
 
-        spark = SparkSession.builder.master("local[1]") \
-                            .appName("TestSpark") \
-                            .getOrCreate() 
+        spark = SparkSession.builder.master("local[1]").appName("TestSpark").getOrCreate()
         df1 = spark.read.csv(filepath1)
 
         io = Parquet()
         io.write(df1, filepath2)
 
-        assert os.path.exists(filepath2), "Parquet Error: Write didn't happen"        
+        assert os.path.exists(filepath2), "Parquet Error: Write didn't happen"
 
         df2 = io.read(filepath2)
 
         assert df1.schema == df2.schema, "Parquet Read Write Failure"
-        
 
 
 @pytest.mark.s3
