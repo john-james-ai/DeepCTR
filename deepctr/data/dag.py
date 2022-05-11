@@ -204,6 +204,7 @@ class DagBuilder:
         dag_no = config["dag_no"]
         dag_name = config["dag_name"]
         dag_description = config["dag_description"]
+        context = config['context']
 
         tasks = self._build_tasks(config)
 

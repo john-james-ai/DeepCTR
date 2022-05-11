@@ -25,7 +25,7 @@ import tarfile
 import logging
 
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import timestamp_seconds, year, month, day, hour, dayofmonth, col
+from pyspark.sql.functions import timestamp_seconds, year, month, days, hour, dayofmonth, col
 
 from deepctr.utils.decorators import operator
 from deepctr.operators.base import Operator
@@ -95,25 +95,10 @@ class ReplaceColumnNames(Operator):
     def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
         """Replaces the columns in the DataFrame according to the params['columns'] object."""
 
-        # Dispatch to the appropriate Pandas or Spark operator for the column processing.
-        if isinstance(data, pd.DataFrame):
+        data = data.toDF(*[x for x in self._params['columns'].values()]) 
 
-            data = self._rename_pandas_cols(data)  
+        logger.error(data.schema)
 
-        else:
-            data = self._rename_spark_cols(data)
-
-        return data
-
-    def _rename_pandas_cols(self, data: pd.DataFrame) -> pd.DataFrame:
-
-        data.columns = data.columns.str.replace(" ", "")  # Remove any whitespace in column names
-        data.rename(columns=self._params["columns"], inplace=True)
-        return data
-
-    def _rename_spark_cols(self, data: DataFrame) -> DataFrame:
-
-        data = data.toDF(*[x for x in self._params['columns'].values]) 
         return data
 
 

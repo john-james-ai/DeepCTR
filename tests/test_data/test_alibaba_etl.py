@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.alibaba
 class TestAlibabaDatabaseDAG:
-    def test_database(self, caplog) -> None:
+    def test_alibaba(self, caplog) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 

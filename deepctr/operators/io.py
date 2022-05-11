@@ -22,12 +22,17 @@ import os
 import pandas as pd
 import shutil
 from typing import Any
+import logging
 
 from deepctr.utils.io import SparkCSV, Parquet
 from deepctr.operators.base import Operator
 from deepctr.utils.decorators import operator
 from deepctr.data.dag import Context
 
+# ------------------------------------------------------------------------------------------------ #
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+# ------------------------------------------------------------------------------------------------ #
 
 # ------------------------------------------------------------------------------------------------ #
 #                                           IO                                                     #
@@ -49,9 +54,10 @@ class IO(Operator, ABC):
     def _get_filepath(self, context: dict) -> str:
         """Returns the data filepath for the specified mode 'dev'/'prod'"""        
         mode = context.get("mode", 'dev')
+        dataset = context.get("dataset")
         directory = os.path.join('data',mode)
-        filename = self._params["filename"]
-        return os.path.join(directory, filename)
+        filepath = os.path.join(dataset, self._params["filename"])
+        return os.path.join(directory, filepath)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -74,7 +80,7 @@ class ParquetReader(IO):
 
         io = Parquet()
         data = io.read(
-                filepath=self._params["source"]                
+                filepath=filepath,
             )           
 
         return data
@@ -96,7 +102,7 @@ class ParquetWriter(IO):
         """Reads from the designated resource"""
         filepath = self._get_filepath(context)
         partition_by = self._params.get('partition_by', None)
-
+        
         io = Parquet()
         io.write(data=data, filepath=filepath, partition_by=partition_by)
         return data
@@ -119,9 +125,9 @@ class SparkCSVReader(IO):
     def execute(self, data: Any = None, context: Context = None) -> Any:
         """Reads from the designated resource"""
         filepath = self._get_filepath(context)
-        
+                
         io = SparkCSV()
-        data = io.read(filepath=self._params["source"])
+        data = io.read(filepath=filepath)
         return data
 
 
@@ -141,7 +147,7 @@ class SparkCSVWriter(IO):
         """Reads from the designated resource"""
         filepath = self._get_filepath(context)
 
-        io = SparkCsvIO()
+        io = SparkCSV()
         io.write(data=data, filepath=filepath, partition_by=self._params('partition_by',None))
         return data
 

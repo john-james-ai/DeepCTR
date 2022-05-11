@@ -161,6 +161,7 @@ class SparkCSV(IO):
 
         data.write.option("header", header) \
                   .csv(filepath)
+        return data
 
 
     def _get_memory(self, memory: int = 90) -> int:
