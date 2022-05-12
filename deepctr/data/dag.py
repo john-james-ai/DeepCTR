@@ -19,109 +19,13 @@
 # ================================================================================================ #
 """Defines the interfaces for classes involved in the construction and implementation of DAGS."""
 from abc import ABC, abstractmethod
-import os
 import importlib
-from dotenv import load_dotenv
 import logging
-from pprint import pprint
-from typing import Any
 from deepctr.utils.io import YamlIO
 
 # ------------------------------------------------------------------------------------------------ #
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-# ------------------------------------------------------------------------------------------------ #
-
-
-class Context:
-    """DAG Context object containing variables shared among the tasks in a dag.
-
-    The context may contain any type of variable that can be represented as a key/value
-    pair. Database credentials have a nested structure organized by the resource
-    for which the credentials are used. For the credentials, the structure
-    is as illustrated below:
-
-    context = {
-        'database': {
-            'mysql': {
-                user: username,
-                pwd: somepwd,
-                ...
-            },
-            'somedb': {
-                user: anotheruser,
-                pwd: anotherpwd,
-                ...
-            }
-        },
-        'cloud': {
-            'aws': {
-                key: somekey,
-                pwd: somepwd
-                }
-            }
-        }
-    }
-    """
-
-    def __init__(self) -> None:
-        self._context = {}
-
-    def add(self, key: str, value: Any) -> None:
-        """Adds a key/value pair to the context.
-
-        Args:
-            key (str): The variable name.
-            value (Any): The value for the variable.
-
-        """
-        self._context[key] = value
-
-    def get(self, key: str) -> Any:
-        """Returns a value for a variable name passed via the 'key' parameter
-
-        Args:
-            key (str): Variable name
-
-        Returns:
-            Any the value for the variable name.
-        """
-        try:
-            return self._context.get(key)
-        except KeyError as e:
-            logger.error("The key {} was not found on the context\n{}".format(key, e))
-
-    def add_resource(self, resource_type: str, resource: str) -> None:
-        """Adds context for a given resource and resource type
-
-        Args:
-            resource_type (str): Type of resource, i.e. 'database' or 'cloud'
-            resource (str): Name of the resource
-        """
-        # Filepath for credentials is stored in environment variable
-        load_dotenv()
-        filepath = os.getenv("credentials_filepath")
-
-        io = YamlIO()
-        credentials_data = io.read(filepath)
-        credentials = credentials_data[resource_type].get(resource)
-
-        self._context[resource_type] = self._context.get(resource_type, {})
-        self._context[resource_type][resource] = credentials
-
-    def get_resource(self, resource_type: str, resource: str) -> dict:
-        """Gets context for a given resource and resource type from context object
-
-        Args:
-            resource_type (str): Type of resource, i.e. 'database' or 'cloud'
-            resource (str): Name of the resource
-        """
-        return self._context[resource_type].get(resource)
-
-    def print_context(self) -> None:
-        pprint(self._context)
-
-
 # ------------------------------------------------------------------------------------------------ #
 
 
@@ -135,9 +39,7 @@ class AbstractDAG(ABC):
 
     """
 
-    def __init__(
-        self, dag_no: str, dag_name: str, dag_description: str, tasks: list, context: Context = None
-    ) -> None:
+    def __init__(self, dag_no: str, dag_name: str, dag_description: str, tasks: list, context: dict = None) -> None:
         self._dag_no = dag_no
         self._dag_description = dag_description
         self._tasks = tasks
@@ -162,15 +64,9 @@ class Dag(AbstractDAG):
 
     """
 
-    def __init__(
-        self, dag_no: str, dag_name: str, dag_description: str, tasks: list, context: Context = None
-    ) -> None:
+    def __init__(self, dag_no: str, dag_name: str, dag_description: str, tasks: list, context: dict = None) -> None:
         super(Dag, self).__init__(
-            dag_no=dag_no,
-            dag_name=dag_name,
-            dag_description=dag_description,
-            tasks=tasks,
-            context=context,
+            dag_no=dag_no, dag_name=dag_name, dag_description=dag_description, tasks=tasks, context=context,
         )
 
     def run(self, start: int = 0, stop: float = float("inf")) -> None:
@@ -204,16 +100,12 @@ class DagBuilder:
         dag_no = config["dag_no"]
         dag_name = config["dag_name"]
         dag_description = config["dag_description"]
-        context = config['context']
+        context = config["context"]
 
         tasks = self._build_tasks(config)
 
         self._dag = Dag(
-            dag_no=dag_no,
-            dag_name=dag_name,
-            dag_description=dag_description,
-            tasks=tasks,
-            context=context,
+            dag_no=dag_no, dag_name=dag_name, dag_description=dag_description, tasks=tasks, context=context,
         )
 
         return self._dag
@@ -247,9 +139,7 @@ class DagBuilder:
 class DagRunner:
     """Builds and executes a DAG"""
 
-    def run(
-        self, config_filepath: str, start: int = 0, stop: float = float("inf"), mode: str = "dev"
-    ) -> None:
+    def run(self, config_filepath: str, start: int = 0, stop: float = float("inf"), mode: str = "dev") -> None:
         """Builds and executes a DAG
 
         Args:

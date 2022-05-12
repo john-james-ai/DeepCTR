@@ -28,7 +28,7 @@ from botocore.exceptions import NoCredentialsError
 
 from deepctr.operators.base import Operator
 from deepctr.utils.decorators import operator
-from deepctr.utils.io import FileManager, YamlIO
+from deepctr.utils.io import YamlIO
 
 # ------------------------------------------------------------------------------------------------ #
 
@@ -61,7 +61,7 @@ class ExtractS3(Operator):
         self._resource = params.get("resource")
         self._bucket = params.get("bucket")
         self._folder = params.get("folder")
-        self._stage = params.get("stage")
+        self._destination = params.get("destination")
         self._force = params["force"]
 
         self._credentials_file = "config/credentials.yml"
@@ -72,31 +72,21 @@ class ExtractS3(Operator):
     def execute(self, data: Any = None, context: list = None) -> pd.DataFrame:
         """Extracts data from an Amazon AWS S3 resource and persists it."""
 
-        # Get data asset information from context data
-        asset_type = context.get("asset_type", "data")
-        collection = context.get("dataaset", None)
-        mode = context.get("mode", "prod")
-        stage = self._destination.get("stage", "external")
-
-        # Obtain the directory path from the FileManager
-        fm = FileManager()
-        destination = fm.make_path(asset_type=asset_type, collection=collection, stage=stage, mode=mode)
-
         # If the non-empty collection already exists and force is False, this step is skipped.
-        if os.path.exists(destination) and len(os.listdir(destination)) > 0 and not self._force:
+        if not (os.path.exists(self._destination) and len(os.listdir(self._destination)) > 0) and not self._force:
 
             io = YamlIO()
             credentials = io.read(self._credentials_file)
-            s3access = credentials.get("key")
-            s3password = credentials.get("password")
+            s3access = credentials[self._resource_type][self._resource].get("key")
+            s3password = credentials[self._resource_type][self._resource].get("password")
 
             object_keys = self._list_bucket_contents()
             self._s3 = boto3.client("s3", aws_access_key_id=s3access, aws_secret_access_key=s3password)
 
-            os.makedirs(destination, exist_ok=True)
+            os.makedirs(self._destination, exist_ok=True)
 
             for object_key in object_keys:
-                filepath = os.path.join(destination, os.path.basename(object_key))
+                filepath = os.path.join(self._destination, os.path.basename(object_key))
                 self._download(object_key, filepath)
 
     def _list_bucket_contents(self) -> list:

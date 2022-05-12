@@ -20,6 +20,7 @@
 import inspect
 import pytest
 import logging
+import shutil
 from deepctr.data.dag import DagRunner
 
 
@@ -33,14 +34,33 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.alibaba
 class TestAlibabaDatabaseDAG:
-    def test_alibaba(self, caplog) -> None:
+    def cleanup(self):
+
+        filepath = "data/alibaba/prod/staged"
+        shutil.rmtree(filepath, ignore_errors=True)
+
+    def test_alibaba_extract(self, caplog) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        config_filepath = "data/prod/alibaba/alibaba.yml"
+        config_filepath = "data/alibaba/prod/alibaba.yml"
         mode = "prod"
 
         dr = DagRunner()
-        dr.run(config_filepath=config_filepath, mode=mode)
+        dr.run(config_filepath=config_filepath, start=0, stop=2, mode=mode)
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    def test_alibaba_samples(self, caplog) -> None:
+        caplog.set_level(logging.INFO)
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        self.cleanup()
+
+        config_filepath = "data/alibaba/prod/alibaba.yml"
+        mode = "prod"
+
+        dr = DagRunner()
+        dr.run(config_filepath=config_filepath, start=3, stop=6, mode=mode)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))

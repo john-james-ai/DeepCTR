@@ -55,7 +55,7 @@ class SQLEngine(Operator):
         )
 
     @operator
-    def execute(self, data: Any = None, context: Context = None) -> None:
+    def execute(self, data: Any = None, context: dict = None) -> None:
 
         connection = self._get_connection(context=context)
 
@@ -65,12 +65,10 @@ class SQLEngine(Operator):
 
         connection.close()
 
-    def _get_connection(self, context: Context) -> connect:
+    def _get_connection(self, context: dict) -> connect:
         """Return a MySQL database connection."""
 
-        credentials = self.get_credentials(
-            external_resource=self._params["external_resource"], context=context
-        )
+        credentials = self.get_credentials(external_resource=self._params["external_resource"], context=context)
 
         connection = connect(
             host=credentials["host"],
@@ -97,7 +95,7 @@ class TableLoader(Operator):
         )
 
     @operator
-    def execute(self, data: Any = None, context: Context = None) -> None:
+    def execute(self, data: Any = None, context: dict = None) -> None:
 
         engine = self._get_engine(context=context)
 
@@ -127,12 +125,7 @@ class TableLoader(Operator):
     def _get_engine(self, context: dict) -> sqlalchemy.engine:
         """Return an SQLAlchemy Database Engine"""
 
-        credentials = self.get_credentials(
-            external_resource=self.params["external_resource"], context=context
-        )
+        credentials = self.get_credentials(external_resource=self.params["external_resource"], context=context)
 
-        engine = sqlalchemy.create_engine(
-            credentials["uri"],
-            echo=False,
-        )
+        engine = sqlalchemy.create_engine(credentials["uri"], echo=False,)
         return engine

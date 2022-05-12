@@ -18,7 +18,6 @@
 # Copyright: (c) 2022 Bryant St. Labs                                                              #
 # ================================================================================================ #
 from abc import ABC, abstractmethod
-import os
 import pandas as pd
 import shutil
 from typing import Any
@@ -27,7 +26,7 @@ import logging
 from deepctr.utils.io import SparkCSV, Parquet
 from deepctr.operators.base import Operator
 from deepctr.utils.decorators import operator
-from deepctr.data.dag import Context
+from deepctr.utils.io import FileManager
 
 # ------------------------------------------------------------------------------------------------ #
 logging.basicConfig(level=logging.INFO)
@@ -45,17 +44,47 @@ class IO(Operator, ABC):
     def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
         super(IO, self).__init__(task_no=task_no, task_name=task_name, task_description=task_description, params=params)
 
+        self._item = params.get("item", None)
+        self._stage = params.get("stage", "raw")
+        self._fileformat = params.get("fileformat", None)
+
     @abstractmethod
-    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: dict = None) -> pd.DataFrame:
         pass
 
-    def _get_path(self, context: dict) -> str:
-        """Returns the data filepath for the specified mode 'dev'/'prod'"""
+    def _check_in(self, context: dict) -> str:
+        """Gets an available filepath for writing."""
+        asset_type = context.get("asset_type", "data")
+        collection = context.get("dataset")
         mode = context.get("mode", "dev")
-        dataset = context.get("dataset")
-        directory = os.path.join("data", mode)
-        filepath = os.path.join(dataset, self._params["filename"])
-        return os.path.join(directory, filepath)
+
+        fm = FileManager()
+
+        return fm.check_in(
+            asset_type=asset_type,
+            collection=collection,
+            item=self._item,
+            stage=self._stage,
+            fileformat=self._fileformat,
+            mode=mode,
+        )
+
+    def _check_out(self, context: dict) -> str:
+        """Returns a filepath for an existing asset."""
+        asset_type = context.get("asset_type", "data")
+        collection = context.get("dataset")
+        mode = context.get("mode", "dev")
+
+        fm = FileManager()
+
+        return fm.check_out(
+            asset_type=asset_type,
+            collection=collection,
+            item=self._item,
+            stage=self._stage,
+            fileformat=self._fileformat,
+            mode=mode,
+        )
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -72,9 +101,9 @@ class ParquetReader(IO):
         )
 
     @operator
-    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: dict = None) -> pd.DataFrame:
         """Reads from the designated resource"""
-        filepath = self._get_path(context)
+        filepath = self._check_out(context)
 
         io = Parquet()
         data = io.read(filepath=filepath,)
@@ -94,10 +123,12 @@ class ParquetWriter(IO):
         )
 
     @operator
-    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: dict = None) -> pd.DataFrame:
         """Reads from the designated resource"""
-        filepath = self._get_path(context)
+        filepath = self._check_in(context)
         partition_by = self._params.get("partition_by", None)
+
+        print("\n\n\tDataFrame has shape ({},{})".format(str(data.count()), str(len(data.columns))))
 
         io = Parquet()
         io.write(data=data, filepath=filepath, partition_by=partition_by)
@@ -118,9 +149,9 @@ class SparkCSVReader(IO):
         )
 
     @operator
-    def execute(self, data: Any = None, context: Context = None) -> Any:
+    def execute(self, data: Any = None, context: dict = None) -> Any:
         """Reads from the designated resource"""
-        filepath = self._get_path(context)
+        filepath = self._check_out(context)
 
         io = SparkCSV()
         data = io.read(filepath=filepath)
@@ -139,9 +170,9 @@ class SparkCSVWriter(IO):
         )
 
     @operator
-    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: dict = None) -> pd.DataFrame:
         """Reads from the designated resource"""
-        filepath = self._get_path(context)
+        filepath = self._check_in(context)
 
         io = SparkCSV()
         io.write(data=data, filepath=filepath, partition_by=self._params("partition_by", None))
@@ -160,7 +191,7 @@ class CopyOperator(Operator):
         )
 
     @operator
-    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: dict = None) -> pd.DataFrame:
         """Copies a file from source to destination"""
 
         source = self._params["source"]

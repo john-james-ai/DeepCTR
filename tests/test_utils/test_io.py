@@ -33,9 +33,9 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------- #
 
 
-@pytest.mark.FileManager
+@pytest.mark.filemanager
 class TestFileManager:
-    def test_make_path(self, caplog) -> None:
+    def test_check_in_ok(self, caplog) -> None:
         caplog.set_level(logging.INFO)
         asset_type = "data"
         collection = "aliba"
@@ -45,7 +45,7 @@ class TestFileManager:
         mode = "prad"
 
         lib = FileManager()
-        filepath = lib.make_filepath(asset_type, collection, item, stage, fileformat, mode)
+        filepath = lib.check_in(asset_type, collection, item, stage, fileformat, mode)
         assert "data" in filepath, logger.info(
             "\tFailed in {} {}".format(self.__class__.__name__, inspect.stack()[0][3])
         )
@@ -65,7 +65,7 @@ class TestFileManager:
             "\tFailed in {} {}".format(self.__class__.__name__, inspect.stack()[0][3])
         )
 
-    def test_get_path_ok(self, caplog) -> None:
+    def test_check_in_fail(self, caplog) -> None:
         caplog.set_level(logging.INFO)
         asset_type = "data"
         collection = "aliba"
@@ -75,30 +75,15 @@ class TestFileManager:
         mode = "prad"
 
         lib = FileManager()
-        filepath = lib.get_path(asset_type, collection, item, stage, fileformat, mode)
-        assert isinstance(filepath, str), logger.info(
-            "\tFailed in {} {}".format(self.__class__.__name__, inspect.stack()[0][3])
-        )
-
-    def test_get_path_fail(self, caplog) -> None:
-        caplog.set_level(logging.INFO)
-        asset_type = "data"
-        collection = "aliba"
-        item = "user"
-        stage = "stage"
-        fileformat = ".csv"
-        mode = "prad"
-
-        lib = FileManager()
-        with pytest.raises(FileNotFoundError):
-            filepath = lib.get_path(asset_type, collection, item, stage, fileformat, mode)
+        with pytest.raises(FileExistsError):
+            filepath = lib.check_in(asset_type, collection, item, stage, fileformat, mode)
             assert filepath is None, logger.info(
                 "\tFailed in {} {}".format(self.__class__.__name__, inspect.stack()[0][3])
             )
 
-    def test_describe_ok(self, caplog) -> None:
+    def test_check_out_ok(self, caplog) -> None:
         caplog.set_level(logging.INFO)
-        asset_type = "dat"
+        asset_type = "data"
         collection = "aliba"
         item = "user_profile"
         stage = "raw"
@@ -106,31 +91,26 @@ class TestFileManager:
         mode = "prad"
 
         lib = FileManager()
-        filepath = lib.get_path(asset_type, collection, item, stage, fileformat, mode)
+        filepath = lib.check_out(asset_type, collection, item, stage, fileformat, mode)
 
         assert isinstance(filepath, str), logger.info(
             "\tFailed in {} {}".format(self.__class__.__name__, inspect.stack()[0][3])
         )
-        description = lib.describe(asset_type, collection, item, stage, fileformat, mode)
 
-        assert isinstance(description, dict), logger.info(
-            "\tFailed in {} {}".format(self.__class__.__name__, inspect.stack()[0][3])
-        )
-
-    def test_describe_fail(self, caplog) -> None:
+    def test_check_out_fail(self, caplog) -> None:
         caplog.set_level(logging.INFO)
-        asset_type = "d"
+        asset_type = "data"
         collection = "aliba"
-        item = "user"
-        stage = "raw"
+        item = "user_profile"
+        stage = "staged"
         fileformat = ".csv"
         mode = "prad"
 
         lib = FileManager()
 
-        with pytest.raises(ValueError):
-            description = lib.describe(asset_type, collection, item, stage, fileformat, mode)
-            assert not isinstance(description, dict)
+        with pytest.raises(FileNotFoundError):
+            filepath = lib.check_out(asset_type, collection, item, stage, fileformat, mode)
+            assert not isinstance(filepath, str)
 
 
 @pytest.mark.parquet

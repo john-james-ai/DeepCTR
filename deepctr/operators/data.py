@@ -17,26 +17,167 @@
 # License  : BSD 3-clause "New" or "Revised" License                                               #
 # Copyright: (c) 2022 Bryant St. Labs                                                              #
 # ================================================================================================ #
+from abc import ABC, abstractmethod
+import sys
 import os
 import pandas as pd
 from datetime import datetime
 from typing import Any
 import tarfile
 import logging
-
-from pyspark.sql.functions import timestamp_seconds, year, month, dayofmonth, col
+import pyspark
+from pyspark.sql.functions import timestamp_seconds, hour, col, rand
 
 from deepctr.utils.decorators import operator
 from deepctr.operators.base import Operator
 from deepctr.utils.io import CsvIO
-from deepctr.data.dag import Context
-from deepctr.utils.decorators import debugger
 from deepctr.utils.sample import sample_from_file
 
 # ------------------------------------------------------------------------------------------------ #
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
+# ------------------------------------------------------------------------------------------------ #
+#                                         PARTITION                                                #
+# ------------------------------------------------------------------------------------------------ #
+
+
+class BasePartitioner(Operator, ABC):
+    """Base class for Spark DataFrame partition strategies.
+
+    Args:
+        task_no (int): A number, typically used to indicate the sequence of the task within a DAG
+        task_name (str): String name
+        task_description (str): A description for the task
+        params (Any): Parameters for the task, including:
+
+            filepath (str): Filepath to the partitioned output files.
+            n_partitions (int): The number of partitions to create. Default's to None. If None
+                this value will be inferred.
+            max_records_per_file (int): The maximum number of records that can be in a
+                partition file. Default is None in which case, the value will be inferred.
+            partition_columns (list): List of columns in the dataset by which to partition.
+            shuffle_partitions (int): Transformations requiring cross-partition data trigger
+                data shuffling activity. The default number of shuffle partitions is 200.
+            max_partition_bytes (int): Spark parameter which governs partition size. It defaults
+                to  134,217,728 (128 MB).
+            n_cores (int): Number of CPU cores. Default = 24.
+            open_cost (int): Spark parameter that captures the cost to open a file in a distributed system.
+                Default = 4,194,304 (4MB).
+
+    """
+
+    def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
+        super(BasePartitioner, self).__init__(
+            task_no=task_no, task_name=task_name, task_description=task_description, params=params
+        )
+        self._n_partitions = params.get("n_partitions", None)
+        self._max_records_per_file = params.get("max_records_per_file", None)
+        self._file_partition_columns = params.get("file_partition_columns", [])
+        self._memory_partition_columns = params.get("memory_partition_columns", [])
+        self._shuffle_partitions = params.get("shuffle_partitions", 200)
+        self._max_partition_bytes = params.get("max_partition_bytes", 134217728)
+        self._n_cores = params.get("n_cores", 24)
+        self._open_cost = params.get("open_cost", 4194304)
+        self._filepath = params.get("filepath")
+
+        self._filesize = None
+        self._bytes_per_core = None  # Filesize in bytes / n_cores
+        self._n_rows_per_partition_file = None
+        self._n_bytes_per_row = None
+        self._n_files_per_partition = None  # The number of files per partition.
+        self._max_bytes_per_partition_file = None  # Upper bound on number of bytes in each partition file.
+
+    @operator
+    @abstractmethod
+    def execute(self, data: pyspark.sql.DataFrame = None, context: dict = None) -> pyspark.sql.DataFrame:
+        """Partitions the data."""
+        pass
+
+    def _compute_partition_stats(self, data: pyspark.sql.DataFrame) -> None:
+        """Computing statistics governing selection of a partitioning strategy."""
+
+        self._filesize = sys.getsizeof(data)
+        self._bytes_per_core = self._filesize / self._n_cores
+        self._n_rows_data = data.count()
+        self._n_bytes_per_row = int(self._filesize / self._n_rows_data)
+        self._max_bytes_per_partition_file = min(self._max_partition_bytes, max(self._open_cost, self._bytes_per_core))
+        self._max_records_per_file = self._max_bytes_per_partition_file / self._n_bytes_per_row
+
+
+# ------------------------------------------------------------------------------------------------ #
+
+
+class StaticPartitioner(Operator, ABC):
+    """Partitions the data using a designated fixed number of partitions.  """
+
+    def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
+        super(StaticPartitioner, self).__init__(
+            task_no=task_no, task_name=task_name, task_description=task_description, params=params
+        )
+
+    @operator
+    def execute(self, data: pyspark.sql.DataFrame = None, context: dict = None) -> pyspark.sql.DataFrame:
+        """Partitions the data"""
+        self._compute_partition_stats(data=data)
+
+        data = data.repartition(self._n_partitions).write.parquet(self._filepath)
+        return data
+
+
+# ------------------------------------------------------------------------------------------------ #
+
+
+class ColumnPartitioner(Operator, ABC):
+    """Partitions the data using a designated fixed number of partitions.  """
+
+    def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
+        super(StaticPartitioner, self).__init__(
+            task_no=task_no, task_name=task_name, task_description=task_description, params=params
+        )
+
+    @operator
+    def execute(self, data: pyspark.sql.DataFrame = None, context: dict = None) -> pyspark.sql.DataFrame:
+        """Partitions the data"""
+
+        self._compute_partition_stats(data=data)
+
+        data = (
+            data.repartition(self._n_partitions, self._memory_partition_columns)
+            .write.partitionBy(self._file_partition_columns)
+            .parquet(self._filepath)
+        )
+        return data
+
+
+# ------------------------------------------------------------------------------------------------ #
+
+
+class DynamicPartitioner(Operator, ABC):
+    """Partitions the data using a designated fixed number of partitions.  """
+
+    def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
+        super(DynamicPartitioner, self).__init__(
+            task_no=task_no, task_name=task_name, task_description=task_description, params=params
+        )
+
+    @operator
+    def execute(self, data: pyspark.sql.DataFrame = None, context: dict = None) -> pyspark.sql.DataFrame:
+        """Dyamically partitions column-based partitioned data."""
+
+        self._compute_partition_stats(data=data)
+
+        partition_count = data.groupBy(self._file_partition_columns).count()
+
+        data = (
+            data.join(partition_count, on=self._file_partition_columns)
+            .withColumn("seed", rand() * partition_count["count"] / self._n_rows_per_partition_file)
+            .cast("int")
+            .repartition(*self._memory_partition_columns, "seed")
+            .write.partitionBy(self._file_partition_columns)
+            .parquet(self._filepath)
+        )
+        return data
 
 
 class TimeStampDecoder(Operator):
@@ -54,21 +195,10 @@ class TimeStampDecoder(Operator):
             task_no=task_no, task_name=task_name, task_description=task_description, params=params
         )
 
-    @debugger
     @operator
-    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: dict = None) -> pd.DataFrame:
         """Extracts temporal data from timestamp and adds as columns to data."""
-
-        # Extract the name of the timestamp column from the parameter list
-        timestamp_var = self._params.get("timestamp_var", None)
-
-        # Extract year, month and monthday from the data
-        yr = year(timestamp_seconds(col(timestamp_var)))
-        mth = month(timestamp_seconds(col(timestamp_var)))
-        mthday = dayofmonth(timestamp_seconds(col(timestamp_var)))
-
-        # Add date data as columns.
-        data = data.withColumn("year", yr).withColumn("month", mth).withColumn("day", mthday)
+        data = data.withColumn("hour", hour(timestamp_seconds(col("timestamp"))))
 
         return data
 
@@ -88,14 +218,11 @@ class ReplaceColumnNames(Operator):
             task_no=task_no, task_name=task_name, task_description=task_description, params=params
         )
 
-    @debugger
     @operator
-    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: dict = None) -> pd.DataFrame:
         """Replaces the columns in the DataFrame according to the params['columns'] object."""
 
         data = data.toDF(*[x for x in self._params["columns"].values()])
-
-        logger.error(data.schema)
 
         return data
 
@@ -184,7 +311,7 @@ class AlibabaDevSet(Operator):
         self._start = None
 
     @operator
-    def execute(self, data: Any = None, context: Context = None) -> pd.DataFrame:
+    def execute(self, data: Any = None, context: dict = None) -> pd.DataFrame:
         """Creates development for the dataset passed named in the params variable.
 
         This method controls the processes by which the development set is created. It supports

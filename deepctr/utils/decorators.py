@@ -186,7 +186,7 @@ def print_start(module: str, classname: str, self: str, start: datetime):
     task_no = self.__dict__["_task_no"]
     task_name = self.__dict__["_task_name"]
     module = module.split(".")[2]
-    date = start.strftime("%d/%m/%y")
+    date = start.strftime("%m/%d/%y")
     time = start.strftime("%I:%M %p")
     msg = "Module: {}\t\tTask {}:\t{}\tStarted {} at {}.".format(str(module), str(task_no), task_name, date, time)
     print(msg)
@@ -221,20 +221,3 @@ def profiled():
     # uncomment this to see who's calling what
     ps.print_callers()
     print(s.getvalue())
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                    DEBUG DECORATOR                                               #
-# ------------------------------------------------------------------------------------------------ #
-def debugger(func):
-    @functools.wraps(func)
-    def wrapper(self, *args, **kwargs):
-
-        module = func.__module__
-        klass = func.__class__.__name__
-        method = self.__name__
-        response = func(self, *args, **kwargs)
-        print("\n\n\tCompleted {}: {}: {}\n".format(module, klass, method))
-        return response
-
-    return wrapper

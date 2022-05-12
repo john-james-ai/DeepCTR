@@ -21,8 +21,6 @@ from abc import ABC, abstractmethod
 from typing import Any
 import logging
 
-from deepctr.data.dag import Context
-
 # ------------------------------------------------------------------------------------------------ #
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -40,13 +38,7 @@ class Operator(ABC):
 
     """
 
-    def __init__(
-        self,
-        task_no: int,
-        task_name: str,
-        task_description: str,
-        params: list,
-    ) -> None:
+    def __init__(self, task_no: int, task_name: str, task_description: str, params: list,) -> None:
         self._task_no = task_no
         self._task_name = task_name
         self._task_description = task_description
@@ -59,12 +51,12 @@ class Operator(ABC):
             )
         )
 
-    def get_credentials(self, external_resource: dict, context: Context) -> dict:
+    def get_credentials(self, external_resource: dict, context: dict) -> dict:
         """Obtains credentials for an external resource from the context
 
         Args:
             external_resource (dict): Resource and type for an external resource
-            context (Context): Object containing context credentials for external resources
+            context (dict): Object containing context credentials for external resources
 
         Returns dictionary containing requests context.
 
@@ -112,7 +104,7 @@ class Dependency(Operator):
             task_no=task_no, task_name=task_name, task_description=task_description, params=params
         )
 
-    def execute(self, data: Any = None, context: Context = None) -> dict:
+    def execute(self, data: Any = None, context: dict = None) -> dict:
         from deepctr.database.ddl import ALIBABA_DDL
 
         return ALIBABA_DDL
