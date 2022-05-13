@@ -7,6 +7,90 @@
     "settings": {
         "search.useIgnoreFiles": false,
         "python.languageServer": "Default",
-        "python.linting.flake8Enabled": true
-    }
+        "python.linting.flake8Enabled": true,
+    "psi-header.config": {
+
+        "forceToTop": true,
+        "blankLinesAfter": 1,
+        "spacesBetweenYears": false,
+        "license": "BSD-3-Clause",
+        "author": "John James",
+        "initials": "J2",
+        "authorEmail": "john.james.ai.studio@gmail.com",
+        "company": "TBD",
+        "copyrightHolder": "John James",
+        "creationDateZero": "asIs"
+    },
+    "psi-header.changes-tracking": {
+        "isActive": true,
+        "modAuthor": "Modified By:",
+        "modDate": "Last Modified:",
+        "modDateFormat": "dddd MMMM Do YYYY hh:mm:ss a",
+        "include": ["python", "shellscript","yaml", "sql", "ini", "cpp"],
+        "includeGlob": ["./**/*/.py"],
+        "exclude": ["markdown", "json", "jsonc"],
+        "excludeGlob": ["./**/*/ignoreme.*"],
+        "autoHeader": "autoSave",
+        "enforceHeader": true,
+        "replace": [
+            "Filename",
+            "Project"
+        ],
+        "updateLicenseVariables": false
+    },
+    "psi-header.variables": [
+        ["projectCreationYear", "2022"],
+        ["url", "https://github.com/john-james-ai/DeepCTR"],
+        ["projectname", "DeepCTR: Deep Learning for CTR Prediction"],
+        ["version", "0.1.0"]
+    ],
+    "psi-header.lang-config": [
+        {
+            "language": "python",
+            "begin": "# ================================================================================================ #",
+            "prefix": "# ",
+            "suffix": " #",
+            "lineLength": 100,
+            "end": "# ================================================================================================ #",
+            "forceToTop": true,
+            "blankLinesAfter": 1,
+            "beforeHeader": [
+                "#!/usr/bin/env python3",
+                "# -*- coding:utf-8 -*-"
+            ],
+            "afterHeader": [],
+            "modAuthor": "Modified By:",
+            "modDate": "Last Modified:",
+            "modDateFormat": "dddd MMMM Do YYYY hh:mm:ss a",
+            "replace": [
+                "Filename   :",
+                "URL        :",
+                "Project    :",
+                "Version    :"
+            ],
+            "ignoreLines": []
+        }
+    ],
+    "psi-header.templates": [
+        {
+            "language": "python",
+            "template": [
+                "Project    : <<projectname>>",
+                "Version    : <<version>>",
+                "Filename   : <<filerelativepath>>",
+                "------------------------------------------------------------------------------------------------",
+                "Author     : <<author>>",
+                "Email      : <<authoremail>>",
+                "URL        : <<url>>",
+                "------------------------------------------------------------------------------------------------",
+                "Created    : <<filecreated('dddd MMMM Do YYYY hh:mm:ss a')>>",
+                "Modified   : <<dateformat('dddd MMMM Do YYYY hh:mm:ss a')>>",
+                "------------------------------------------------------------------------------------------------",
+                "License    : <<licensename>>",
+                "Copyright  : (c) <<yeartoyear(fc, now)>> <<copyrightHolder>>",
+
+            ],
+        },
+    ]
+}
 }

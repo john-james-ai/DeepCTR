@@ -1,0 +1,229 @@
+---
+# ================================================================================================ #
+#                                         ALIBABA                                                  #
+# ================================================================================================ #
+
+dag_no: 2
+dag_name: alibaba_etl
+dag_description: Extracts, transforms and loads the Alibaba Display Ad Data from Amazon S3
+context:
+  asset_type: data
+  dataset: alibaba
+  mode: 'prod'
+tasks:
+  # ============================================================================================ #
+  #                                     EXTRACT                                                  #
+  # ============================================================================================ #
+  1:
+    task: ExtractS3
+    module: deepctr.operators.remote
+    task_no: 1
+    task_name: extract_s3_data
+    task_description: Extracts Alibaba Display Ad Data (Production) from Amazon S3
+    task_params:
+      resource_type: cloud
+      resource: amazon
+      bucket: deepctr
+      folder: alibaba
+      destination: data/external/alibaba
+      force: False
+  2:
+    task: ExpandGZ
+    module: deepctr.operators.data
+    task_no: 2
+    task_name: expand_gzfiles
+    task_description: Expands Alibaba Display Ad Data (Production) to raw directory
+    task_params:
+      source: data/external/alibaba
+      destination: data/alibaba/prod/raw
+      force: False
+
+  # ============================================================================================ #
+  #                            RAW SAMPLES -> IMPRESSIONS                                        #
+  # ============================================================================================ #
+
+  3:
+    task: SparkCSVReader
+    module: deepctr.operators.io
+    task_no: 3
+    task_name: read_alibaba_raw_sample_csv
+    task_description: Read Alibaba Raw Sample CSV
+    task_params:
+      item: raw_sample
+      stage: raw
+      fileformat: csv
+
+  4:
+    task: ReplaceColumnNames
+    module: deepctr.operators.data
+    task_no: 4
+    task_name: replace_alibaba_raw_sample_column_names
+    task_description: Replace Alibaba Raw Sample Column Names
+    task_params:
+      columns:
+        user: user_id
+        time_stamp: timestamp
+        adgroup_id: adgroup_id
+        pid: scenario
+        nonclk: non_click
+        clk: click
+
+  5:
+    task: TimeStampDecoder
+    module: deepctr.operators.data
+    task_no: 5
+    task_name: decode_timestamp
+    task_description: Decode Timestamp
+    task_params:
+      timestamp_var: timestamp
+
+
+  6:
+    task: ParquetWriter
+    module: deepctr.operators.io
+    task_no: 6
+    task_name: stage_impression_data
+    task_description: Stage Impression Data
+    task_params:
+      item: impression
+      stage: staged
+      fileformat: parquet
+      partition_by: day
+
+  # ============================================================================================ #
+  #                                       USER                                                   #
+  # ============================================================================================ #
+
+  7:
+    task: SparkCSVReader
+    module: deepctr.operators.io
+    task_no: 7
+    task_name: read_alibaba_user_csv
+    task_description: Read Alibaba User CSV
+    task_params:
+      item: user_profile
+      stage: raw
+      fileformat: csv
+
+
+  8:
+    task: ReplaceColumnNames
+    module: deepctr.operators.data
+    task_no: 8
+    task_name: replace_alibaba_user_column_names
+    task_description: Replace Alibaba User Column Names
+    task_params:
+      columns:
+        userid: user_id
+        cms_segid: cms_segment_id
+        cms_group_id: cms_group_id
+        final_gender_code: gender_code
+        age_level: age_level
+        pvalue_level: consumption_level
+        shopping_level: shopping_level
+        occupation: student
+        new_user_class_level: city_level
+
+  9:
+    task: ParquetWriter
+    module: deepctr.operators.io
+    task_no: 9
+    task_name: stage_user_data
+    task_description: Stage User Data
+    task_params:
+      item: user
+      stage: staged
+      fileformat: parquet
+      partition_by: day
+
+
+  # ============================================================================================ #
+  #                                         AD                                                   #
+  # ============================================================================================ #
+  10:
+    task: SparkCSVReader
+    module: deepctr.operators.io
+    task_no: 10
+    task_name: read_alibaba_ad_csv
+    task_description: Read Alibaba Ad CSV
+    task_params:
+      item: ad_feature
+      stage: raw
+      fileformat: csv
+
+  11:
+    task: ReplaceColumnNames
+    module: deepctr.operators.data
+    task_no: 11
+    task_name: transform_alibaba_ad_column_names
+    task_description: Transform Alibaba Ad Column Names
+    task_params:
+      columns:
+        adgroup_id: adgroup_id
+        cate_id: category_id
+        campaign_id: campaign_id
+        customer: customer_id
+        brand: brand_id
+        price: price
+
+  12:
+    task: ParquetWriter
+    module: deepctr.operators.io
+    task_no: 12
+    task_name: stage_ad_data
+    task_description: Stage Ad Data
+    task_params:
+      item: ad
+      stage: staged
+      fileformat: parquet
+
+
+  # ============================================================================================ #
+  #                                  BEHAVIOR                                                    #
+  # ============================================================================================ #
+  13:
+    task: SparkCSVReader
+    module: deepctr.operators.io
+    task_no: 13
+    task_name: read_alibaba_behaviors_csv
+    task_description: Read Alibaba Behaviors CSV
+    task_params:
+      item: behavior_log
+      stage: raw
+      fileformat: csv
+
+  14:
+    task: ReplaceColumnNames
+    module: deepctr.operators.data
+    task_no: 14
+    task_name: transform_alibaba_behavior_column_names
+    task_description: Transform Alibaba Behavior Column Names
+    task_params:
+      columns:
+        user: user_id
+        time_stamp: timestamp
+        btag: btag
+        cate: category_id
+        brand: brand_id
+
+  15:
+    task: TimeStampDecoder
+    module: deepctr.operators.data
+    task_no: 15
+    task_name: decode_timestamp
+    task_description: Decode Timestamp
+    task_params:
+      timestamp_var: timestamp
+
+  16:
+    task: ParquetWriter
+    module: deepctr.operators.io
+    task_no: 16
+    task_name: stage_impression_data
+    task_description: Stage Impression Data
+    task_params:
+      item: behavior
+      stage: staged
+      fileformat: parquet
+      partition_by: day
+

@@ -21,7 +21,7 @@ import inspect
 import pytest
 import logging
 import shutil
-from deepctr.data.dag import DagRunner
+from deepctr.orchestration.dag import DagRunner
 
 
 # from deepctr.database.access import DAO
