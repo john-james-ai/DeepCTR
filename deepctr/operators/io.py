@@ -25,7 +25,7 @@ import logging
 
 from deepctr.operators.base import Operator
 from deepctr.utils.decorators import operator
-from deepctr.utils.io import FileManager
+from deepctr.utils.io import SparkCSV, FileManager
 
 # ------------------------------------------------------------------------------------------------ #
 logging.basicConfig(level=logging.INFO)
@@ -48,12 +48,7 @@ class IO(Operator, ABC):
         pass
 
 
-# ------------------------------------------------------------------------------------------------ #
-#                                       DATA READER                                                #
-# ------------------------------------------------------------------------------------------------ #
-
-
-class DataReader(IO):
+class Spark(IO):
     """Reads data and returns a Spark DataFrame"""
 
     def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
@@ -123,8 +118,9 @@ class SparkCSVReader(IO):
     @operator
     def execute(self, data: Any = None, context: dict = None) -> Any:
         """Reads from the designated resource"""
-        filepath = self._check_out(context)
-
+        try:
+            fm = FileManager()
+            filepath = fm.check_out(asset_type='data', )
         io = SparkCSV()
         data = io.read(filepath=filepath)
         return data
