@@ -23,7 +23,6 @@ import shutil
 from typing import Any
 import logging
 
-from deepctr.utils.io import SparkCSV, Parquet
 from deepctr.operators.base import Operator
 from deepctr.utils.decorators import operator
 from deepctr.utils.io import FileManager
@@ -44,95 +43,68 @@ class IO(Operator, ABC):
     def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
         super(IO, self).__init__(task_no=task_no, task_name=task_name, task_description=task_description, params=params)
 
-        self._item = params.get("item", None)
-        self._stage = params.get("stage", "raw")
-        self._fileformat = params.get("fileformat", None)
-
     @abstractmethod
     def execute(self, data: Any = None, context: dict = None) -> pd.DataFrame:
         pass
 
-    def _check_in(self, context: dict) -> str:
-        """Gets an available filepath for writing."""
-        asset_type = context.get("asset_type", "data")
-        collection = context.get("dataset")
-        mode = context.get("mode", "dev")
-
-        fm = FileManager()
-
-        return fm.check_in(
-            asset_type=asset_type,
-            collection=collection,
-            item=self._item,
-            stage=self._stage,
-            fileformat=self._fileformat,
-            mode=mode,
-        )
-
-    def _check_out(self, context: dict) -> str:
-        """Returns a filepath for an existing asset."""
-        asset_type = context.get("asset_type", "data")
-        collection = context.get("dataset")
-        mode = context.get("mode", "dev")
-
-        fm = FileManager()
-
-        return fm.check_out(
-            asset_type=asset_type,
-            collection=collection,
-            item=self._item,
-            stage=self._stage,
-            fileformat=self._fileformat,
-            mode=mode,
-        )
-
 
 # ------------------------------------------------------------------------------------------------ #
-#                                       PARQUET                                                    #
+#                                       DATA READER                                                #
 # ------------------------------------------------------------------------------------------------ #
 
 
-class ParquetReader(IO):
-    """Parquet file reader operator for DAGS"""
+class DataReader(IO):
+    """Reads data and returns a Spark DataFrame"""
 
     def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
-        super(ParquetReader, self).__init__(
+        super(DataReader, self).__init__(
             task_no=task_no, task_name=task_name, task_description=task_description, params=params
         )
 
     @operator
     def execute(self, data: Any = None, context: dict = None) -> pd.DataFrame:
         """Reads from the designated resource"""
-        filepath = self._check_out(context)
-
-        io = Parquet()
-        data = io.read(filepath=filepath,)
-
-        return data
+        fm = FileManager()
+        try:
+            return fm.read(
+                asset_type="data",
+                asset=self._params["asset"],
+                stage=self._params["stage"],
+                item=self._params["item"],
+                format=self._params["format"],
+                mode=context["mode"],
+            )
+        except KeyError as e:
+            raise ValueError(e)
 
 
 # ------------------------------------------------------------------------------------------------ #
 
 
-class ParquetWriter(IO):
+class DataWriter(IO):
     """Writes DataFrames to Parquet file storage"""
 
     def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
-        super(ParquetWriter, self).__init__(
+        super(DataWriter, self).__init__(
             task_no=task_no, task_name=task_name, task_description=task_description, params=params
         )
 
     @operator
     def execute(self, data: Any = None, context: dict = None) -> pd.DataFrame:
         """Reads from the designated resource"""
-        filepath = self._check_in(context)
-        partition_by = self._params.get("partition_by", None)
-
-        print("\n\n\tDataFrame has shape ({},{})".format(str(data.count()), str(len(data.columns))))
-
-        io = Parquet()
-        io.write(data=data, filepath=filepath, partition_by=partition_by)
-        return data
+        fm = FileManager()
+        try:
+            fm.write(
+                data=data,
+                asset_type="data",
+                asset=self._params["asset"],
+                stage=self._params["stage"],
+                item=self._params["item"],
+                format=self._params["format"],
+                mode=context["mode"],
+            )
+        except KeyError as e:
+            raise ValueError(e)
 
 
 # ------------------------------------------------------------------------------------------------ #
