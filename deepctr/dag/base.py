@@ -51,24 +51,9 @@ class Operator(ABC):
             )
         )
 
-    def get_credentials(self, external_resource: dict, context: dict) -> dict:
-        """Obtains credentials for an external resource from the context
-
-        Args:
-            external_resource (dict): Resource and type for an external resource
-            context (dict): Object containing context credentials for external resources
-
-        Returns dictionary containing requests context.
-
-        """
-        resource_type = external_resource.get("resource_type")
-        resource = external_resource.get("resource")
-
-        credentials = context.get_resource(resource_type=resource_type, resource=resource)
-
-        logging.debug("\nCREDENTIALS\n{}".format(credentials))
-
-        return credentials
+    @abstractmethod
+    def execute(self, data: Any = None, context: dict = None) -> Any:
+        pass
 
     @property
     def task_no(self) -> int:
@@ -85,26 +70,3 @@ class Operator(ABC):
     @property
     def params(self) -> Any:
         return self._params
-
-    @abstractmethod
-    def execute(self, data: Any = None, context: dict = None) -> Any:
-        pass
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                   DEPENDENCY OPERATOR                                            #
-# ------------------------------------------------------------------------------------------------ #
-
-
-class Dependency(Operator):
-    """Class can be used to obtain dependencies required by downstream operators."""
-
-    def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
-        super(Dependency, self).__init__(
-            task_no=task_no, task_name=task_name, task_description=task_description, params=params
-        )
-
-    def execute(self, data: Any = None, context: dict = None) -> dict:
-        from deepctr.database.ddl import ALIBABA_DDL
-
-        return ALIBABA_DDL

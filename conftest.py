@@ -17,22 +17,21 @@
 # License  : BSD 3-clause "New" or "Revised" License                                               #
 # Copyright: (c) 2022 Bryant St. Labs                                                              #
 # ================================================================================================ #
-import os
 import pytest
-from dotenv import load_dotenv
-from sqlalchemy import create_engine
+import pandas as pd
+from pyspark.sql import SparkSession
 
 # ------------------------------------------------------------------------------------------------ #
-#                                    DATABASE FIXTURES                                             #
+#                                     SPARK FIXTURES                                               #
 # ------------------------------------------------------------------------------------------------ #
 
 
 @pytest.fixture(scope="module")
-def connection_alibaba():
+def spark_dataframe():
 
-    load_dotenv()
-    URI = os.getenv("URI_ALIBABA")
-    engine = create_engine(URI)
-    connection = engine.connect()
-    yield connection
-    connection.close()
+    filepath = "tests/data/test.csv"
+    pdf = pd.read_csv(filepath, header=0)
+    spark = SparkSession.builder.master("local[18]").appName("Spark DataFrame").getOrCreate()
+    spark.sparkContext.setLogLevel("INFO")
+
+    return spark.createDataFrame(pdf)

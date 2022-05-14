@@ -138,7 +138,9 @@ def format_msg(start: datetime, end: datetime, query: Query, params: tuple = Non
     date = start.strftime("%m/%d/%y")
     time = start.strftime("%I:%M%p")
     if params is None:
-        msg = "Query: {}\tStarted {} at {}\tDuration: {} seconds".format(query.name, date, time, duration)
+        msg = "Query: {}\tStarted {} at {}\tDuration: {} seconds".format(
+            query.name, date, time, duration
+        )
     else:
         msg = "Query: {}. Params: {}\tStarted {} at {}\tDuration: {} seconds".format(
             query.name, params, date, time, duration
@@ -188,7 +190,9 @@ def print_start(module: str, classname: str, self: str, start: datetime):
     module = module.split(".")[2]
     date = start.strftime("%m/%d/%y")
     time = start.strftime("%I:%M %p")
-    msg = "Module: {}\t\tTask {}:\t{}\tStarted {} at {}.".format(str(module), str(task_no), task_name, date, time)
+    msg = "Module: {}\t\tTask {}:\t{}\tStarted {} at {}.".format(
+        str(module), str(task_no), task_name, date, time
+    )
     print(msg)
 
 
