@@ -19,10 +19,10 @@ import os
 import inspect
 import pytest
 import logging
-import shutil
 from pyspark.sql import DataFrame
 
 from deepctr.persistence.dal import SparkCSV, SparkParquet
+from deepctr.utils.printing import Printer
 
 # ---------------------------------------------------------------------------- #
 logging.basicConfig(level=logging.INFO)
@@ -33,13 +33,15 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.dal
 class TestSparkCSV:
-    def test_write(self, caplog, spark_dataframe) -> None:
+    def test_write(self, caplog, spark_dataframe, csv_filepath) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
         sdf = spark_dataframe
-        filepath = "tests/data/persistence/test_spark_csv.csv"
-        shutil.rmtree(filepath, ignore_errors=True)
+        filepath = csv_filepath
+
+        title = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
+        self.show(sdf, title)
 
         io = SparkCSV()
         io.write(data=sdf, filepath=filepath)
@@ -48,31 +50,52 @@ class TestSparkCSV:
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-    def test_read(self, caplog) -> None:
+    def test_read(self, caplog, csv_filepath) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        filepath = "tests/data/persistence/test_spark_csv.csv"
+        filepath = csv_filepath
 
         io = SparkCSV()
-        df = io.read(filepath)
-        df.show()
-        assert isinstance(df, DataFrame), logging.error(
+        sdf = io.read(filepath, header=True, sep=",")
+
+        title = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
+        self.show(sdf, title)
+
+        assert isinstance(sdf, DataFrame), logging.error(
             "SparkCSV failed to return a pyspark.sql.DataFrame object"
         )
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
+    def test_read_fail(self, caplog) -> None:
+        caplog.set_level(logging.INFO)
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        filepath = "test/filenotfound.txt"
+
+        io = SparkCSV()
+        with pytest.raises(FileNotFoundError):
+            io.read(filepath)
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    def show(self, sdf, title):
+        printer = Printer()
+        printer.print_spark_dataframe_summary(content=sdf, title=title)
+
 
 @pytest.mark.dal
 class TestSparkParquet:
-    def test_write(self, caplog, spark_dataframe) -> None:
+    def test_write(self, caplog, spark_dataframe, parquet_filepath) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
         sdf = spark_dataframe
-        filepath = "tests/data/persistence/test_spark_parquet.parquet"
-        shutil.rmtree(filepath, ignore_errors=True)
+        filepath = parquet_filepath
+
+        title = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
+        self.show(sdf, title)
 
         io = SparkParquet()
         io.write(data=sdf, filepath=filepath)
@@ -81,17 +104,36 @@ class TestSparkParquet:
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-    def test_read(self, caplog) -> None:
+    def test_read(self, caplog, parquet_filepath) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        filepath = "tests/data/persistence/test_spark_parquet.parquet"
+        filepath = parquet_filepath
 
         io = SparkParquet()
-        df = io.read(filepath)
-        df.show()
-        assert isinstance(df, DataFrame), logging.error(
+        sdf = io.read(filepath)
+
+        title = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
+        self.show(sdf, title)
+
+        assert isinstance(sdf, DataFrame), logging.error(
             "SparkParquet failed to return a pyspark.sql.DataFrame object"
         )
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    def test_read_fail(self, caplog) -> None:
+        caplog.set_level(logging.INFO)
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        filepath = "test/filenotfound.txt"
+
+        io = SparkParquet()
+        with pytest.raises(FileNotFoundError):
+            io.read(filepath)
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    def show(self, sdf, title):
+        printer = Printer()
+        printer.print_spark_dataframe_summary(content=sdf, title=title)

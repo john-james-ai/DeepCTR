@@ -36,6 +36,7 @@ findspark.init()
 
 # ------------------------------------------------------------------------------------------------ #
 logging.basicConfig(level=logging.INFO)
+logging.getLogger("py4j").setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ------------------------------------------------------------------------------------------------ #
@@ -61,7 +62,7 @@ class IO(ABC):
 class SparkParquet(IO):
     """Reads, and writes Spark DataFrames to / from Parquet storage format.."""
 
-    def read(self, filepath: str, **kwargs) -> pyspark.sql.DataFrame:
+    def read(self, filepath: str, cores: int = 18) -> pyspark.sql.DataFrame:
         """Reads a Spark DataFrame from Parquet file resource
 
         Args:
@@ -71,14 +72,15 @@ class SparkParquet(IO):
             Spark DataFrame
         """
 
-        # Create spark session
-        spark = SparkSession.builder.master("local[18]").appName("Read SparkParquet").getOrCreate()
-        spark.sparkContext.setLogLevel("ERROR")
+        if os.path.exists(filepath):
+            local = "local[" + str(cores) + "]"
+            spark = SparkSession.builder.master(local).appName("Read SparkParquet").getOrCreate()
+            spark.sparkContext.setLogLevel("ERROR")
+            return spark.read.parquet(filepath)
 
-        # Read the data
-        sdf = spark.read.parquet(filepath)
-
-        return sdf
+        else:
+            logger.error("File {} was not found.".format(filepath))
+            raise FileNotFoundError()
 
     def write(
         self,
@@ -105,35 +107,57 @@ class SparkParquet(IO):
 class SparkCSV(IO):
     """IO using the Spark API"""
 
-    def read(self, filepath: str) -> pyspark.sql.DataFrame:
+    def read(
+        self,
+        filepath: str,
+        cores: int = 18,
+        header: bool = True,
+        infer_schema: bool = True,
+        sep: str = ",",
+    ) -> pyspark.sql.DataFrame:
         """Reads a Spark DataFrame from Parquet file resource
 
         Args:
             filepath (str): The path to the parquet file resource
+            cores (int): The number of CPU cores to designated to the operation. Default = 18
+            header (bool): True if the data contains a header row. Default = True
+            infer_schema (bool): True if the data types should be inferred. Default = False
+            sep (str): Column delimiter. Default = ","
 
         Returns:
             Spark DataFrame
         """
 
-        # Create spark session
-        spark = SparkSession.builder.master("local[18]").appName("Read SparkCSV").getOrCreate()
-        spark.sparkContext.setLogLevel("ERROR")
-
-        # Read the data
-        return spark.read.csv(filepath, inferSchema=True, sep=",")
+        if os.path.exists(filepath):
+            local = "local[" + str(cores) + "]"
+            spark = SparkSession.builder.master(local).appName("Read SparkCSV").getOrCreate()
+            spark.sparkContext.setLogLevel("ERROR")
+            return spark.read.options(header=header, delimiter=sep, inferSchema=infer_schema).csv(
+                filepath
+            )
+        else:
+            logger.error("File {} was not found.".format(filepath))
+            raise FileNotFoundError()
 
     def write(
-        self, data: pyspark.sql.DataFrame, filepath: str, mode: str = "overwrite", **kwargs,
+        self,
+        data: pyspark.sql.DataFrame,
+        filepath: str,
+        header: bool = True,
+        sep: str = ",",
+        mode: str = "overwrite",
     ) -> None:
         """Writes Spark DataFrame to Parquet file resource
 
         Args:
             data (pyspark.sql.DataFrame): Spark DataFrame to write
             filepath (str): The path to the parquet file to be written
-            mode (str): 'overwrite' or 'append'. Default is 'overwrite'.
+            header (bool): True if data contains header. Default = True
+            sep (str): Column delimiter. Default = ","
+            mode (str): 'overwrite' or 'append'. Default = 'overwrite'.
         """
 
-        data.write.csv(filepath)
+        data.write.csv(path=filepath, header=header, sep=sep, mode=mode)
 
 
 # ------------------------------------------------------------------------------------------------ #

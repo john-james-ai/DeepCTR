@@ -30,6 +30,7 @@ from deepctr.persistence.dal import SparkCSV, SparkParquet
 
 # ------------------------------------------------------------------------------------------------ #
 logging.basicConfig(level=logging.INFO)
+logging.getLogger("py4j").setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -71,11 +72,12 @@ class DataRepository(Repository):
     """Repository for data assets."""
 
     __stages = ["raw", "staged", "clean", "processed", "complete"]
-    __modes = ["dev", "prod"]
+    __modes = ["dev", "prod", "test"]
     __datasets = ["alibaba", "avazu", "criteo"]
     __formats = ["csv", "parquet"]
-    # -------------------------------------------------------------------------------------------- #
+    __asset_type = "data"
 
+    # -------------------------------------------------------------------------------------------- #
     def add(
         self,
         name: str,
@@ -99,7 +101,7 @@ class DataRepository(Repository):
 
         """
         filepath = self._get_filepath(
-            name=name, asset=asset, dataset=dataset, stage=stage, fomrat=format, mode=mode
+            name=name, dataset=dataset, stage=stage, format=format, mode=mode
         )
         if os.path.exists(filepath) and not force:
             raise FileExistsError("{} already exists.".format(filepath))
@@ -126,8 +128,13 @@ class DataRepository(Repository):
         filepath = self._get_filepath(
             name=name, dataset=dataset, stage=stage, format=format, mode=mode
         )
-        io = self._get_io(format)
-        return io.read(filepath, filepath)
+
+        try:
+            io = self._get_io(format)
+            return io.read(filepath=filepath)
+        except FileNotFoundError as e:
+            logger.error("File {} not found.".format(filepath))
+            raise FileNotFoundError(e)
 
     # -------------------------------------------------------------------------------------------- #
     def remove(
@@ -150,6 +157,7 @@ class DataRepository(Repository):
         )
         shutil.rmtree(filepath, ignore_errors=True)
 
+    # -------------------------------------------------------------------------------------------- #
     def _get_filepath(
         self, name: str, dataset: str, stage: str, format: str = "parquet", mode: str = "prod",
     ) -> str:
@@ -160,7 +168,7 @@ class DataRepository(Repository):
             mode = get_close_matches(mode, DataRepository.__modes)[0]
         except IndexError as e:
             raise ValueError("Unable to parse dataset configuration. {}".format(e))
-        return os.path.join("data", dataset, mode, stage, name) + "." + format
+        return os.path.join(DataRepository.__asset_type, dataset, mode, stage, name) + "." + format
 
     def _get_io(self, format: str) -> Union[SparkCSV, SparkParquet]:
         if "csv" in format:
