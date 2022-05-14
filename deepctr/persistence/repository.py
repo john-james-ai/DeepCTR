@@ -168,7 +168,7 @@ class DataRepository(Repository):
             mode = get_close_matches(mode, DataRepository.__modes)[0]
         except IndexError as e:
             raise ValueError("Unable to parse dataset configuration. {}".format(e))
-        return os.path.join(DataRepository.__asset_type, dataset, mode, stage, name) + "." + format
+        return os.path.join(DataRepository.__asset_type, mode, dataset, stage, name) + "." + format
 
     def _get_io(self, format: str) -> Union[SparkCSV, SparkParquet]:
         if "csv" in format:

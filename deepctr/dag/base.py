@@ -38,7 +38,7 @@ class Operator(ABC):
 
     """
 
-    def __init__(self, task_no: int, task_name: str, task_description: str, params: list,) -> None:
+    def __init__(self, task_no: int, task_name: str, task_description: str, params: dict) -> None:
         self._task_no = task_no
         self._task_name = task_name
         self._task_description = task_description
@@ -52,7 +52,7 @@ class Operator(ABC):
         )
 
     @abstractmethod
-    def execute(self, data: Any = None, context: dict = None) -> Any:
+    def execute(self, data: Any = None) -> Any:
         pass
 
     @property

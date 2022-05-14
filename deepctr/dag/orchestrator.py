@@ -39,14 +39,11 @@ class DAG(ABC):
 
     """
 
-    def __init__(
-        self, dag_no: str, dag_name: str, dag_description: str, tasks: list, context: dict = None
-    ) -> None:
+    def __init__(self, dag_no: str, dag_name: str, dag_description: str, tasks: list) -> None:
         self._dag_no = dag_no
         self._dag_name = dag_name
         self._dag_description = dag_description
         self._tasks = tasks
-        self._context = context
 
     @abstractmethod
     def run(self, start: int = 0, stop: float = float("inf")) -> None:
@@ -67,22 +64,16 @@ class DataDAG(DAG):
 
     """
 
-    def __init__(
-        self, dag_no: str, dag_name: str, dag_description: str, tasks: list, context: dict = None
-    ) -> None:
+    def __init__(self, dag_no: str, dag_name: str, dag_description: str, tasks: list) -> None:
         super(DataDAG, self).__init__(
-            dag_no=dag_no,
-            dag_name=dag_name,
-            dag_description=dag_description,
-            tasks=tasks,
-            context=context,
+            dag_no=dag_no, dag_name=dag_name, dag_description=dag_description, tasks=tasks,
         )
 
     def run(self, start: int = 0, stop: float = float("inf")) -> None:
         data = None
         for task in self._tasks:
             if task.task_no >= start and task.task_no <= stop:
-                result = task.execute(data=data, context=self._context)
+                result = task.execute(data=data)
                 data = result if result is not None else data
 
 
@@ -99,8 +90,8 @@ class DAGBuilder(ABC):
         self._dag = None
 
     @property
-    def dag(self) -> None:
-        self._dag
+    def dag(self) -> DAG:
+        return self._dag
 
     @abstractmethod
     def build(self, config: dict) -> None:
@@ -112,6 +103,9 @@ class DAGBuilder(ABC):
         tasks = []
 
         for _, task_config in config["tasks"].items():
+
+            # Add context to the parameters dictionary
+            task_config["task_params"].update(config["dag_context"])
 
             # Create task object from string using importlib
             module = importlib.import_module(name=task_config["module"])

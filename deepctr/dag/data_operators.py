@@ -64,42 +64,37 @@ class ExtractS3(Operator):
         self._task_name = task_name
         self._task_description = task_description
 
-        self._resource_type = params.get("resource_type")
-        self._resource = params.get("resource")
         self._bucket = params.get("bucket")
         self._folder = params.get("folder")
         self._destination = params.get("destination")
         self._force = params["force"]
 
-        self._credentials_file = "config/credentials.yml"
-
         self._progressbar = None
 
     @operator
-    def execute(self, data: Any = None, context: list = None) -> pd.DataFrame:
+    def execute(self, data: Any = None) -> pd.DataFrame:
         """Extracts data from an Amazon AWS S3 resource and persists it."""
 
-        # If the non-empty collection already exists and force is False, this step is skipped.
-        if (
-            not (os.path.exists(self._destination) and len(os.listdir(self._destination)) > 0)
-            and not self._force
-        ):
+        load_dotenv()
 
-            load_dotenv()
+        S3_ACCESS = os.getenv("S3_ACCESS")
+        S3_PASSWORD = os.getenv("S3_PASSWORD")
 
-            S3_ACCESS = os.getenv("S3_ACCESS")
-            S3_PASSWORD = os.getenv("S3_PASSWORD")
+        object_keys = self._list_bucket_contents()
+        self._s3 = boto3.client(
+            "s3", aws_access_key_id=S3_ACCESS, aws_secret_access_key=S3_PASSWORD
+        )
 
-            object_keys = self._list_bucket_contents()
-            self._s3 = boto3.client(
-                "s3", aws_access_key_id=S3_ACCESS, aws_secret_access_key=S3_PASSWORD
-            )
+        os.makedirs(self._destination, exist_ok=True)
 
-            os.makedirs(self._destination, exist_ok=True)
-
-            for object_key in object_keys:
-                filepath = os.path.join(self._destination, os.path.basename(object_key))
+        for object_key in object_keys:
+            filepath = os.path.join(self._destination, os.path.basename(object_key))
+            if self._force or not os.path.exists(filepath):
                 self._download(object_key, filepath)
+            else:
+                logger.info(
+                    "File {} not downloaded. It already exists".format(os.path.basename(filepath))
+                )
 
     def _list_bucket_contents(self) -> list:
         """Returns a list of objects in the designated bucket"""
@@ -152,7 +147,7 @@ class ExpandGZ(Operator):
           force (bool): If True, will execute and overwrite existing data.
     """
 
-    def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
+    def __init__(self, task_no: int, task_name: str, task_description: str, params: dict) -> None:
         super(ExpandGZ, self).__init__(
             task_no=task_no, task_name=task_name, task_description=task_description, params=params
         )
@@ -162,12 +157,11 @@ class ExpandGZ(Operator):
         self._force = params["force"]
 
     @operator
-    def execute(self, data: Any = None, context: dict = None) -> pd.DataFrame:
+    def execute(self, data: Any = None) -> pd.DataFrame:
         """Executes the Expand operation.
 
         Args:
             data (pd.DataFrame): None. This method takes no parameter
-            context (dict): None. This method takes no parameter
         """
 
         # Create destination if it doesn't exist
@@ -181,6 +175,10 @@ class ExpandGZ(Operator):
                 tar = tarfile.open(filepath, "r:gz")
                 tar.extractall(self._destination)
                 tar.close()
+        else:
+            logger.info(
+                "Files not expanded. Raw data already exists at {}".format(self._destination)
+            )
 
     def _destination_empty_or_force(self) -> bool:
         """Returns true if the file doesn't exist or force is True."""
@@ -200,7 +198,7 @@ class DataReader(Operator):
         )
 
     @operator
-    def execute(self, data: Any = None, context: dict = None) -> Any:
+    def execute(self, data: Any = None) -> Any:
         """Reads from the designated resource"""
         repo = DataRepository()
         return repo.get(
@@ -224,7 +222,7 @@ class DataWriter(Operator):
         )
 
     @operator
-    def execute(self, data: Any = None, context: dict = None) -> Any:
+    def execute(self, data: Any = None) -> Any:
         """Reads from the designated resource"""
         repo = DataRepository()
         return repo.add(

@@ -6,33 +6,33 @@
 dag_no: 1
 dag_name: alibaba_etl
 dag_description: Extracts, transforms and loads the Alibaba Display Ad Data from Amazon S3
-dag_type: data
+dag_context:
+  asset_type: data
+  mode: test
 tasks:
   # ============================================================================================ #
   #                                     EXTRACT                                                  #
   # ============================================================================================ #
   1:
     task: ExtractS3
-    module: deepctr.operators.remote
+    module: deepctr.dag.data_operators
     task_no: 1
     task_name: extract_s3_data
     task_description: Extracts Alibaba Display Ad Data (Production) from Amazon S3
     task_params:
-      resource_type: cloud
-      resource: amazon
       bucket: deepctr
       folder: alibaba
-      destination: data/alibaba/external
+      destination: data/test/alibaba/external
       force: False
   2:
     task: ExpandGZ
-    module: deepctr.operators.data
+    module: deepctr.dag.data_operators
     task_no: 2
     task_name: expand_gzfiles
     task_description: Expands Alibaba Display Ad Data (Production) to raw directory
     task_params:
-      source: data/alibaba/external
-      destination: data/alibaba/prod/raw
+      source: data/test/alibaba/external
+      destination: data/test/alibaba/raw
       force: False
 
   # ============================================================================================ #
@@ -50,7 +50,6 @@ tasks:
       name: raw_sample
       stage: raw
       format: csv
-      mode: prod
 
   4:
     task: ReplaceColumnNames
@@ -78,7 +77,6 @@ tasks:
       name: impression
       stage: staged
       format: parquet
-      mode: prod
 
   # ============================================================================================ #
   #                                       USER                                                   #
@@ -95,8 +93,6 @@ tasks:
       name: user_profile
       stage: raw
       format: csv
-      mode: prod
-
 
   7:
     task: ReplaceColumnNames
@@ -127,8 +123,6 @@ tasks:
       name: user
       stage: staged
       format: parquet
-      mode: prod
-
 
 
   # ============================================================================================ #
@@ -145,7 +139,6 @@ tasks:
       name: ad_feature
       stage: raw
       format: csv
-      mode: prod
 
   10:
     task: ReplaceColumnNames
@@ -173,7 +166,6 @@ tasks:
       name: ad
       stage: staged
       format: parquet
-      mode: prod
 
 
   # ============================================================================================ #
@@ -190,7 +182,6 @@ tasks:
       name: behavior_log
       stage: raw
       format: csv
-      mode: prod
 
   13:
     task: ReplaceColumnNames
@@ -206,10 +197,10 @@ tasks:
         cate: category_id
         brand: brand_id
 
-  11:
+  14:
     task: DataWriter
     module: deepctr.dag.data_operators
-    task_no: 11
+    task_no: 14
     task_name: stage_behavior_data
     task_description: Stage Behavior Data
     task_params:
@@ -217,7 +208,6 @@ tasks:
       name: behavior
       stage: staged
       format: parquet
-      mode: prod
 
 
 
