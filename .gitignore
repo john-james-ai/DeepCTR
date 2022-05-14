@@ -23,7 +23,8 @@ var/
 .installed.cfg
 *.egg
 
-# Config
+# Credentials
+**/**/credentials.*
 *.*yaml
 **/.*yaml
 
@@ -35,8 +36,9 @@ var/
 **/auth*.sql
 
 # Data
-data/**/*.csv
-**/tests/data/*
+data/**/*.*
+**/tests/data/*.*
+*.parquet
 
 # Notes and internal documents
 notes/*.*
