@@ -39,56 +39,48 @@ The entities and attributes described below have been  are described below.
 ### Raw Sample
 Over 26 million user/advertisement interactions are collectively defined by:
 
-| Feature    | Column     | Type   | Description                                                             |
-|------------|------------|--------|-------------------------------------------------------------------------|
-| user       | user_id    | int    |  A de-identified identifier for a   user. (Composite Primary Key)       |
-| time_stamp | timestamp  | bigint |  The timestamp when the interaction   occurred. (Composite Primary Key) |
-| adgroup_id | adgroup_id | int    |  A desensitized advertising unit   identifier.                          |
-| pid        | scenario   | int    |  Definition unspecified.                                                |
-| noclk      | non_click  | int    |  Binary indicator of no click. 0 if   yes. 1 if no.                     |
-| clk        | click      | int    |  Binary indicator of the occurence   of a click. 1 if yes. 0 if no.     |
+- **user** / user_id (int): A de-identified identifier for a user. (Composite Primary Key)
+- **time_stamp** / timestamp (bigint): The timestamp when the interaction occurred. (Composite Primary Key)
+- **adgroup_id** (int): A desensitized advertising unit identifier.
+- **pid** / scenario (varchar): Definition unspecified.
+- **noclk** / non_click (int): Binary indicator of no click. 0 if yes. 1 if no.
+- **clk** / click (int): Binary indicator of the occurence of a click. 1 if yes. 0 if no.
 
 ### Advertising Campaign
 About 846,000 Advertising Campaigns connect customer and item. The six features are:
 
-| Feature     | Column      | Type  | Description                                                  |
-|-------------|-------------|-------|--------------------------------------------------------------|
-| adgroup_id  | adgroup_id  | int   |  A desensitized advertising unit   identifier. (Primary Key) |
-| cate_id     | category_id | int   |  A product's decensitized commodity   category id.           |
-| campaign_id | campaign_id | int   |  A desensitized advertising plan   identifier.               |
-| customer    | customer_id | int   |  A desensitized customer segment   identifier.               |
-| brand       | brand_id    | float |  A desensitized brand to which the   product belongs.        |
-| price       | price       | float |  The price for the product.   Currency not specified.        |
+- **adgroup_id** (int): A desensitized advertising unit identifier. (Primary Key)
+- **cate_id** / category_id (int): A product's decensitized commodity category id.
+- **campaign_id** (int): A desensitized advertising plan identifier.
+- **customer** / customer_id (int): A desensitized customer segment identifier.
+- **brand** / brand_id (float): A desensitized brand to which the product belongs.
+- **price** (float): The price for the product. Currency not specified.
 
 ### User Profile
 Some 1.06 million user profiles are defined by the following nine attributes:
 
-| Feature              | Column            | Type  | Description                                             |
-|----------------------|-------------------|-------|---------------------------------------------------------|
-| userid               | user_id           | int   |  A de-identified identifier for a   user. (Primary Key) |
-| cms_segid            | cms_segment_id    | int   |  A micro-group identifier.                              |
-| cms_group_id         | cms_group_id      | int   |  Unspecified                                            |
-| final_gender_code    | gender_code       | int   |  1 for male, 2 for female.                              |
-| age_level            | age_level         | int   |  Unspecified                                            |
-| pvalue_level         | consumption_level | float | 1:  low- grade, 2.0:  mid-grade, 3.0:  high-grade.      |
-| shopping_level       | shopping_level    | int   | 1:  shallow user , 2:  moderate user , 3:  deep user    |
-| occupation           | student           | int   |  1 if user is a college student, 0   if no.             |
-| new_user_class_level | city_level        | float |  Unspecified.                                           |
+- **userid** / user_id (int): A de-identified identifier for a user. (Primary Key)
+- **cms_segid** / cms_segment_id (int): A micro-group identifier.
+- **cms_group_id** (int): Unspecified
+- **final_gender_code** / gender_code (int): 1 for male, 2 for female.
+- **age_level** (int): Unspecified
+- **pvalue_level** / consumption_level (float): 1.0: low- grade, 2.0: mid-grade, 3.0: high-grade.
+- **shopping_level** (int): 1: shallow user , 2: moderate user , 3: deep user
+- **occupation** / student (int): 1 if user is a college student, 0 if no.
+- **new_user_class_level** / city_level (float): Unspecified.
 
 ### User Behavior
 The behavior file contains over 700 million actions, and has the following five attributes:
 
-| Feature              | Column            | Type  | Description                                             |
-|----------------------|-------------------|-------|---------------------------------------------------------|
-| userid               | user_id           | int   |  A de-identified identifier for a   user. (Primary Key) |
-| cms_segid            | cms_segment_id    | int   |  A micro-group identifier.                              |
-| cms_group_id         | cms_group_id      | int   |  Unspecified                                            |
-| final_gender_code    | gender_code       | int   |  1 for male, 2 for female.                              |
-| age_level            | age_level         | int   |  Unspecified                                            |
-| pvalue_level         | consumption_level | float | 1:  low- grade, 2.0:  mid-grade, 3.0:  high-grade.      |
-| shopping_level       | shopping_level    | int   | 1:  shallow user , 2:  moderate user , 3:  deep user    |
-| occupation           | student           | int   |  1 if user is a college student, 0   if no.             |
-| new_user_class_level | city_level        | float |  Unspecified.                                           |
+- **user** / user_id (int): A de-identified identifier for a user. (Composite Primary Key)
+- **time_stamp** / timestamp (bigint): The timestamp when the interaction occurred. (Composite Primary Key)
+- **btag** (varchar): Tag describing one of the following four behaviors:
+  - pv: Page view
+  - fav: Like
+  - cart: Add to shopping cart
+  - buy: Purchase conversion
+- **cate** / category_id (int): A product's decensitized commodity category id.
+- **brand** / brand_id (float): A desensitized brand to which the product belongs.
 
 
 The original dataset may be obtained from the [Alibaba Cloud Tianchi website](https://tianchi.aliyun.com/dataset/dataDetail?dataId=56&userId=1)
