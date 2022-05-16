@@ -203,7 +203,7 @@ class DataReader(Operator):
         repo = DataRepository()
         return repo.get(
             name=self._params["name"],
-            dataset=self._params["dataset"],
+            data_asset=self._params["data_asset"],
             stage=self._params["stage"],
             format=self._params["format"],
             mode=self._params["mode"],
@@ -227,8 +227,8 @@ class DataWriter(Operator):
         repo = DataRepository()
         return repo.add(
             name=self._params["name"],
-            asset=data,
-            dataset=self._params["dataset"],
+            data=data,
+            data_asset=self._params["data_asset"],
             stage=self._params["stage"],
             format=self._params["format"],
             mode=self._params["mode"],

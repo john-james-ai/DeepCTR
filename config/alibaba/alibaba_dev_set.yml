@@ -1,84 +1,39 @@
 ---
 # ================================================================================================ #
-#                                      ALIBABA ETL                                                 #
+#                                      ALIBABA SUBSAMPLE                                           #
 # ================================================================================================ #
 
-dag_no: 1
-dag_name: alibaba_etl
-dag_description: Extracts, transforms and loads the Alibaba Display Ad Data from Amazon S3
+dag_no: 2
+dag_name: alibaba_subsample
+dag_description: Samples the Alibaba Data to Last n Days of Impressions
 tasks:
   # ============================================================================================ #
-  #                                     EXTRACT                                                  #
+  #                                     SAMPLE IMPRESSIONS                                       #
   # ============================================================================================ #
   1:
-    task: ExtractS3
-    module: deepctr.dag.data_operators
-    task_no: 1
-    task_name: extract_s3_data
-    task_description: Extracts Alibaba Display Ad Data (Production) from Amazon S3
-    task_params:
-      bucket: deepctr
-      folder: alibaba
-      destination: data/test/alibaba/external
-      force: False
-      mode: test
-  2:
-    task: ExpandGZ
-    module: deepctr.dag.data_operators
-    task_no: 2
-    task_name: expand_gzfiles
-    task_description: Expands Alibaba Display Ad Data (Production) to raw directory
-    task_params:
-      source: data/test/alibaba/external
-      destination: data/test/alibaba/raw
-      force: False
-      mode: test
-
-  # ============================================================================================ #
-  #                            RAW SAMPLES -> IMPRESSIONS                                        #
-  # ============================================================================================ #
-
-  3:
     task: DataReader
     module: deepctr.dag.data_operators
-    task_no: 3
-    task_name: read_alibaba_raw_sample_csv
-    task_description: Read Alibaba Raw Sample CSV
+    task_no: 1
+    task_name: read_staged_impressions_data
+    task_description: Read Staged Impressions Data
     task_params:
-      data_asset: alibaba
-      name: raw_sample
-      stage: raw
-      format: csv
-      mode: test
-
-  4:
-    task: ReplaceColumnNames
-    module: deepctr.dag.transform_operators
-    task_no: 4
-    task_name: replace_alibaba_raw_sample_column_names
-    task_description: Replace Alibaba Raw Sample Column Names
-    task_params:
-      mode: test
-      columns:
-        user: user_id
-        time_stamp: timestamp
-        adgroup_id: adgroup_id
-        pid: scenario
-        nonclk: non_click
-        clk: click
-
-  5:
-    task: DataWriter
-    module: deepctr.dag.data_operators
-    task_no: 5
-    task_name: stage_impression_data
-    task_description: Stage Impression Data
-    task_params:
-      data_asset: alibaba
+      dataset: alibaba
       name: impression
       stage: staged
       format: parquet
-      mode: test
+      mode: prod
+
+  2:
+    task: TimeSeriesSampler
+    module: deepctr.dag.data_operators
+    task_no: 2
+    task_name: sample_production_impressions_data
+    task_description: Sample Production Impressions Data
+    task_params:
+      start: alibaba
+      name: impression
+      stage: staged
+      format: parquet
 
   # ============================================================================================ #
   #                                       USER                                                   #
@@ -91,11 +46,10 @@ tasks:
     task_name: read_alibaba_user_csv
     task_description: Read Alibaba User CSV
     task_params:
-      data_asset: alibaba
+      dataset: alibaba
       name: user_profile
       stage: raw
       format: csv
-      mode: test
 
   7:
     task: ReplaceColumnNames
@@ -104,7 +58,6 @@ tasks:
     task_name: replace_alibaba_user_column_names
     task_description: Replace Alibaba User Column Names
     task_params:
-      mode: test
       columns:
         userid: user_id
         cms_segid: cms_segment_id
@@ -123,11 +76,10 @@ tasks:
     task_name: stage_user_data
     task_description: Stage User Data
     task_params:
-      data_asset: alibaba
+      dataset: alibaba
       name: user
       stage: staged
       format: parquet
-      mode: test
 
 
   # ============================================================================================ #
@@ -140,11 +92,10 @@ tasks:
     task_name: read_alibaba_ad_csv
     task_description: Read Alibaba Ad CSV
     task_params:
-      data_asset: alibaba
+      dataset: alibaba
       name: ad_feature
       stage: raw
       format: csv
-      mode: test
 
   10:
     task: ReplaceColumnNames
@@ -153,7 +104,6 @@ tasks:
     task_name: transform_alibaba_ad_column_names
     task_description: Transform Alibaba Ad Column Names
     task_params:
-      mode: test
       columns:
         adgroup_id: adgroup_id
         cate_id: category_id
@@ -169,11 +119,10 @@ tasks:
     task_name: stage_ad_data
     task_description: Stage Ad Data
     task_params:
-      data_asset: alibaba
+      dataset: alibaba
       name: ad
       stage: staged
       format: parquet
-      mode: test
 
 
   # ============================================================================================ #
@@ -186,11 +135,10 @@ tasks:
     task_name: read_alibaba_behavior_csv
     task_description: Read Alibaba Behavior CSV
     task_params:
-      data_asset: alibaba
+      dataset: alibaba
       name: behavior_log
       stage: raw
       format: csv
-      mode: test
 
   13:
     task: ReplaceColumnNames
@@ -199,7 +147,6 @@ tasks:
     task_name: transform_alibaba_behavior_column_names
     task_description: Transform Alibaba Behavior Column Names
     task_params:
-      mode: test
       columns:
         user: user_id
         time_stamp: timestamp
@@ -214,11 +161,10 @@ tasks:
     task_name: stage_behavior_data
     task_description: Stage Behavior Data
     task_params:
-      data_asset: alibaba
+      dataset: alibaba
       name: behavior
       stage: staged
       format: parquet
-      mode: test
 
 
 

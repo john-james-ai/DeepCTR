@@ -104,9 +104,6 @@ class DAGBuilder(ABC):
 
         for _, task_config in config["tasks"].items():
 
-            # Add context to the parameters dictionary
-            task_config["task_params"].update(config["dag_context"])
-
             # Create task object from string using importlib
             module = importlib.import_module(name=task_config["module"])
             task = getattr(module, task_config["task"])

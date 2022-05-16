@@ -71,9 +71,9 @@ class Repository(ABC):
 class DataRepository(Repository):
     """Repository for data assets."""
 
-    __stages = ["raw", "staged", "clean", "processed", "complete"]
+    __stages = ["raw", "staged", "interim", "clean", "processed"]
     __modes = ["dev", "prod", "test"]
-    __datasets = ["alibaba", "avazu", "criteo"]
+    __assets = ["alibaba", "avazu", "criteo"]
     __formats = ["csv", "parquet"]
     __asset_type = "data"
 
@@ -81,8 +81,8 @@ class DataRepository(Repository):
     def add(
         self,
         name: str,
-        asset: DataFrame,
-        dataset: str,
+        data: DataFrame,
+        asset: str,
         stage: str,
         format: str = "parquet",
         mode: str = "prod",
@@ -91,43 +91,38 @@ class DataRepository(Repository):
         """Adds a data asset (file) to the data repository
 
         Args:
-            name (str): Name of dataset
-            asset (DataFrame): The data to store
-            dataset (str): Dataset to which the asset belongs
+            name (str): Name of asset
+            data (DataFrame): The data to store
+            asset (str): Dataset to which the asset belongs
             stage (str): Data processing stage i.e, 'raw', 'staged', 'clean', 'processed'.
             format (str): Either 'csv', or 'parquet'. Default is 'parquet'
             mode (str): Either 'dev' or 'prod'. Default is 'prod'
             force (bool): If True, method will overwrite existing data. Default is False
 
         """
-        filepath = self._get_filepath(
-            name=name, dataset=dataset, stage=stage, format=format, mode=mode
-        )
+        filepath = self._get_filepath(name=name, asset=asset, stage=stage, format=format, mode=mode)
         if os.path.exists(filepath) and not force:
             raise FileExistsError("{} already exists.".format(filepath))
 
         io = self._get_io(format)
-        io.write(data=asset, filepath=filepath)
+        io.write(data=data, filepath=filepath)
 
     # -------------------------------------------------------------------------------------------- #
     def get(
-        self, name: str, dataset: str, stage: str, format: str = "parquet", mode: str = "prod"
+        self, name: str, asset: str, stage: str, format: str = "parquet", mode: str = "prod"
     ) -> DataFrame:
         """Obtains a DataFrame from the data repository
 
         Args:
-            name (str): Name of dataset
-            dataset (str): Dataset to which the asset belongs
+            name (str): Name of asset item or table
+            asset (str): Dataset to which the asset belongs
             stage (str): Data processing stage i.e, 'raw', 'staged', 'clean', 'processed'.
             format (str): Either 'csv', or 'parquet'. Default is 'parquet'
             mode (str): Either 'dev' or 'prod'. Default is 'prod'
-            force (bool): If True, method will overwrite existing data. Default is False
 
         Returns (DataFrame)
         """
-        filepath = self._get_filepath(
-            name=name, dataset=dataset, stage=stage, format=format, mode=mode
-        )
+        filepath = self._get_filepath(name=name, asset=asset, stage=stage, format=format, mode=mode)
 
         try:
             io = self._get_io(format)
@@ -138,13 +133,19 @@ class DataRepository(Repository):
 
     # -------------------------------------------------------------------------------------------- #
     def remove(
-        self, name: str, dataset: str, stage: str, format: str = "parquet", mode: str = "prod"
+        self,
+        name: str,
+        asset: str,
+        stage: str,
+        format: str = "parquet",
+        mode: str = "prod",
+        force=False,
     ) -> None:
         """Removes a file from the data repository
 
         Args:
-            name (str): Name of dataset
-            dataset (str): Dataset to which the asset belongs
+            name (str): Name of asset
+            asset (str): Dataset to which the asset belongs
             stage (str): Data processing stage i.e, 'raw', 'staged', 'clean', 'processed'.
             format (str): Either 'csv', or 'parquet'. Default is 'parquet'
             mode (str): Either 'dev' or 'prod'. Default is 'prod'
@@ -152,23 +153,21 @@ class DataRepository(Repository):
 
         Returns (DataFrame)
         """
-        filepath = self._get_filepath(
-            name=name, dataset=dataset, stage=stage, format=format, mode=mode
-        )
+        filepath = self._get_filepath(name=name, asset=asset, stage=stage, format=format, mode=mode)
         shutil.rmtree(filepath, ignore_errors=True)
 
     # -------------------------------------------------------------------------------------------- #
     def _get_filepath(
-        self, name: str, dataset: str, stage: str, format: str = "parquet", mode: str = "prod",
+        self, name: str, asset: str, stage: str, format: str = "parquet", mode: str = "prod",
     ) -> str:
         try:
-            dataset = get_close_matches(dataset, DataRepository.__datasets)[0]
+            asset = get_close_matches(asset, DataRepository.__assets)[0]
             stage = get_close_matches(stage, DataRepository.__stages)[0]
             format = get_close_matches(format, DataRepository.__formats)[0]
             mode = get_close_matches(mode, DataRepository.__modes)[0]
         except IndexError as e:
-            raise ValueError("Unable to parse dataset configuration. {}".format(e))
-        return os.path.join(DataRepository.__asset_type, mode, dataset, stage, name) + "." + format
+            raise ValueError("Unable to parse asset configuration. {}".format(e))
+        return os.path.join(DataRepository.__asset_type, mode, asset, stage, name) + "." + format
 
     def _get_io(self, format: str) -> Union[SparkCSV, SparkParquet]:
         if "csv" in format:

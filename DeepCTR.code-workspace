@@ -23,6 +23,7 @@
     },
     "psi-header.changes-tracking": {
 
+
         "isActive": true,
         "modAuthor": "Modified By:",
         "modDate": "Last Modified:",
@@ -54,7 +55,7 @@
             "lineLength": 100,
             "end": "# ================================================================================================ #",
             "forceToTop": true,
-            "blankLinesAfter": 1,
+            "blankLinesAfter": 0,
             "beforeHeader": [
                 "#!/usr/bin/env python3",
                 "# -*- coding:utf-8 -*-"
