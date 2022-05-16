@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 import tarfile
 import pandas as pd
 import logging
+import logging.config
 import progressbar
 import boto3
 from botocore.exceptions import NoCredentialsError
@@ -30,13 +31,14 @@ from botocore.exceptions import NoCredentialsError
 from deepctr.utils.decorators import operator
 from deepctr.dag.base import Operator
 from deepctr.persistence.dal import DataTableDTO, DataTableDAO
-from deepctr.utils.logger import LogFactory
-
+from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
-LOGFILE = "logs/operators.log"
-logger = LogFactory().get_logger(__name__, level="info", logfile=LOGFILE)
-logging.getLogger("py4j").setLevel(logging.INFO)
+logging.config.dictConfig(LOG_CONFIG)
+logging.getLogger("py4j").setLevel(logging.WARN)
+logger = logging.getLogger(__name__)
+# ------------------------------------------------------------------------------------------------ #
+
 # ------------------------------------------------------------------------------------------------ #
 #                                    EXTRACT S3                                                    #
 # ------------------------------------------------------------------------------------------------ #

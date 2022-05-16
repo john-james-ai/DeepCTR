@@ -20,16 +20,18 @@ import os
 import inspect
 import pytest
 import logging
+import logging.config
 import shutil
 from pyspark.sql import SparkSession
 
 from deepctr.utils.config import YamlIO
 from deepctr.dag.orchestrator import DataDAGBuilder
 from deepctr.utils.printing import Printer
+from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
+logging.config.dictConfig(LOG_CONFIG)
 logging.getLogger("py4j").setLevel(logging.WARN)
-logging.basicConfig(level=logging.INFO, filename="deepctr.log")
 logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 

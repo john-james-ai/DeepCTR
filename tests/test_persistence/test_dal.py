@@ -19,14 +19,16 @@ import os
 import inspect
 import pytest
 import logging
+import logging.config
 from pyspark.sql import DataFrame
 
 from deepctr.persistence.dal import SparkCSV, SparkParquet
 from deepctr.utils.printing import Printer
+from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
+logging.config.dictConfig(LOG_CONFIG)
 logging.getLogger("py4j").setLevel(logging.WARN)
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 

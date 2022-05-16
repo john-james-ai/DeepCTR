@@ -20,14 +20,17 @@
 import os
 import pandas as pd
 import logging
+import logging.config
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 
 from deepctr.utils.database import Query
 from deepctr.utils.decorators import query
+from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
-logging.basicConfig(level=logging.DEBUG)
+logging.config.dictConfig(LOG_CONFIG)
+logging.getLogger("py4j").setLevel(logging.WARN)
 logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 

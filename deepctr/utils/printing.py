@@ -165,4 +165,3 @@ class Printer:
 
     def print_aligned(self, content):
         print(self.get_print_string(content))
-

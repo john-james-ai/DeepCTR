@@ -20,10 +20,14 @@
 import nbformat as nbf
 from glob import glob
 import logging
+import logging.config
+from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
-logging.basicConfig(level=logging.DEBUG)
+logging.config.dictConfig(LOG_CONFIG)
+logging.getLogger("py4j").setLevel(logging.WARN)
 logger = logging.getLogger(__name__)
+# ------------------------------------------------------------------------------------------------ #
 
 
 def prepare_notebooks():

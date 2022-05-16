@@ -20,10 +20,14 @@
 from abc import ABC, abstractmethod
 import importlib
 import logging
+import logging.config
+from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
-logging.basicConfig(level=logging.INFO)
+logging.config.dictConfig(LOG_CONFIG)
+logging.getLogger("py4j").setLevel(logging.WARN)
 logger = logging.getLogger(__name__)
+# ------------------------------------------------------------------------------------------------ #
 # ------------------------------------------------------------------------------------------------ #
 #                                          DAG                                                     #
 # ------------------------------------------------------------------------------------------------ #

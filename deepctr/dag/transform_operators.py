@@ -20,12 +20,15 @@
 import pandas as pd
 from typing import Any
 import logging
+import logging.config
 
 from deepctr.utils.decorators import operator
 from deepctr.dag.base import Operator
+from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
-logging.basicConfig(level=logging.INFO)
+logging.config.dictConfig(LOG_CONFIG)
+logging.getLogger("py4j").setLevel(logging.WARN)
 logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 

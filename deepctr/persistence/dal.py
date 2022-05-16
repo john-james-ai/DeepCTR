@@ -19,6 +19,7 @@
 import os
 from abc import ABC, abstractmethod
 import logging
+import logging.config
 from dataclasses import dataclass
 from typing import Any, Union
 from difflib import get_close_matches
@@ -27,12 +28,13 @@ import shutil
 from pyspark.sql import DataFrame
 
 from deepctr.persistence.io import SparkCSV, SparkParquet
-from deepctr.utils.logger import LogFactory
+from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
-LOGFILE = "logs/persistence.log"
-logger = LogFactory().get_logger(__name__, level="info", logfile=LOGFILE)
-logging.getLogger("py4j").setLevel(logging.INFO)
+logging.config.dictConfig(LOG_CONFIG)
+logging.getLogger("py4j").setLevel(logging.WARN)
+logger = logging.getLogger(__name__)
+# ------------------------------------------------------------------------------------------------ #
 
 
 # ------------------------------------------------------------------------------------------------ #
