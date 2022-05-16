@@ -21,19 +21,14 @@
 import functools
 from datetime import datetime
 import pandas as pd
-from deepctr.utils.logger import LoggerBuilder
+from deepctr.utils.logger import ConsoleLogFactory, FileLogFactory
+from deepctr.utils.printing import Printer
 
 pd.set_option("display.max_rows", None)
 pd.set_option("display.max_columns", None)
 pd.set_option("display.width", 1000)
 pd.set_option("display.colheader_justify", "center")
 pd.set_option("display.precision", 2)
-
-# ------------------------------------------------------------------------------------------------ #
-#                                    QUERY DECORATOR                                               #
-# ------------------------------------------------------------------------------------------------ #
-ERROR_LOGFILE = "logs/error.log"
-DEBUG_LOGFILE = "logs/debug.log"
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -43,54 +38,78 @@ def operator(func):
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
 
-        logger_builder = LoggerBuilder()
+        OPERATOR_LOGFILE = "logs/operators.log"
 
-        logger = (
-            logger_builder.reset()
-            .set_level(level="error")
-            .set_logfile(ERROR_LOGFILE)
-            .build(name=func.__module__)
-            .logger
+        # Creating separate loggers so that each logger only prints to a single output
+        # to avoid each message printing twice to console.
+        console_logname = func.__class__.__name__ + "_console"
+        file_logname = func.__class__.__name__ + "_file"
+
+        console_logger = ConsoleLogFactory().get_logger(console_logname, level="info")
+        file_logger = FileLogFactory().get_logger(
+            file_logname, level="info", logfile=OPERATOR_LOGFILE
         )
+        loggers = {"console": console_logger, "file": file_logger}
 
         try:
             module = func.__module__
             classname = func.__qualname__
             start = datetime.now()
-            print_start(module, classname, self, start)
+            print_start(module, classname, self, start, file_logger)
 
             result = func(self, *args, **kwargs)
             end = datetime.now()
 
-            print_end(module, classname, self, start, end)
+            print_end(module, classname, self, start, end, file_logger)
             return result
 
         except Exception as e:
-            logger.exception(f"Exception raised in {func.__name__}. exception: {str(e)}")
+            for logger in loggers.values():
+                logger.exception(f"Exception raised in {func.__name__}. exception: {str(e)}")
             raise e
 
     return wrapper
 
 
-def print_start(module: str, classname: str, self: str, start: datetime):
-    task_no = self.__dict__["_task_no"]
+def print_start(module: str, classname: str, self: str, start: datetime, logger):
+    printer = Printer()
+    printer.print_blank_line()
+
+    print_line = {}
+
+    task = "Task " + str(self.__dict__["_task_no"]) + ":"
+    print_line[task] = 10
+
     task_name = self.__dict__["_task_name"]
-    module = module.split(".")[2]
-    date = start.strftime("%m/%d/%y")
+    print_line[task_name] = 40
+
     time = start.strftime("%I:%M %p")
-    msg = "Module: {}\t\tTask {}:\t{}\tStarted {} at {}.".format(
-        str(module), str(task_no), task_name, date, time
-    )
-    print(msg)
+    dt = "Started at {}".format(time)
+    print_line[dt] = 20
+
+    print_string = printer.print_aligned(content=print_line, return_line=True)
+
+    logger.info(print_string)
 
 
-def print_end(module: str, classname: str, self: str, start: datetime, end: datetime):
-    task_no = self.__dict__["_task_no"]
-    task_name = self.__dict__["_task_name"]
+def print_end(module: str, classname: str, self: str, start: datetime, end: datetime, logger):
+    printer = Printer()
+
     duration = end - start
     duration = duration.total_seconds()
-    module = module.split(".")[2]
-    msg = "Module: {}\t\tTask {}:\t{}\tComplete.\tDuration: {} seconds.".format(
-        str(module), str(task_no), task_name, str(round(duration, 2))
-    )
-    print(msg)
+
+    print_line = {}
+
+    task = "Task " + str(self.__dict__["_task_no"]) + ":"
+    print_line[task] = 10
+
+    task_name = self.__dict__["_task_name"]
+    print_line[task_name] = 50
+
+    time = start.strftime("%I:%M %p")
+    dt = "Completed at {} (Duration: {} seconds.)".format(time, str(round(duration, 2)))
+    print_line[dt] = 0
+
+    print_string = printer.print_aligned(content=print_line, return_line=True)
+
+    logger.info(print_string)

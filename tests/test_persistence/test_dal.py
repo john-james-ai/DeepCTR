@@ -24,11 +24,11 @@ from pyspark.sql import DataFrame
 from deepctr.persistence.dal import SparkCSV, SparkParquet
 from deepctr.utils.printing import Printer
 
-# ---------------------------------------------------------------------------- #
+# ------------------------------------------------------------------------------------------------ #
+logging.getLogger("py4j").setLevel(logging.WARN)
 logging.basicConfig(level=logging.INFO)
-logging.getLogger("py4j").setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
-# ---------------------------------------------------------------------------- #
+# ------------------------------------------------------------------------------------------------ #
 
 
 @pytest.mark.dal

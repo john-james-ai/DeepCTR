@@ -30,7 +30,7 @@ from pyspark.sql import SparkSession
 def spark_dataframe():
     filepath = "tests/data/test.parquet"
     spark = SparkSession.builder.master("local[18]").appName("Spark DataFrame").getOrCreate()
-    spark.sparkContext.setLogLevel("INFO")
+    spark.sparkContext.setLogLevel("WARN")
     return spark.read.parquet(filepath)
 
 
@@ -61,12 +61,13 @@ def parquet_filepath():
 @pytest.fixture(scope="class")
 def parquet_asset(spark_dataframe):
     asset = {}
-    asset["name"] = "parquet_asset"
-    asset["asset"] = spark_dataframe
-    asset["dataset"] = "albaba"
+    asset["name"] = "impression"
+    asset["asset"] = "alibab"
+    asset["data"] = spark_dataframe
+    asset["dataset"] = "alibaba_raw"
     asset["stage"] = "rwa"
     asset["format"] = "paruet"
-    asset["mode"] = "tes"
-    asset["filepath"] = "data/alibaba/test/raw/parquet_asset.parquet"
+    asset["env"] = "tes"
+    asset["filepath"] = "data/test/alibaba/raw/alibaba_raw/impression.parquet"
     yield asset
     shutil.rmtree(asset["filepath"], ignore_errors=True)

@@ -1,156 +1,155 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # ================================================================================================ #
-# Project  : Deepctr: Deep Learning for Conversion Rate Prediction                                 #
-# Version  : 0.1.0                                                                                 #
-# File     : /io.py                                                                                #
-# Language : Python 3.8.12                                                                         #
+# Project    : DeepCTR: Deep Learning for CTR Prediction                                           #
+# Version    : 0.1.0                                                                               #
+# Filename   : /dal.py                                                                             #
 # ------------------------------------------------------------------------------------------------ #
-# Author   : John James                                                                            #
-# Email    : john.james.ai.studio@gmail.com                                                        #
-# URL      : https://github.com/john-james-ai/ctr                                                  #
+# Author     : John James                                                                          #
+# Email      : john.james.ai.studio@gmail.com                                                      #
+# URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
-# Created  : Saturday, February 26th 2022, 6:41:17 pm                                              #
-# Modified : Tuesday, May 3rd 2022, 8:48:33 pm                                                     #
-# Modifier : John James (john.james.ai.studio@gmail.com)                                           #
+# Created    : Friday May 13th 2022 02:51:48 pm                                                    #
+# Modified   : Sunday May 15th 2022 11:22:36 pm                                                    #
 # ------------------------------------------------------------------------------------------------ #
-# License  : BSD 3-clause "New" or "Revised" License                                               #
-# Copyright: (c) 2022 Bryant St. Labs                                                              #
+# License    : BSD 3-clause "New" or "Revised" License                                             #
+# Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
-"""Reading and writing dataframes with progress bars"""
-from abc import ABC, abstractmethod
+"""Module defines the API for data access and management."""
 import os
-import pandas as pd
-import pyspark
+from abc import ABC, abstractmethod
 import logging
-import findspark
-from pyspark.sql import SparkSession
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Union
+from difflib import get_close_matches
+import shutil
 
+from pyspark.sql import DataFrame
 
-findspark.init()
+from deepctr.persistence.io import SparkCSV, SparkParquet
+from deepctr.utils.logger import LogFactory
 
 # ------------------------------------------------------------------------------------------------ #
-logging.basicConfig(level=logging.INFO)
+LOGFILE = "logs/persistence.log"
+logger = LogFactory().get_logger(__name__, level="info", logfile=LOGFILE)
 logging.getLogger("py4j").setLevel(logging.INFO)
-logger = logging.getLogger(__name__)
+
 
 # ------------------------------------------------------------------------------------------------ #
-#                                              IO                                                  #
+#                                DATA TRANSFER OBJECTS                                             #
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class DataTableDTO:
+    name: str  # The name of the table.
+    dataset: str  # Name of dataset.
+    asset: str  # The data asset, i.e. 'alibaba', 'criteo', 'avazu'
+    stage: str  # Data processing stage, i.e 'raw', 'staged', 'interim', 'clean', 'processed'
+    env: str  # Either 'dev', 'prod', or 'test' environment
+    format: str = "parquet"  # Storage format, either 'csv', or 'parquet'
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                DATA ACCESS OBJECTS                                               #
 # ------------------------------------------------------------------------------------------------ #
 
 
-class IO(ABC):
-    """Base class for IO classes"""
+class DAO(ABC):
+    """Defines interface for data access objects."""
 
     @abstractmethod
-    def read(self, filepath: str, **kwargs) -> pd.DataFrame:
+    def create(self, dto: Any, data: Any, force: bool = False) -> None:
         pass
 
     @abstractmethod
-    def write(self, data: Any, filepath: str, **kwargs) -> None:
+    def read(self, dto: Any) -> None:
+        pass
+
+    @abstractmethod
+    def delete(self, dto: Any) -> None:
+        pass
+
+    @abstractmethod
+    def _get_filepath(self, dto: Any) -> str:
         pass
 
 
 # ------------------------------------------------------------------------------------------------ #
-
-
-class SparkParquet(IO):
-    """Reads, and writes Spark DataFrames to / from Parquet storage format.."""
-
-    def read(self, filepath: str, cores: int = 18) -> pyspark.sql.DataFrame:
-        """Reads a Spark DataFrame from Parquet file resource
-
-        Args:
-            filepath (str): The path to the parquet file resource
-
-        Returns:
-            Spark DataFrame
-        """
-
-        if os.path.exists(filepath):
-            local = "local[" + str(cores) + "]"
-            spark = SparkSession.builder.master(local).appName("Read SparkParquet").getOrCreate()
-            spark.sparkContext.setLogLevel("ERROR")
-            return spark.read.parquet(filepath)
-
-        else:
-            logger.error("File {} was not found.".format(filepath))
-            raise FileNotFoundError()
-
-    def write(
-        self,
-        data: pyspark.sql.DataFrame,
-        filepath: str,
-        header: bool = True,
-        mode: str = "overwrite",
-        **kwargs,
-    ) -> None:
-        """Writes Spark DataFrame to Parquet file resource
-
-        Args:
-            data (pyspark.sql.DataFrame): Spark DataFrame to write
-            filepath (str): The path to the parquet file to be written
-            header (bool): True if data contains header row. False otherwise.
-            mode (str): 'overwrite' or 'append'. Default is 'overwrite'.
-        """
-        data.write.option("header", header).mode(mode).parquet(filepath)
-
-
+#                                     DATA REPOSITORY                                              #
 # ------------------------------------------------------------------------------------------------ #
-#                                        SPARK                                                     #
-# ------------------------------------------------------------------------------------------------ #
-class SparkCSV(IO):
-    """IO using the Spark API"""
 
-    def read(
-        self,
-        filepath: str,
-        cores: int = 18,
-        header: bool = True,
-        infer_schema: bool = True,
-        sep: str = ",",
-    ) -> pyspark.sql.DataFrame:
-        """Reads a Spark DataFrame from Parquet file resource
+
+class DataTableDAO(DAO):
+    """Data access object for data tables."""
+
+    __stages = ["raw", "staged", "interim", "clean", "processed"]
+    __envs = ["dev", "prod", "test"]
+    __assets = ["alibaba", "avazu", "criteo"]
+    __formats = ["csv", "parquet"]
+    __asset_type = "data"
+
+    # -------------------------------------------------------------------------------------------- #
+    def create(self, dto: DataTableDTO, data: DataFrame, force: str = True) -> None:
+        """Persists a new data table to storage.
 
         Args:
-            filepath (str): The path to the parquet file resource
-            cores (int): The number of CPU cores to designated to the operation. Default = 18
-            header (bool): True if the data contains a header row. Default = True
-            infer_schema (bool): True if the data types should be inferred. Default = False
-            sep (str): Column delimiter. Default = ","
+            dto (DataTableDTO): Data transfer object containing the datatable parameters
+            data (DataFrame): The data to store
+            force (bool): If True, method will overwrite existing data. Default is True
 
-        Returns:
-            Spark DataFrame
         """
+        filepath = self._get_filepath(dto)
+        if os.path.exists(filepath) and not force:
+            raise FileExistsError("{} already exists.".format(filepath))
 
-        if os.path.exists(filepath):
-            local = "local[" + str(cores) + "]"
-            spark = SparkSession.builder.master(local).appName("Read SparkCSV").getOrCreate()
-            spark.sparkContext.setLogLevel("ERROR")
-            return spark.read.options(header=header, delimiter=sep, inferSchema=infer_schema).csv(
-                filepath
-            )
+        io = self._get_io(format=dto.format)
+        io.write(data=data, filepath=filepath)
+
+    # -------------------------------------------------------------------------------------------- #
+    def read(self, dto: DataTableDTO) -> DataFrame:
+        """Obtains a DataFrame from persisted storage
+
+        Args:
+            dto (DataTableDTO): Data transfer object containing the datatable parameters
+
+        Returns (DataFrame)
+        """
+        filepath = self._get_filepath(dto)
+
+        try:
+            io = self._get_io(format=dto.format)
+            return io.read(filepath=filepath)
+        except FileNotFoundError as e:
+            logger.error("File {} not found.".format(filepath))
+            raise FileNotFoundError(e)
+
+    # -------------------------------------------------------------------------------------------- #
+    def delete(self, dto: DataTableDTO) -> None:
+        """Removes a data table from persisted storage
+
+        Args:
+            dto (DataTableDTO): Data transfer object containing the datatable parameters
+        """
+        filepath = self._get_filepath(dto)
+        shutil.rmtree(filepath, ignore_errors=True)
+
+    # -------------------------------------------------------------------------------------------- #
+    def _get_filepath(self, dto: DataTableDTO) -> str:
+        try:
+            asset = get_close_matches(dto.asset, DataTableDAO.__assets)[0]
+            stage = get_close_matches(dto.stage, DataTableDAO.__stages)[0]
+            format = get_close_matches(dto.format, DataTableDAO.__formats)[0]
+            env = get_close_matches(dto.env, DataTableDAO.__envs)[0]
+        except IndexError as e:
+            raise ValueError("Unable to parse asset configuration. {}".format(e))
+        return (
+            os.path.join(DataTableDAO.__asset_type, env, asset, stage, dto.dataset, dto.name)
+            + "."
+            + format
+        )
+
+    def _get_io(self, format: str) -> Union[SparkCSV, SparkParquet]:
+        if "csv" in format:
+            io = SparkCSV()
         else:
-            logger.error("File {} was not found.".format(filepath))
-            raise FileNotFoundError()
-
-    def write(
-        self,
-        data: pyspark.sql.DataFrame,
-        filepath: str,
-        header: bool = True,
-        sep: str = ",",
-        mode: str = "overwrite",
-    ) -> None:
-        """Writes Spark DataFrame to Parquet file resource
-
-        Args:
-            data (pyspark.sql.DataFrame): Spark DataFrame to write
-            filepath (str): The path to the parquet file to be written
-            header (bool): True if data contains header. Default = True
-            sep (str): Column delimiter. Default = ","
-            mode (str): 'overwrite' or 'append'. Default = 'overwrite'.
-        """
-
-        data.write.csv(path=filepath, header=header, sep=sep, mode=mode)
+            io = SparkParquet()
+        return io

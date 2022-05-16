@@ -20,8 +20,8 @@ import os
 from typing import Any
 from dotenv import load_dotenv
 import tarfile
-import logging
 import pandas as pd
+import logging
 import progressbar
 import boto3
 from botocore.exceptions import NoCredentialsError
@@ -29,12 +29,14 @@ from botocore.exceptions import NoCredentialsError
 
 from deepctr.utils.decorators import operator
 from deepctr.dag.base import Operator
-from deepctr.persistence.repository import DataRepository
+from deepctr.persistence.dal import DataTableDTO, DataTableDAO
+from deepctr.utils.logger import LogFactory
 
 
 # ------------------------------------------------------------------------------------------------ #
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+LOGFILE = "logs/operators.log"
+logger = LogFactory().get_logger(__name__, level="info", logfile=LOGFILE)
+logging.getLogger("py4j").setLevel(logging.INFO)
 # ------------------------------------------------------------------------------------------------ #
 #                                    EXTRACT S3                                                    #
 # ------------------------------------------------------------------------------------------------ #
@@ -200,14 +202,16 @@ class DataReader(Operator):
     @operator
     def execute(self, data: Any = None) -> Any:
         """Reads from the designated resource"""
-        repo = DataRepository()
-        return repo.get(
+        dto = DataTableDTO(
             name=self._params["name"],
-            data_asset=self._params["data_asset"],
+            dataset=self._params["dataset"],
+            asset=self._params["asset"],
             stage=self._params["stage"],
+            env=self._params["env"],
             format=self._params["format"],
-            mode=self._params["mode"],
         )
+        dao = DataTableDAO()
+        return dao.read(dto=dto)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -224,12 +228,13 @@ class DataWriter(Operator):
     @operator
     def execute(self, data: Any = None) -> Any:
         """Reads from the designated resource"""
-        repo = DataRepository()
-        return repo.add(
+        dto = DataTableDTO(
             name=self._params["name"],
-            data=data,
-            data_asset=self._params["data_asset"],
+            dataset=self._params["dataset"],
+            asset=self._params["asset"],
             stage=self._params["stage"],
+            env=self._params["env"],
             format=self._params["format"],
-            mode=self._params["mode"],
         )
+        dao = DataTableDAO()
+        dao.create(dto=dto, data=data, force=self._params["force"])

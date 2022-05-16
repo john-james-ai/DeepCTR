@@ -3,7 +3,7 @@
 # ================================================================================================ #
 # Project    : DeepCTR: Deep Learning for CTR Prediction                                           #
 # Version    : 0.1.0                                                                               #
-# Filename   : /test_repo.py                                                                       #
+# Filename   : /test_dao.py                                                                        #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
@@ -19,19 +19,23 @@
 import os
 import inspect
 import pytest
+import shutil
 import logging
-from deepctr.persistence.repository import DataRepository
+from deepctr.persistence.dal import DataTableDAO, DataTableDTO
 from deepctr.utils.printing import Printer
 
-# ---------------------------------------------------------------------------- #
+# ------------------------------------------------------------------------------------------------ #
+logging.getLogger("py4j").setLevel(logging.WARN)
 logging.basicConfig(level=logging.INFO)
-logging.getLogger("py4j").setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
-# ---------------------------------------------------------------------------- #
+# ------------------------------------------------------------------------------------------------ #
 
 
-@pytest.mark.repo
-class TestDataRepo:
+@pytest.mark.dao
+class TestDataTableDAO:
+    def test_setup(self):
+        shutil.rmtree("data/test", ignore_errors=True)
+
     def test_add(self, caplog, parquet_asset) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\n\n\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
@@ -39,27 +43,25 @@ class TestDataRepo:
         # Obtain asset
         name = parquet_asset["name"]
         asset = parquet_asset["asset"]
+        data = parquet_asset["data"]
         dataset = parquet_asset["dataset"]
         stage = parquet_asset["stage"]
         format = parquet_asset["format"]
-        mode = parquet_asset["mode"]
+        env = parquet_asset["env"]
         filepath = parquet_asset["filepath"]
         force = False
 
-        # Add asset to repo
-        repo = DataRepository()
-        repo.add(
-            name=name,
-            asset=asset,
-            dataset=dataset,
-            stage=stage,
-            format=format,
-            mode=mode,
-            force=force,
+        # Create DTO
+        dto = DataTableDTO(
+            name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
         )
 
+        # Persist data table
+        dao = DataTableDAO()
+        dao.create(dto=dto, data=data, force=force)
+
         # Check existence of file and location
-        assert os.path.exists(filepath), "TestDataRepo: add failed"
+        assert os.path.exists(filepath), "TestDataDAO: add failed"
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -70,24 +72,22 @@ class TestDataRepo:
         # Obtain asset
         name = parquet_asset["name"]
         asset = parquet_asset["asset"]
+        data = parquet_asset["data"]
         dataset = parquet_asset["dataset"]
         stage = parquet_asset["stage"]
         format = parquet_asset["format"]
-        mode = parquet_asset["mode"]
+        env = parquet_asset["env"]
         filepath = parquet_asset["filepath"]
         force = True
 
-        # Add asset to repo
-        repo = DataRepository()
-        repo.add(
-            name=name,
-            asset=asset,
-            dataset=dataset,
-            stage=stage,
-            format=format,
-            mode=mode,
-            force=force,
+        # Create DTO
+        dto = DataTableDTO(
+            name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
         )
+
+        # Persist data table
+        dao = DataTableDAO()
+        dao.create(dto=dto, data=data, force=force)
 
         # Check existence of file and location
         assert os.path.exists(filepath), "TestDataRepo: add failed"
@@ -101,23 +101,22 @@ class TestDataRepo:
         # Obtain asset
         name = parquet_asset["name"]
         asset = parquet_asset["asset"]
+        data = parquet_asset["data"]
         dataset = parquet_asset["dataset"]
         stage = parquet_asset["stage"]
         format = parquet_asset["format"]
-        mode = parquet_asset["mode"]
+        env = parquet_asset["env"]
         force = False
 
-        repo = DataRepository()
+        # Create DTO
+        dto = DataTableDTO(
+            name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
+        )
+
+        # Persist data table
+        dao = DataTableDAO()
         with pytest.raises(FileExistsError):
-            repo.add(
-                name=name,
-                asset=asset,
-                dataset=dataset,
-                stage=stage,
-                format=format,
-                mode=mode,
-                force=force,
-            )
+            dao.create(dto=dto, data=data, force=force)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -128,19 +127,25 @@ class TestDataRepo:
         # Obtain asset
         name = parquet_asset["name"]
         asset = parquet_asset["asset"]
+        data = parquet_asset["data"]
         dataset = parquet_asset["dataset"]
         stage = parquet_asset["stage"]
         format = parquet_asset["format"]
-        mode = parquet_asset["mode"]
+        env = parquet_asset["env"]
 
-        # Read asset from repository
-        repo = DataRepository()
-        sdf = repo.get(name=name, dataset=dataset, stage=stage, format=format, mode=mode)
+        # Create DTO
+        dto = DataTableDTO(
+            name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
+        )
+
+        # Read data table
+        dao = DataTableDAO()
+        sdf = dao.read(dto=dto)
 
         title = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
         self.show(sdf, title)
 
-        assert sdf.count() == asset.count(), logger.error("TestDataRepo: add failed")
+        assert sdf.count() == data.count(), logger.error("TestDataRepo: add failed")
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -150,16 +155,21 @@ class TestDataRepo:
 
         # Obtain asset
         name = "test_asset_not_to_be_found"
+        asset = parquet_asset["asset"]
         dataset = parquet_asset["dataset"]
         stage = parquet_asset["stage"]
         format = parquet_asset["format"]
-        mode = parquet_asset["mode"]
+        env = parquet_asset["env"]
 
-        # Read asset from repository
-        repo = DataRepository()
+        # Create DTO
+        dto = DataTableDTO(
+            name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
+        )
 
+        # Read data table
+        dao = DataTableDAO()
         with pytest.raises(FileNotFoundError):
-            repo.get(name=name, dataset=dataset, stage=stage, format=format, mode=mode)
+            dao.read(dto=dto)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -169,16 +179,19 @@ class TestDataRepo:
 
         # Obtain asset
         name = "test_asset_not_to_be_found"
+        asset = parquet_asset["asset"]
         dataset = parquet_asset["dataset"]
-        stage = "adfala;"
-        format = parquet_asset["format"]
-        mode = parquet_asset["mode"]
+        stage = "x93i"
+        format = ".duto"
+        env = parquet_asset["env"]
 
-        # Read asset from repository
-        repo = DataRepository()
-
+        # Create DTO
+        dto = DataTableDTO(
+            name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
+        )
+        dao = DataTableDAO()
         with pytest.raises(ValueError):
-            repo.get(name=name, dataset=dataset, stage=stage, format=format, mode=mode)
+            dao.read(dto=dto)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -188,16 +201,23 @@ class TestDataRepo:
 
         # Obtain asset
         name = parquet_asset["name"]
+        asset = parquet_asset["asset"]
         dataset = parquet_asset["dataset"]
         stage = parquet_asset["stage"]
         format = parquet_asset["format"]
-        mode = parquet_asset["mode"]
+        env = parquet_asset["env"]
         filepath = parquet_asset["filepath"]
 
         assert os.path.exists(filepath), logger.error("TestDataRepo: remove - already removed.")
-        # Add asset to repo
-        repo = DataRepository()
-        repo.remove(name=name, dataset=dataset, stage=stage, format=format, mode=mode)
+
+        # Create DTO
+        dto = DataTableDTO(
+            name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
+        )
+
+        dao = DataTableDAO()
+
+        dao.delete(dto)
 
         assert not os.path.exists(filepath), logger.error("TestDataRepo: remove failed")
 

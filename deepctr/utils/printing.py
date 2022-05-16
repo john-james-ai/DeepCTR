@@ -144,3 +144,25 @@ class Printer:
             self.print_title(title)
         content.show()
         content.printSchema()
+
+    def get_print_string(self, content):
+        """Prints a line to standout with aligneed columns.
+
+        Parameters
+        ----------
+        content : dictionary with texts and widths that the
+            text can occupy.
+        """
+        print_string = ""
+        for text, width in content.items():
+            length = len(text)
+            padding = (
+                width - length if width > 0 else 0
+            )  # If width is 0, end of line, no padding required.
+            print_string = print_string + text + " " * padding
+
+        return print_string
+
+    def print_aligned(self, content):
+        print(self.get_print_string(content))
+

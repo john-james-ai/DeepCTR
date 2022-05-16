@@ -18,6 +18,7 @@
 # Copyright: (c) 2022 Bryant St. Labs                                                              #
 # ================================================================================================ #
 #%%
+from abc import ABC
 import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -40,8 +41,7 @@ class LoggerBuilder:
 
     def reset(self):
         self._logger = None
-        self._level = (logging.INFO,)
-        self._logfile = "logs/deepctr.log"
+        self._console_log_format = "%(name)-12s: %(levelname)-8s %(message)s"
         return self
 
     @property
@@ -50,39 +50,74 @@ class LoggerBuilder:
         self.reset()
         return logger
 
+    def set_logger(self, name: str) -> None:
+        self.reset()
+        self._logger = logging.getLogger(name)
+        return self
+
     def set_level(self, level: str = "info") -> None:
-        self._level = LoggerBuilder.__level.get(level[0], logging.INFO)
+        level = LoggerBuilder.__level.get(level[0], logging.INFO)
+        self._logger.setLevel(level)
         return self
 
     def set_logfile(self, logfile: str = "logs/deepctr.log") -> None:
         self._logfile = logfile
         return self
 
-    def build_console_handler(self):
+    def set_console_log_format(self, log_format="%(name)-12s: %(levelname)-8s %(message)s"):
+        self._console_log_format = log_format
+
+    def set_console_handler(self):
         """Formats the handler and sets logger"""
         # Obtain handller
         handler = logging.StreamHandler()
         # Configure formatter
-        format = logging.Formatter("%(name)-12s: %(levelname)-8s %(message)s")
+        format = logging.Formatter(self._console_log_format)
         # Set format on handler
         handler.setFormatter(format)
-        return handler
+        # Set the handler on the logger
+        self._logger.addHandler(handler)
+        return self
 
-    def build_file_handler(self, logfile: str):
+    def set_file_handler(self, logfile: str):
         """Formats the operations file handler and sets logger"""
         os.makedirs(os.path.dirname(logfile), exist_ok=True)
         # Time rotating file handler is preferred
-        handler = TimedRotatingFileHandler(filename=self._logfile)
+        handler = TimedRotatingFileHandler(filename=logfile)
         # Configure formatter for files to include time
         format = logging.Formatter("%(asctime)s %(name)-12s %(levelname)-8s %(message)s")
         # Set format on handler
         handler.setFormatter(format)
-        return handler
-
-    def build(self, name: str):
-        # Instantiate logger with 'info' level. User can override
-        self._logger = logging.getLogger(name)
-        self._logger.setLevel(self._level)
-        self._logger.addHandler(self.build_console_handler())
-        self._logger.addHandler(self.build_file_handler(self._logfile))
+        # Set the handler on the logger
+        self._logger.addHandler(handler)
         return self
+
+
+class LogFactory(ABC):
+
+    __LOGGER = None
+
+    @staticmethod
+    def __create_logger(logname: str, level: str = "info", **kwargs) -> logging.getLogger:
+        logger_builder = LoggerBuilder()
+
+        LogFactory.__LOGGER = (
+            logger_builder.reset()
+            .set_logger(logname)
+            .set_level(level=level)
+            .set_console_handler()
+            .set_file_handler(kwargs.get("logfile", "deepctr.log"))
+            .logger
+        )
+        return LogFactory.__LOGGER
+
+    @staticmethod
+    def get_logger(logname: str, level: str = "info", **kwargs) -> logging.getLogger:
+        """
+        A static method called by other modules to initialize logger in
+        their own module
+        """
+        logger = LogFactory.__create_logger(logname, level, kwargs)
+
+        # return the logger object
+        return logger
