@@ -27,7 +27,7 @@ import shutil
 
 from pyspark.sql import DataFrame
 
-from deepctr.persistence.io import SparkCSV, SparkParquet
+from deepctr.persistence.io import SparkCSV, SparkParquet, S3
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
@@ -42,12 +42,24 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
 class DataTableDTO:
-    name: str  # The name of the table.
-    dataset: str  # Name of dataset.
-    asset: str  # The data asset, i.e. 'alibaba', 'criteo', 'avazu'
+    name: str  # The name of the file.
     stage: str  # Data processing stage, i.e 'raw', 'staged', 'interim', 'clean', 'processed'
-    env: str  # Either 'dev', 'prod', or 'test' environment
+    dataset: str  # The specific data collection
+    source: str  # data source, i.e. 'alibaba', 'criteo', 'avazu'
+    home: str = "data"
     format: str = "parquet"  # Storage format, either 'csv', or 'parquet'
+    force: bool = False  # Controls whether to override existing data
+
+
+@dataclass
+class S3DTO:
+    dataset: str  # A specific dataset representation from a source
+    stage: str  # Data processing stage, i.e 'raw', 'staged', 'interim', 'clean', 'processed'
+    source: str  # data source, i.e. 'alibaba', 'criteo', 'avazu'
+    bucket: str  # The name of the S3 bucket
+    folder: str  # The data source, i.e. 'alibaba', 'criteo', 'avazu'
+    home: str = "data"
+    force: bool = False  # Controls whether to override existing data
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -83,11 +95,9 @@ class DAO(ABC):
 class DataTableDAO(DAO):
     """Data access object for data tables."""
 
-    __stages = ["raw", "staged", "interim", "clean", "processed"]
-    __envs = ["dev", "prod", "test"]
-    __assets = ["alibaba", "avazu", "criteo"]
+    __stages = ["raw", "staged", "interim", "clean", "processed", "extract"]
+    __source = ["alibaba", "avazu", "criteo"]
     __formats = ["csv", "parquet"]
-    __asset_type = "data"
 
     # -------------------------------------------------------------------------------------------- #
     def create(self, dto: DataTableDTO, data: DataFrame, force: str = True) -> None:
@@ -135,20 +145,41 @@ class DataTableDAO(DAO):
         shutil.rmtree(filepath, ignore_errors=True)
 
     # -------------------------------------------------------------------------------------------- #
-    def _get_filepath(self, dto: DataTableDTO) -> str:
-        try:
-            asset = get_close_matches(dto.asset, DataTableDAO.__assets)[0]
-            stage = get_close_matches(dto.stage, DataTableDAO.__stages)[0]
-            format = get_close_matches(dto.format, DataTableDAO.__formats)[0]
-            env = get_close_matches(dto.env, DataTableDAO.__envs)[0]
-        except IndexError as e:
-            raise ValueError("Unable to parse asset configuration. {}".format(e))
-        return (
-            os.path.join(DataTableDAO.__asset_type, env, asset, stage, dto.dataset, dto.name)
-            + "."
-            + format
+    def download(self, dto: DataTableDTO) -> None:
+        """Downloads data from an S3 Resource
+
+        Args:
+            dto (DataTableDTO): Data transfer object containing the datatable parameters
+        """
+        directory = self._get_directory(dto)
+
+        io = S3()
+        io.download_directory(
+            bucket=dto.bucket, folder=dto.folder, directory=directory, force=dto.force
         )
 
+    # -------------------------------------------------------------------------------------------- #
+    def _get_filepath(self, dto: DataTableDTO) -> str:
+        try:
+            source = get_close_matches(dto.dataset, DataTableDAO.__source)[0]
+            stage = get_close_matches(dto.stage, DataTableDAO.__stages)[0]
+            format = get_close_matches(dto.format, DataTableDAO.__formats)[0]
+
+        except IndexError as e:
+            raise ValueError("Unable to parse dataset configuration. {}".format(e))
+        return os.path.join(dto.home, source, dto.dataset, stage, dto.name) + "." + format
+
+    # -------------------------------------------------------------------------------------------- #
+    def _get_directory(self, dto: DataTableDTO) -> str:
+        try:
+            source = get_close_matches(dto.dataset, DataTableDAO.__source)[0]
+            stage = get_close_matches(dto.stage, DataTableDAO.__stages)[0]
+
+        except IndexError as e:
+            raise ValueError("Unable to parse dataset configuration. {}".format(e))
+        return os.path.join(dto.home, source, dto.dataset, stage)
+
+    # -------------------------------------------------------------------------------------------- #
     def _get_io(self, format: str) -> Union[SparkCSV, SparkParquet]:
         if "csv" in format:
             io = SparkCSV()

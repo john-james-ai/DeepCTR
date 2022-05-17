@@ -64,20 +64,23 @@ class ExtractS3(Operator):
             task_no=task_no, task_name=task_name, task_description=task_description, params=params
         )
 
-        self._task_no = task_no
-        self._task_name = task_name
-        self._task_description = task_description
-
-        self._bucket = params.get("bucket")
-        self._folder = params.get("folder")
-        self._destination = params.get("destination")
-        self._force = params["force"]
-
         self._progressbar = None
 
     @operator
     def execute(self, data: Any = None) -> pd.DataFrame:
         """Extracts data from an Amazon AWS S3 resource and persists it."""
+
+
+        try:
+            self._bucket = self._params["bucket"]
+            self._destination = \
+                os.path.join(context.get('home'),\
+                context.get('source'),\
+                context.get('dataset'), \
+                self._params.get('destination'))
+        except KeyError as e:
+            logger.error("")
+
 
         load_dotenv()
 
@@ -161,7 +164,7 @@ class ExpandGZ(Operator):
         self._force = params["force"]
 
     @operator
-    def execute(self, data: Any = None) -> pd.DataFrame:
+    def execute(self, data: Any = None -> pd.DataFrame:
         """Executes the Expand operation.
 
         Args:
@@ -202,7 +205,7 @@ class DataReader(Operator):
         )
 
     @operator
-    def execute(self, data: Any = None) -> Any:
+    def execute(self, data: Any = None -> Any:
         """Reads from the designated resource"""
         dto = DataTableDTO(
             name=self._params["name"],
@@ -228,7 +231,7 @@ class DataWriter(Operator):
         )
 
     @operator
-    def execute(self, data: Any = None) -> Any:
+    def execute(self, data: Any = None -> Any:
         """Reads from the designated resource"""
         dto = DataTableDTO(
             name=self._params["name"],

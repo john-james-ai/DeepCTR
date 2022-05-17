@@ -36,8 +36,9 @@ var/
 **/auth*.sql
 
 # Data
-data/**/*.*
-**/tests/data/*.*
+data/**
+data_dev/**
+**/tests/data/**
 *.parquet
 
 # Notes and internal documents

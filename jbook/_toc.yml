@@ -33,9 +33,10 @@ parts:
   - caption: 3. Data
     numbered: 3
     chapters:
-      - file: 3_data/1_alibaba
-      - file: 3_data/2_criteo
-      - file: 3_data/3_avazu
+      - file: 3_data/1_alibaba/1_alibaba_overview
+      - file: 3_data/1_alibaba/2_alibaba_data_download
+      - file: 3_data/1_criteo/1_criteo_overview
+      - file: 3_data/1_avazu/1_avazu_overview
   - caption: References
     chapters:
       - file: 99_references

@@ -127,9 +127,9 @@ class DAGBuilder(ABC):
 # ------------------------------------------------------------------------------------------------ #
 
 
-class DataDAGBuilder(DAGBuilder):
+class AlibabaETLBuilder(DAGBuilder):
     def __init__(self) -> None:
-        super(DataDAGBuilder, self).__init__()
+        super(AlibabaETLBuilder, self).__init__()
 
     def build(self, config: dict) -> None:
 

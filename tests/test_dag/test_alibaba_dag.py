@@ -25,7 +25,7 @@ import shutil
 from pyspark.sql import SparkSession
 
 from deepctr.utils.config import YamlIO
-from deepctr.dag.orchestrator import DataDAGBuilder
+from deepctr.dag.orchestrator import AlibabaETLBuilder
 from deepctr.utils.printing import Printer
 from deepctr.utils.log_config import LOG_CONFIG
 
@@ -54,7 +54,7 @@ class TestAlibabaETL:
         config_filepath = "config/alibaba_etl.yml"
         config = io.read(config_filepath)
 
-        builder = DataDAGBuilder()
+        builder = AlibabaETLBuilder()
         builder.build(config=config)
         builder.dag.run(start=0, stop=15)
 
