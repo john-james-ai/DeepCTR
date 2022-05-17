@@ -22,7 +22,7 @@ import pytest
 import shutil
 import logging
 import logging.config
-from deepctr.persistence.dal import DataTableDAO, DataTableDTO
+from deepctr.persistence.dal import DataTableDAO, DataParam
 from deepctr.utils.printing import Printer
 from deepctr.utils.log_config import LOG_CONFIG
 
@@ -38,29 +38,13 @@ class TestDataTableDAO:
     def test_setup(self):
         shutil.rmtree("data/test/alibaba/stage", ignore_errors=True)
 
-    def test_add(self, caplog, parquet_asset) -> None:
+    def test_add(self, caplog, dp_std) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\n\n\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        # Obtain asset
-        name = parquet_asset["name"]
-        asset = parquet_asset["asset"]
-        data = parquet_asset["data"]
-        dataset = parquet_asset["dataset"]
-        stage = parquet_asset["stage"]
-        format = parquet_asset["format"]
-        env = parquet_asset["env"]
-        filepath = parquet_asset["filepath"]
-        force = False
-
-        # Create DTO
-        dto = DataTableDTO(
-            name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
-        )
-
         # Persist data table
         dao = DataTableDAO()
-        dao.create(dto=dto, data=data, force=force)
+        dao.create(data_params=dp_std, data=data, force=force)
 
         # Check existence of file and location
         assert os.path.exists(filepath), "TestDataDAO: add failed"
@@ -82,14 +66,14 @@ class TestDataTableDAO:
         filepath = parquet_asset["filepath"]
         force = True
 
-        # Create DTO
-        dto = DataTableDTO(
+        # Create data_params
+        data_params = DataParam(
             name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
         )
 
         # Persist data table
         dao = DataTableDAO()
-        dao.create(dto=dto, data=data, force=force)
+        dao.create(data_params=data_params, data=data, force=force)
 
         # Check existence of file and location
         assert os.path.exists(filepath), "TestDataRepo: add failed"
@@ -110,15 +94,15 @@ class TestDataTableDAO:
         env = parquet_asset["env"]
         force = False
 
-        # Create DTO
-        dto = DataTableDTO(
+        # Create data_params
+        data_params = DataParam(
             name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
         )
 
         # Persist data table
         dao = DataTableDAO()
         with pytest.raises(FileExistsError):
-            dao.create(dto=dto, data=data, force=force)
+            dao.create(data_params=data_params, data=data, force=force)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -135,14 +119,14 @@ class TestDataTableDAO:
         format = parquet_asset["format"]
         env = parquet_asset["env"]
 
-        # Create DTO
-        dto = DataTableDTO(
+        # Create data_params
+        data_params = DataParam(
             name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
         )
 
         # Read data table
         dao = DataTableDAO()
-        sdf = dao.read(dto=dto)
+        sdf = dao.read(data_params=data_params)
 
         title = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
         self.show(sdf, title)
@@ -163,15 +147,15 @@ class TestDataTableDAO:
         format = parquet_asset["format"]
         env = parquet_asset["env"]
 
-        # Create DTO
-        dto = DataTableDTO(
+        # Create data_params
+        data_params = DataParam(
             name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
         )
 
         # Read data table
         dao = DataTableDAO()
         with pytest.raises(FileNotFoundError):
-            dao.read(dto=dto)
+            dao.read(data_params=data_params)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -187,13 +171,13 @@ class TestDataTableDAO:
         format = ".duto"
         env = parquet_asset["env"]
 
-        # Create DTO
-        dto = DataTableDTO(
+        # Create data_params
+        data_params = DataParam(
             name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
         )
         dao = DataTableDAO()
         with pytest.raises(ValueError):
-            dao.read(dto=dto)
+            dao.read(data_params=data_params)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -212,14 +196,14 @@ class TestDataTableDAO:
 
         assert os.path.exists(filepath), logger.error("TestDataRepo: remove - already removed.")
 
-        # Create DTO
-        dto = DataTableDTO(
+        # Create data_params
+        data_params = DataParam(
             name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
         )
 
         dao = DataTableDAO()
 
-        dao.delete(dto)
+        dao.delete(data_params)
 
         assert not os.path.exists(filepath), logger.error("TestDataRepo: remove failed")
 

@@ -22,6 +22,7 @@ from abc import ABC, abstractmethod
 import os
 from dotenv import load_dotenv
 import logging
+import tarfile
 import logging.config
 import pandas as pd
 import progressbar
@@ -29,6 +30,7 @@ import pyspark
 from pyspark.sql import SparkSession
 import findspark
 from typing import Any
+import tempfile
 import boto3
 import botocore
 from boto3.s3.transfer import TransferConfig
@@ -42,6 +44,70 @@ findspark.init()
 logging.config.dictConfig(LOG_CONFIG)
 logging.getLogger("py4j").setLevel(logging.WARN)
 logger = logging.getLogger(__name__)
+# ------------------------------------------------------------------------------------------------ #
+#                                          COMPRESSION                                             #
+# ------------------------------------------------------------------------------------------------ #
+
+
+class Compression(ABC):
+    """Abstract base class for data compression classes."""
+
+    def compress(self, source: str, destination: str) -> None:
+        pass
+
+    def expand(self, source: str, destination: str) -> None:
+        pass
+
+
+# ------------------------------------------------------------------------------------------------ #
+class TarGZ(Compression):
+    """Batch compress and expand Tar and Gzip files. """
+
+    def compress(self, source: str, destination: str) -> None:
+        """Compress files in a directory into a Tar GZ archive
+
+        Args:
+            source (str): The directory containing the files to compress
+            destination (str): The path for the output Tar GZ File
+        """
+        os.makedirs(os.path.dirname(destination), exist_ok=True)
+
+        with tarfile.open(destination, "w:gz") as tar:
+            filenames = os.listdir(source)
+            for filename in filenames:
+                member = os.path.join(source, filename)
+                tar.add(member, arcname=filename)
+
+    def expand(self, source: str, destination: str, force: str = False) -> None:
+        """Expands a Tar Gz archive to the designated destination directory
+
+        Args:
+            source (str): A directory containing Tar GZ file(s)
+            destination (str): The directory into which the files will be expanded.
+        """
+        os.makedirs(destination, exist_ok=True)
+
+        if self._exists(destination) and not force:
+            logger.info(
+                "The destination {} is non-empty and force is False. The expand was therefore skipped.".format(
+                    destination
+                )
+            )
+        else:
+
+            filenames = os.listdir(source)
+            for filename in filenames:
+                filepath = os.path.join(source, filename)
+                tar = tarfile.open(filepath, "r:gz")
+                tar.extractall(destination)
+                tar.close()
+
+    def _exists(self, destination) -> bool:
+        """Returns true if the directory exists and is non-empty, returns False otherwise."""
+        num_files = len(os.listdir(destination))
+        return num_files > 0
+
+
 # ------------------------------------------------------------------------------------------------ #
 #                                              S3                                                  #
 # ------------------------------------------------------------------------------------------------ #
@@ -75,6 +141,7 @@ class Cloud(ABC):
         pass
 
 
+# ------------------------------------------------------------------------------------------------ #
 class S3(Cloud):
     """Base class for S3 uploading and downloading"""
 
@@ -103,10 +170,6 @@ class S3(Cloud):
 
             s3 = boto3.client("s3", aws_access_key_id=S3_ACCESS, aws_secret_access_key=S3_PASSWORD)
 
-            size = os.path.getsize(filepath)
-            self._progressbar = progressbar.progressbar.ProgressBar(maxval=size)
-            self._progressbar.start()
-
             MB = 1024 ** 2
             config = TransferConfig(
                 max_concurrency=20,
@@ -115,22 +178,35 @@ class S3(Cloud):
                 max_bandwidth=50 * MB,
             )
 
-            try:
-                s3.upload_file(
-                    Filename=filepath,
-                    Bucket=bucket,
-                    Key=object,
-                    Callback=self._callback,
-                    Config=config,
-                )
+            size = os.path.getsize(filepath)
+            self._progressbar = progressbar.progressbar.ProgressBar(maxval=size)
+            self._progressbar.start()
 
-            except NoCredentialsError:
-                msg = "Credentials not available for {} bucket".format(bucket)
-                raise NoCredentialsError(msg)
+            archive = os.path.basename(filepath) + ".tar.gz"
 
-            except FileNotFoundError as e:
-                logger.error("File {} was not found.".format(filepath))
-                raise FileExistsError(e)
+            with tarfile.open(archive, "w:gz") as tar:
+                tar.add(filepath)
+
+                print(40 * "*")
+                df = pd.read_csv(filepath)
+                print(df.head())
+
+                try:
+                    s3.upload_file(
+                        Filename=filepath,
+                        Bucket=bucket,
+                        Key=object,
+                        Callback=self._callback,
+                        Config=config,
+                    )
+
+                except NoCredentialsError:
+                    msg = "Credentials not available for {} bucket".format(bucket)
+                    raise NoCredentialsError(msg)
+
+                except FileNotFoundError as e:
+                    logger.error("File {} was not found.".format(filepath))
+                    raise FileExistsError(e)
 
     def upload_directory(
         self, directory: str, bucket: str, folder: str, force: bool = False
@@ -146,8 +222,8 @@ class S3(Cloud):
         """
         files = os.listdir(directory)
         for file in files:
-            filepath = os.path.join(os.path.dirname(directory), file)
-            object = os.path.join(folder, file)
+            filepath = os.path.join(directory, file)
+            object = os.path.join(folder, file) + ".tar.gz"
             self.upload_file(filepath=filepath, bucket=bucket, object=object, force=force)
 
     def download_file(self, bucket: str, object: str, filepath: str, force: bool = False) -> None:
@@ -222,27 +298,42 @@ class S3(Cloud):
             folder (str): The S3 folder containing the files to download.
             directory (str): The destination directory to which the files will be downloaded.
         """
+        os.makedirs(directory, exist_ok=True)
 
+        if len(os.listdir(directory)) > 0 and not force:
+            logger.warning(
+                "Destination directory is not empty. Since force is False, the download from {}\\{} has been skipped.".format(
+                    bucket, folder
+                )
+            )
+
+        else:
+
+            load_dotenv()
+
+            S3_ACCESS = os.getenv("S3_ACCESS")
+            S3_PASSWORD = os.getenv("S3_PASSWORD")
+
+            object_keys = self._list_bucket_contents(bucket, folder)
+
+            s3 = boto3.client("s3", aws_access_key_id=S3_ACCESS, aws_secret_access_key=S3_PASSWORD)
+
+            for object_key in object_keys:
+                self._download(s3, bucket, object_key, filepath)
+
+    def delete(self, bucket: str, object: str) -> None:
+        """Deletes a object from S3 storage
+
+        Args:
+            bucket (str): The S3 bucket name
+            object (str): The S3 object key
+        """
         load_dotenv()
 
         S3_ACCESS = os.getenv("S3_ACCESS")
         S3_PASSWORD = os.getenv("S3_PASSWORD")
-
-        object_keys = self._list_bucket_contents(bucket, folder)
-
-        s3 = boto3.client("s3", aws_access_key_id=S3_ACCESS, aws_secret_access_key=S3_PASSWORD)
-
-        os.makedirs(directory, exist_ok=True)
-
-        for object_key in object_keys:
-            filepath = os.path.join(directory, os.path.basename(object_key))
-
-            if force or not os.path.exists(filepath):
-                self._download(s3, bucket, object_key, filepath)
-            else:
-                logger.info(
-                    "File {} not downloaded. It already exists".format(os.path.basename(filepath))
-                )
+        s3 = boto3.resource("s3", aws_access_key_id=S3_ACCESS, aws_secret_access_key=S3_PASSWORD,)
+        s3.Object(bucket, object).delete()
 
     def exists(self, bucket: str, object: str) -> bool:
         """Checks if a file exists in an S3 bucket
@@ -288,9 +379,7 @@ class S3(Cloud):
         )
 
         try:
-            s3.download_file(
-                bucket, object, filepath, Callback=self._download_callback, Config=config
-            )
+            s3.download_file(bucket, object, filepath, Callback=self._callback, Config=config)
 
         except NoCredentialsError:
             msg = "Credentials not available for {} bucket".format(bucket)

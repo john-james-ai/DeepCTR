@@ -40,7 +40,13 @@ tasks:
     task_name: expand_gzfiles
     task_description: Expands Alibaba Display Ad Data (Production) to raw directory
     task_params:
-      source: external
+      home: data
+      source: alibaba
+      dataset: vesuvio
+      bucket: deepctr
+      stage: extract
+      force: False
+      
       destination: data/test/alibaba/raw/alibaba_raw
       force: False
 
