@@ -30,7 +30,7 @@ from botocore.exceptions import NoCredentialsError
 
 from deepctr.utils.decorators import operator
 from deepctr.dag.base import Operator
-from deepctr.persistence.dal import DataTableDTO, DataTableDAO
+from deepctr.persistence.dal import DataParam, DataTableDAO, S3DTO
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
@@ -70,72 +70,15 @@ class ExtractS3(Operator):
     def execute(self, data: Any = None) -> pd.DataFrame:
         """Extracts data from an Amazon AWS S3 resource and persists it."""
 
-
         try:
-            self._bucket = self._params["bucket"]
-            self._destination = \
-                os.path.join(context.get('home'),\
-                context.get('source'),\
-                context.get('dataset'), \
-                self._params.get('destination'))
+            dto = S3DTO(dataset=self._params['dataset'], stage=self._params['stage'],
+            source=self._params['source'], bucket=self._params['bucket'])
+            dao = DataTableDAO()
+            dao.download(dto)
+
+
         except KeyError as e:
-            logger.error("")
-
-
-        load_dotenv()
-
-        S3_ACCESS = os.getenv("S3_ACCESS")
-        S3_PASSWORD = os.getenv("S3_PASSWORD")
-
-        object_keys = self._list_bucket_contents()
-        self._s3 = boto3.client(
-            "s3", aws_access_key_id=S3_ACCESS, aws_secret_access_key=S3_PASSWORD
-        )
-
-        os.makedirs(self._destination, exist_ok=True)
-
-        for object_key in object_keys:
-            filepath = os.path.join(self._destination, os.path.basename(object_key))
-            if self._force or not os.path.exists(filepath):
-                self._download(object_key, filepath)
-            else:
-                logger.info(
-                    "File {} not downloaded. It already exists".format(os.path.basename(filepath))
-                )
-
-    def _list_bucket_contents(self) -> list:
-        """Returns a list of objects in the designated bucket"""
-
-        objects = []
-        s3 = boto3.resource("s3")
-        bucket = s3.Bucket(self._bucket)
-        for object in bucket.objects.filter(Delimiter="/t", Prefix=self._folder):
-            if not object.key.endswith("/"):  # Skip objects that are just the folder name
-                objects.append(object.key)
-
-        return objects
-
-    def _download(self, object_key: str, filepath: str) -> None:
-        """Downloads object designated by the object ke if not exists or force is True"""
-
-        response = self._s3.head_object(Bucket=self._bucket, Key=object_key)
-        size = response["ContentLength"]
-
-        self._progressbar = progressbar.progressbar.ProgressBar(maxval=size)
-        self._progressbar.start()
-
-        try:
-            self._s3.download_file(
-                self._bucket, object_key, filepath, Callback=self._download_callback
-            )
-
-        except NoCredentialsError:
-            msg = "Credentials not available for {} bucket".format(self._bucket)
-            raise NoCredentialsError(msg)
-
-    def _download_callback(self, size):
-        self._progressbar.update(self._progressbar.currval + size)
-
+            logger.error("Invalid S3DTO Parameter Object. {}".format(dto))
 
 # ------------------------------------------------------------------------------------------------ #
 #                                    EXPAND GZ                                                     #
@@ -207,7 +150,7 @@ class DataReader(Operator):
     @operator
     def execute(self, data: Any = None -> Any:
         """Reads from the designated resource"""
-        dto = DataTableDTO(
+        dto = DataParam(
             name=self._params["name"],
             dataset=self._params["dataset"],
             asset=self._params["asset"],
@@ -233,7 +176,7 @@ class DataWriter(Operator):
     @operator
     def execute(self, data: Any = None -> Any:
         """Reads from the designated resource"""
-        dto = DataTableDTO(
+        dto = DataParam(
             name=self._params["name"],
             dataset=self._params["dataset"],
             asset=self._params["asset"],

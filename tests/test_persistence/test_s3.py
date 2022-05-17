@@ -36,60 +36,88 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 # ------------------------------------------------------------------------------------------------ #
 
 
+HOME = "tests/data/s3/"
+FOLDER = "test/s3/"
+
+
 @pytest.mark.s3
 class TestS3:
-    def test_upload_file(self, caplog) -> None:
+    def test_setup(self):
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    def test_upload_file(self, caplog, csvfile) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        filepath = "tests/data/aws/aws_test1.csv"
         bucket = "deepctr"
-        object = "test/aws_test1.csv"
+        object = FOLDER + os.path.basename(csvfile) + ".tar.gz"
 
         io = S3()
-        io.upload_file(filepath, bucket, object)
+        io.upload_file(csvfile, bucket, object, force=True)
         assert io.exists(bucket, object), logger.error("File didn't make it.")
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-    def test_upload_directory(self, caplog) -> None:
-        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-        directory = "tests/data/aws/"
-        bucket = "deepctr"
-        folder = "test"
-        object = "test/aws_test2.csv"
-
-        io = S3()
-        io.upload_directory(directory, bucket, folder)
-        assert io.exists(bucket, object), logger.error("File didn't make it.")
-
-        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-    def test_download_file(self, caplog) -> None:
+    def test_download_file(self, caplog, csvfile) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        filepath = "tests/data/aws2/aws_test1.csv"
+        filepath = os.path.join(HOME, "download_file")
         bucket = "deepctr"
-        object = "test/aws_test1.csv"
+        object = FOLDER + os.path.basename(csvfile) + ".tar.gz"
 
         io = S3()
-        io.download_file(bucket, object, filepath)
+        io.download_file(bucket, object, filepath, force=True)
         assert os.path.exists(filepath), logger.error("File was not downloaded")
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    def test_upload_directory(self, caplog, csvfiles) -> None:
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        directory = csvfiles
+        bucket = "deepctr"
+        folder = os.path.join(FOLDER, "upload_directory")
+
+        io = S3()
+        io.upload_directory(directory, bucket, folder, force=True)
+
+        objects = os.listdir(csvfiles)
+        for object in objects:
+            object = os.path.join(folder, os.path.basename(object)) + ".tar.gz"
+            print(80 * "*")
+            print(directory)
+            print(object)
+            assert io.exists(bucket, object), logger.error("File didn't make it.")
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
     def test_download_directory(self, caplog) -> None:
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        directory = "tests/data/aws/"
+        directory = os.path.join(HOME, "download_directory")
         bucket = "deepctr"
-        folder = "test"
-        filepath = "tests/data/aws/aws_test2.csv"
+        folder = os.path.join(FOLDER, "upload_directory")
+        filepath = os.path.join(directory, "dataframe_2.csv.tar.gz")
 
         io = S3()
-        io.download_directory(bucket, folder, directory)
+        io.download_directory(bucket, folder, directory, force=True)
         assert os.path.exists(filepath), logger.error("Download directory failed")
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    def test_delete(self, caplog, csvfile) -> None:
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        bucket = "deepctr"
+        object = os.path.join(FOLDER, os.path.basename(csvfile)) + "tar.gz"
+
+        io = S3()
+        assert io.exists(bucket, object), logger.error("Object doesn't exist")
+
+        io.delete(bucket, object)
+        assert not io.exists(bucket, object), logger.error("Object not deleted")
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))

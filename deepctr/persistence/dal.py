@@ -38,27 +38,18 @@ logger = logging.getLogger(__name__)
 
 
 # ------------------------------------------------------------------------------------------------ #
-#                                DATA TRANSFER OBJECTS                                             #
+#                                DATA PARAMETER OBJECT                                             #
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class DataTableDTO:
+class DataParam:
     name: str  # The name of the file.
     stage: str  # Data processing stage, i.e 'raw', 'staged', 'interim', 'clean', 'processed'
     dataset: str  # The specific data collection
     source: str  # data source, i.e. 'alibaba', 'criteo', 'avazu'
+    bucket: str  # The name of the S3 bucket
+    object: str  # The object key for an S3 resource
     home: str = "data"
     format: str = "parquet"  # Storage format, either 'csv', or 'parquet'
-    force: bool = False  # Controls whether to override existing data
-
-
-@dataclass
-class S3DTO:
-    dataset: str  # A specific dataset representation from a source
-    stage: str  # Data processing stage, i.e 'raw', 'staged', 'interim', 'clean', 'processed'
-    source: str  # data source, i.e. 'alibaba', 'criteo', 'avazu'
-    bucket: str  # The name of the S3 bucket
-    folder: str  # The data source, i.e. 'alibaba', 'criteo', 'avazu'
-    home: str = "data"
     force: bool = False  # Controls whether to override existing data
 
 
@@ -71,19 +62,23 @@ class DAO(ABC):
     """Defines interface for data access objects."""
 
     @abstractmethod
-    def create(self, dto: Any, data: Any, force: bool = False) -> None:
+    def create(self, data_param: Any, data: Any, force: bool = False) -> None:
         pass
 
     @abstractmethod
-    def read(self, dto: Any) -> None:
+    def read(self, data_param: Any) -> None:
         pass
 
     @abstractmethod
-    def delete(self, dto: Any) -> None:
+    def delete(self, data_param: Any) -> None:
         pass
 
     @abstractmethod
-    def _get_filepath(self, dto: Any) -> str:
+    def download(self, data_param: DataParam) -> None:
+        pass
+
+    @abstractmethod
+    def _get_filepath(self, data_param: Any) -> str:
         pass
 
 
@@ -100,84 +95,91 @@ class DataTableDAO(DAO):
     __formats = ["csv", "parquet"]
 
     # -------------------------------------------------------------------------------------------- #
-    def create(self, dto: DataTableDTO, data: DataFrame, force: str = True) -> None:
+    def create(self, data_param: DataParam, data: DataFrame, force: str = True) -> None:
         """Persists a new data table to storage.
 
         Args:
-            dto (DataTableDTO): Data transfer object containing the datatable parameters
+            data_param (DataParam): Data transfer object containing the datatable parameters
             data (DataFrame): The data to store
             force (bool): If True, method will overwrite existing data. Default is True
 
         """
-        filepath = self._get_filepath(dto)
+        filepath = self._get_filepath(data_param)
         if os.path.exists(filepath) and not force:
             raise FileExistsError("{} already exists.".format(filepath))
 
-        io = self._get_io(format=dto.format)
+        io = self._get_io(format=data_param.format)
         io.write(data=data, filepath=filepath)
 
     # -------------------------------------------------------------------------------------------- #
-    def read(self, dto: DataTableDTO) -> DataFrame:
+    def read(self, data_param: DataParam) -> DataFrame:
         """Obtains a DataFrame from persisted storage
 
         Args:
-            dto (DataTableDTO): Data transfer object containing the datatable parameters
+            data_param (DataParam): Data transfer object containing the datatable parameters
 
         Returns (DataFrame)
         """
-        filepath = self._get_filepath(dto)
+        filepath = self._get_filepath(data_param)
 
         try:
-            io = self._get_io(format=dto.format)
+            io = self._get_io(format=data_param.format)
             return io.read(filepath=filepath)
         except FileNotFoundError as e:
             logger.error("File {} not found.".format(filepath))
             raise FileNotFoundError(e)
 
     # -------------------------------------------------------------------------------------------- #
-    def delete(self, dto: DataTableDTO) -> None:
+    def delete(self, data_param: DataParam) -> None:
         """Removes a data table from persisted storage
 
         Args:
-            dto (DataTableDTO): Data transfer object containing the datatable parameters
+            data_param (DataParam): Data transfer object containing the datatable parameters
         """
-        filepath = self._get_filepath(dto)
+        filepath = self._get_filepath(data_param)
         shutil.rmtree(filepath, ignore_errors=True)
 
     # -------------------------------------------------------------------------------------------- #
-    def download(self, dto: DataTableDTO) -> None:
+    def download(self, data_param: DataParam) -> None:
         """Downloads data from an S3 Resource
 
         Args:
-            dto (DataTableDTO): Data transfer object containing the datatable parameters
+            data_param (DataParam): Data transfer object containing the datatable parameters
         """
-        directory = self._get_directory(dto)
+        directory = self._get_directory(data_param)
 
         io = S3()
         io.download_directory(
-            bucket=dto.bucket, folder=dto.folder, directory=directory, force=dto.force
+            bucket=data_param.bucket,
+            folder=data_param.folder,
+            directory=directory,
+            force=data_param.force,
         )
 
     # -------------------------------------------------------------------------------------------- #
-    def _get_filepath(self, dto: DataTableDTO) -> str:
+    def _get_filepath(self, data_param: DataParam) -> str:
         try:
-            source = get_close_matches(dto.dataset, DataTableDAO.__source)[0]
-            stage = get_close_matches(dto.stage, DataTableDAO.__stages)[0]
-            format = get_close_matches(dto.format, DataTableDAO.__formats)[0]
+            source = get_close_matches(data_param.dataset, DataTableDAO.__source)[0]
+            stage = get_close_matches(data_param.stage, DataTableDAO.__stages)[0]
+            format = get_close_matches(data_param.format, DataTableDAO.__formats)[0]
 
         except IndexError as e:
             raise ValueError("Unable to parse dataset configuration. {}".format(e))
-        return os.path.join(dto.home, source, dto.dataset, stage, dto.name) + "." + format
+        return (
+            os.path.join(data_param.home, source, data_param.dataset, stage, data_param.name)
+            + "."
+            + format
+        )
 
     # -------------------------------------------------------------------------------------------- #
-    def _get_directory(self, dto: DataTableDTO) -> str:
+    def _get_directory(self, data_param: DataParam) -> str:
         try:
-            source = get_close_matches(dto.dataset, DataTableDAO.__source)[0]
-            stage = get_close_matches(dto.stage, DataTableDAO.__stages)[0]
+            source = get_close_matches(data_param.dataset, DataTableDAO.__source)[0]
+            stage = get_close_matches(data_param.stage, DataTableDAO.__stages)[0]
 
         except IndexError as e:
             raise ValueError("Unable to parse dataset configuration. {}".format(e))
-        return os.path.join(dto.home, source, dto.dataset, stage)
+        return os.path.join(data_param.home, source, data_param.dataset, stage)
 
     # -------------------------------------------------------------------------------------------- #
     def _get_io(self, format: str) -> Union[SparkCSV, SparkParquet]:
