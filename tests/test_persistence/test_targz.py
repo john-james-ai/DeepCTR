@@ -20,8 +20,6 @@ import inspect
 import pytest
 import logging
 import logging.config
-import shutil
-
 
 from deepctr.persistence.io import TarGZ
 from deepctr.utils.log_config import LOG_CONFIG
@@ -39,37 +37,62 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 @pytest.mark.tar
 class TestTarGZ:
-    def test_setup(self):
-        filepath = "tests/data/aws2"
-        shutil.rmtree(filepath, ignore_errors=True)
-
-        filepath = "tests/data/aws3"
-        shutil.rmtree(filepath, ignore_errors=True)
-
-    def test_compress(self, caplog) -> None:
+    def test_compress_file(self, caplog, csvfile) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
+        source = csvfile
+        destination = "tests/data/targz/compressed_file.csv.tar.gz"
+
         io = TarGZ()
-        for i in range(4):
-            source = "tests/data/aws/"
-            destination = (
-                os.path.join("tests", "data", "aws2", "archive") + "_" + str(i) + ".tar.gz"
-            )
-            io.compress(source, destination)
+        io.compress(source, destination)
+        assert os.path.exists(destination), logger.error("Compression failed.")
 
-        assert os.path.exists(destination), logger.error("File not compressed.")
-
-        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-    def test_expand(self, caplog) -> None:
+    def test_compress_dir(self, caplog, csvfiles) -> None:
+        caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        source = "tests/data/aws2/"
-        destination = "tests/data/aws3/"
+        source = csvfiles
+        destination = "tests/data/targz/compressed_files.csv.tar.gz"
+
+        io = TarGZ()
+        io.compress(source, destination)
+        assert os.path.exists(destination), logger.error("Compression failed.")
+
+    def test_expand_file(self, caplog, zipfile) -> None:
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        source = zipfile
+        destination = "tests/data/expand/single_file/"
 
         io = TarGZ()
         io.expand(source, destination)
-        assert len(os.listdir(destination)) == 2, logger.error("Expand didn't happen")
+        assert len(os.listdir(destination)) == 1, logger.error("Expand didn't happen")
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    def test_expand_directory(self, caplog, zipfiles) -> None:
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        source = zipfiles
+        destination = "tests/data/expand/multiple_files/"
+
+        io = TarGZ()
+        io.expand(source, destination)
+
+        assert len(os.listdir(destination)) > 1, logger.error("Expand didn't happen")
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    def test_expand_directory_fail(self, caplog, zipfiles) -> None:
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        source = zipfiles
+        destination = "tests/data/expand/multiple_files/"
+
+        io = TarGZ()
+        io.expand(source, destination, force=False)
+
+        assert len(os.listdir(destination)) > 1, logger.error("Expand didn't happen")
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))

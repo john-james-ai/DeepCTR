@@ -37,25 +37,22 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 
 HOME = "tests/data/s3/"
-FOLDER = "test/s3/"
+FOLDER = "test/s3"
+BASE = "tests/data/"
 
 
 @pytest.mark.s3
 class TestS3:
-    def test_setup(self):
-        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
     def test_upload_file(self, caplog, csvfile) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
+        filepath = os.path.join(BASE, "csvfile", os.path.basename(csvfile))
         bucket = "deepctr"
-        object = FOLDER + os.path.basename(csvfile) + ".tar.gz"
+        object = os.path.join(FOLDER, os.path.basename(csvfile))
 
         io = S3()
-        io.upload_file(csvfile, bucket, object, force=True)
+        io.upload_file(filepath, bucket, object, force=True)
         assert io.exists(bucket, object), logger.error("File didn't make it.")
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
@@ -66,7 +63,7 @@ class TestS3:
 
         filepath = os.path.join(HOME, "download_file")
         bucket = "deepctr"
-        object = FOLDER + os.path.basename(csvfile) + ".tar.gz"
+        object = os.path.join(FOLDER, os.path.basename(csvfile))
 
         io = S3()
         io.download_file(bucket, object, filepath, force=True)
@@ -86,10 +83,7 @@ class TestS3:
 
         objects = os.listdir(csvfiles)
         for object in objects:
-            object = os.path.join(folder, os.path.basename(object)) + ".tar.gz"
-            print(80 * "*")
-            print(directory)
-            print(object)
+            object = os.path.join(folder, os.path.basename(object))
             assert io.exists(bucket, object), logger.error("File didn't make it.")
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
@@ -100,7 +94,7 @@ class TestS3:
         directory = os.path.join(HOME, "download_directory")
         bucket = "deepctr"
         folder = os.path.join(FOLDER, "upload_directory")
-        filepath = os.path.join(directory, "dataframe_2.csv.tar.gz")
+        filepath = os.path.join(directory, "dataframe_2.csv")
 
         io = S3()
         io.download_directory(bucket, folder, directory, force=True)
@@ -112,12 +106,24 @@ class TestS3:
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
         bucket = "deepctr"
-        object = os.path.join(FOLDER, os.path.basename(csvfile)) + "tar.gz"
+        object = os.path.join(FOLDER, os.path.basename(csvfile))
 
         io = S3()
         assert io.exists(bucket, object), logger.error("Object doesn't exist")
 
-        io.delete(bucket, object)
+        io.delete_object(bucket, object)
         assert not io.exists(bucket, object), logger.error("Object not deleted")
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    def test_teardown(self):
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        # bucket = "deepctr"
+        # folder = "s3/"
+
+        # shutil.rmtree(HOME)
+        # io = S3()
+        # io.delete_folder(bucket, folder)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))

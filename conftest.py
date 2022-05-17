@@ -19,7 +19,6 @@
 # ================================================================================================ #
 import os
 import pytest
-import pandas as pd
 import shutil
 from pyspark.sql import SparkSession
 from deepctr.persistence.dal import DataParam
@@ -112,41 +111,51 @@ def csvfile(dp_std):
     filepath = os.path.join(home, filename)
     data["data"].to_csv(filepath)
     yield filepath
-    shutil.rmtree(filepath, ignore_errors=True)
+    # shutil.rmtree(filepath, ignore_errors=True)
 
 
 @pytest.fixture(scope="class")
 def csvfiles(dp_std):
 
-    home = "tests/data/csvfiles/"
-    os.makedirs(home, exist_ok=True)
+    directory = "tests/data/csvfiles/"
+    os.makedirs(directory, exist_ok=True)
     data = load_iris(return_X_y=False, as_frame=True)
     for i in range(5):
         filename = "dataframe" + "_" + str(i) + ".csv"
-        filepath = os.path.join(home, filename)
+        filepath = os.path.join(directory, filename)
         data["data"].to_csv(filepath)
-    yield home
-    # shutil.rmtree(home, ignore_errors=True)
+    yield directory
+    # shutil.rmtree(directory, ignore_errors=True)
 
 
 # ------------------------------------------------------------------------------------------------ #
 #                                      ZIP FILES                                                   #
 # ------------------------------------------------------------------------------------------------ #
 @pytest.fixture(scope="class")
+def zipfile(dp_std):
+
+    io = TarGZ()
+    source = "tests/data/csvfile/csvfile.csv"
+    archive = "archive.tar.gz"
+    io.compress(source, archive)
+    yield archive
+    # shutil.rmtree(archive, ignore_errors=True)
+
+
+@pytest.fixture(scope="class")
 def zipfiles(dp_std):
 
     io = TarGZ()
     dataframes = "tests/data/dataframes/"
-    zipfiles = "tests/data/zipfiles/"
+    archive = "archive.tar.gz"
     os.makedirs(dataframes, exist_ok=True)
-    os.makedirs(zipfiles, exist_ok=True)
 
     df = load_iris(return_X_y=False, as_frame=True)
     for i in range(5):
         filename = "dataframe" + "_" + str(i) + ".csv"
         filepath = os.path.join(dataframes, filename)
-        pd.to_csv(filepath, df)
-    io.compress(dataframes, zipfiles)
-    shutil.rmtree(dataframes)
-    yield zipfiles
-    shutil.rmtree(zipfiles, ignore_errors=True)
+        df["data"].to_csv(filepath)
+    io.compress(dataframes, archive)
+
+    yield archive
+    # shutil.rmtree(archive, ignore_errors=True)
