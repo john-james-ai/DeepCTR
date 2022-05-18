@@ -127,11 +127,37 @@ class DAGBuilder(ABC):
 # ------------------------------------------------------------------------------------------------ #
 
 
-class AlibabaETLBuilder(DAGBuilder):
+class DataDAGBuilder(DAGBuilder):
     def __init__(self) -> None:
-        super(AlibabaETLBuilder, self).__init__()
+        super(DataDAGBuilder, self).__init__()
+        self.reset()
 
-    def build(self, config: dict) -> None:
+    def reset(self) -> None:
+        self._dag = None
+        self._home = None
+        self._datasource = None
+        self._dataset = None
+        self._config = None
+
+    def datasource(self, datasource: str) -> DAGBuilder:
+        self._datasource = datasource
+        return self
+
+    def dataset(self, dataset: str) -> DAGBuilder:
+        self._dataset = dataset
+        return self
+
+    def at(self, at: str) -> DAGBuilder:
+        self._home = at
+        return self
+
+    def with_template(self, template: dict) -> DAGBuilder:
+        self._template = template
+        return self
+
+    def build(self) -> None:
+
+        config = self._create_config()
 
         tasks = self._build_tasks(config)
 
@@ -145,3 +171,12 @@ class AlibabaETLBuilder(DAGBuilder):
         except KeyError as e:
             logger.error("Invalid configuration parameters")
             raise ValueError(e)
+        return self
+
+    def _create_config(self) -> dict:
+        config = self._template
+        for task_no in config["tasks"].keys():
+            config["tasks"][task_no]["task_params"]["datasource"] = self._datasource
+            config["tasks"][task_no]["task_params"]["dataset"] = self._dataset
+            config["tasks"][task_no]["task_params"]["home"] = self._home
+        return config

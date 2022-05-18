@@ -10,42 +10,34 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday May 10th 2022 03:30:15 pm                                                   #
-# Modified   : Friday May 13th 2022 10:31:59 am                                                    #
+# Modified   : Tuesday May 17th 2022 05:52:47 pm                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
-
-import os
 from typing import Any
-from dotenv import load_dotenv
-import tarfile
-import pandas as pd
 import logging
 import logging.config
-import progressbar
-import boto3
-from botocore.exceptions import NoCredentialsError
-
+import pandas as pd
 
 from deepctr.utils.decorators import operator
 from deepctr.dag.base import Operator
-from deepctr.persistence.dal import DataParam, DataTableDAO, S3DTO
+from deepctr.persistence.dal import DataParam, DataAccessObject
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
 logging.config.dictConfig(LOG_CONFIG)
-logging.getLogger("py4j").setLevel(logging.WARN)
+logging.getLogger("py4j").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
 # ------------------------------------------------------------------------------------------------ #
-#                                    EXTRACT S3                                                    #
+#                                     DOWNLOAD S3                                                  #
 # ------------------------------------------------------------------------------------------------ #
 
 
-class ExtractS3(Operator):
-    """ExtractS3 operator downloads data from Amazon S3 Resources.
+class DownloadS3(Operator):
+    """Operator that downloads data from Amazon S3 Resources.
 
     Args:
         task_no (int): Task sequence in dag.
@@ -60,7 +52,7 @@ class ExtractS3(Operator):
     """
 
     def __init__(self, task_no: int, task_name: str, task_description: str, params: dict) -> None:
-        super(ExtractS3, self).__init__(
+        super(DownloadS3, self).__init__(
             task_no=task_no, task_name=task_name, task_description=task_description, params=params
         )
 
@@ -70,22 +62,26 @@ class ExtractS3(Operator):
     def execute(self, data: Any = None) -> pd.DataFrame:
         """Extracts data from an Amazon AWS S3 resource and persists it."""
 
-        try:
-            dto = S3DTO(dataset=self._params['dataset'], stage=self._params['stage'],
-            source=self._params['source'], bucket=self._params['bucket'])
-            dao = DataTableDAO()
-            dao.download(dto)
+        dp = DataParam(
+            datasource=self._params["datasource"],
+            dataset=self._params["dataset"],
+            stage=self._params["stage"],
+            bucket=self._params["bucket"],
+            folder=self._params["folder"],
+            home=self._params["home"],
+            force=self._params["force"],
+        )
 
+        dao = DataAccessObject()
+        dao.download(dparam=dp)
 
-        except KeyError as e:
-            logger.error("Invalid S3DTO Parameter Object. {}".format(dto))
 
 # ------------------------------------------------------------------------------------------------ #
-#                                    EXPAND GZ                                                     #
+#                                    EXTRACT GZ                                                    #
 # ------------------------------------------------------------------------------------------------ #
 
 
-class ExpandGZ(Operator):
+class ExtractGz(Operator):
     """Expandes a gzip archive, stores the raw data
 
     Args:
@@ -98,42 +94,31 @@ class ExpandGZ(Operator):
     """
 
     def __init__(self, task_no: int, task_name: str, task_description: str, params: dict) -> None:
-        super(ExpandGZ, self).__init__(
+        super(ExtractGz, self).__init__(
             task_no=task_no, task_name=task_name, task_description=task_description, params=params
         )
 
-        self._source = params["source"]
-        self._destination = params["destination"]
-        self._force = params["force"]
-
     @operator
-    def execute(self, data: Any = None -> pd.DataFrame:
+    def execute(self, data: Any = None) -> pd.DataFrame:
         """Executes the Expand operation.
 
         Args:
             data (pd.DataFrame): None. This method takes no parameter
+
+
         """
+        dp = DataParam(
+            datasource=self._params["datasource"],
+            dataset=self._params["dataset"],
+            stage=self._params["stage"],
+            source=self._params["source"],
+            destination=self._params["destination"],
+            home=self._params["home"],
+            force=self._params["force"],
+        )
 
-        # Create destination if it doesn't exist
-        os.makedirs(self._destination, exist_ok=True)
-
-        # Only runs if destination directory is empty, unless force is True
-        if self._destination_empty_or_force():
-            filenames = os.listdir(self._source)
-            for filename in filenames:
-                filepath = os.path.join(self._source, filename)
-                tar = tarfile.open(filepath, "r:gz")
-                tar.extractall(self._destination)
-                tar.close()
-        else:
-            logger.info(
-                "Files not expanded. Raw data already exists at {}".format(self._destination)
-            )
-
-    def _destination_empty_or_force(self) -> bool:
-        """Returns true if the file doesn't exist or force is True."""
-        num_files = len(os.listdir(self._destination))
-        return num_files == 0 or self._force
+        dao = DataAccessObject()
+        dao.extract(dparam=dp)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -148,18 +133,19 @@ class DataReader(Operator):
         )
 
     @operator
-    def execute(self, data: Any = None -> Any:
+    def execute(self, data: Any = None) -> Any:
         """Reads from the designated resource"""
-        dto = DataParam(
-            name=self._params["name"],
+
+        dp = DataParam(
+            datasource=self._params["datasource"],
             dataset=self._params["dataset"],
-            asset=self._params["asset"],
-            stage=self._params["stage"],
-            env=self._params["env"],
+            filename=self._params["filename"],
             format=self._params["format"],
+            stage=self._params["stage"],
+            home=self._params["home"],
         )
-        dao = DataTableDAO()
-        return dao.read(dto=dto)
+
+        return DataAccessObject().read(dparam=dp)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -174,15 +160,17 @@ class DataWriter(Operator):
         )
 
     @operator
-    def execute(self, data: Any = None -> Any:
+    def execute(self, data: Any = None) -> Any:
         """Reads from the designated resource"""
-        dto = DataParam(
-            name=self._params["name"],
+
+        dp = DataParam(
+            datasource=self._params["datasource"],
+            data=data,
             dataset=self._params["dataset"],
-            asset=self._params["asset"],
-            stage=self._params["stage"],
-            env=self._params["env"],
+            filename=self._params["filename"],
             format=self._params["format"],
+            stage=self._params["stage"],
+            home=self._params["home"],
         )
-        dao = DataTableDAO()
-        dao.create(dto=dto, data=data, force=self._params["force"])
+
+        return DataAccessObject().create(dparam=dp, data=data)

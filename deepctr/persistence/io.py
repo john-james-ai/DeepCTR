@@ -41,7 +41,7 @@ findspark.init()
 
 # ------------------------------------------------------------------------------------------------ #
 logging.config.dictConfig(LOG_CONFIG)
-logging.getLogger("py4j").setLevel(logging.WARN)
+logging.getLogger("py4j").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 #                                          COMPRESSION                                             #
@@ -95,16 +95,16 @@ class TarGZ(Compression):
             destination (str): The directory into which the files will be expanded.
         """
         os.makedirs(destination, exist_ok=True)
-
-        if self._exists(destination) and not force:
-            logger.info(
-                "The destination {} is non-empty and force is False. The expand was therefore skipped.".format(
-                    destination
-                )
-            )
-        else:
-            with tarfile.open(source, "r:gz") as tar:
-                tar.extractall(destination)
+        with tarfile.open(source, "r:gz") as tar:
+            names = tar.getnames()
+            for name in names:
+                filepath = os.path.join(destination, name)
+                if os.path.exists(filepath) and not force:
+                    logger.warning(
+                        "\tFile {} already exists. To overwrite, set force = True".format(name)
+                    )
+                else:
+                    tar.extract(member=name, path=destination)
 
     def _exists(self, destination) -> bool:
         """Returns true if the directory exists and is non-empty, returns False otherwise."""
@@ -174,10 +174,6 @@ class S3(Cloud):
             max_bandwidth=50 * MB,
         )
 
-        print(40 * "=")
-        print(filepath)
-        print(40 * "=")
-
         size = os.path.getsize(filepath)
         self._progressbar = progressbar.progressbar.ProgressBar(maxval=size)
         self._progressbar.start()
@@ -231,7 +227,7 @@ class S3(Cloud):
 
         if os.path.exists(filepath) and not force:
             logger.warning(
-                "S3 File {} already exists and force = False; therefore, the upload was skipped.".format(
+                "\tS3 File {} already exists and force = False; therefore, the upload was skipped.".format(
                     filepath
                 )
             )
@@ -259,26 +255,24 @@ class S3(Cloud):
         """
         os.makedirs(directory, exist_ok=True)
 
-        if len(os.listdir(directory)) > 0 and not force:
-            logger.warning(
-                "Destination directory is not empty. Since force is False, the download from {}\\{} has been skipped.".format(
-                    bucket, folder
+        load_dotenv()
+
+        S3_ACCESS = os.getenv("S3_ACCESS")
+        S3_PASSWORD = os.getenv("S3_PASSWORD")
+
+        object_keys = self._list_bucket_contents(bucket, folder)
+
+        s3 = boto3.client("s3", aws_access_key_id=S3_ACCESS, aws_secret_access_key=S3_PASSWORD)
+
+        for object_key in object_keys:
+            filepath = os.path.join(directory, os.path.basename(object_key))
+            if os.path.exists(filepath) and not force:
+                logger.warning(
+                    "\tObject {} already exists. To force download, set force=True.".format(
+                        object_key
+                    )
                 )
-            )
-
-        else:
-
-            load_dotenv()
-
-            S3_ACCESS = os.getenv("S3_ACCESS")
-            S3_PASSWORD = os.getenv("S3_PASSWORD")
-
-            object_keys = self._list_bucket_contents(bucket, folder)
-
-            s3 = boto3.client("s3", aws_access_key_id=S3_ACCESS, aws_secret_access_key=S3_PASSWORD)
-
-            for object_key in object_keys:
-                filepath = os.path.join(directory, os.path.basename(object_key))
+            else:
                 self._download(s3, bucket, object_key, filepath)
 
     def _download(self, s3, bucket: str, object: str, filepath: str) -> None:

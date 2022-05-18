@@ -25,13 +25,13 @@ import shutil
 from pyspark.sql import SparkSession
 
 from deepctr.utils.config import YamlIO
-from deepctr.dag.orchestrator import AlibabaETLBuilder
+from deepctr.dag.orchestrator import DataDAGBuilder
 from deepctr.utils.printing import Printer
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
 logging.config.dictConfig(LOG_CONFIG)
-logging.getLogger("py4j").setLevel(logging.WARN)
+logging.getLogger("py4j").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
@@ -42,7 +42,7 @@ class TestAlibabaETL:
         caplog.set_level(logging.INFO)
         logger.info("\n\n\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        shutil.rmtree("data/test/alibaba/staged", ignore_errors=True)
+        shutil.rmtree("tests/data/alibaba/vesuvio/staged", ignore_errors=True)
 
         logger.info("\n\n\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -51,20 +51,39 @@ class TestAlibabaETL:
         logger.info("\n\n\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
         io = YamlIO()
-        config_filepath = "config/alibaba_etl.yml"
-        config = io.read(config_filepath)
+        config_template_filepath = "config/alibaba.yml"
+        config_template = io.read(config_template_filepath)
 
-        builder = AlibabaETLBuilder()
-        builder.build(config=config)
-        builder.dag.run(start=0, stop=15)
+        builder = DataDAGBuilder()
+        dag = (
+            builder.datasource("alibaba")
+            .dataset("vesuvio")
+            .at("tests/data")
+            .with_template(config_template)
+            .build()
+            .dag
+        )
+        dag.run(start=0, stop=20)
 
         logger.info("\n\n\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    def test_raw(self, caplog) -> None:
+        caplog.set_level(logging.INFO)
+        logger.info("\n\n\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        directory = "tests/data/alibaba/vesuvio/raw/"
+        files = ["raw_sample.csv", "ad_feature.csv", "behavior_log.csv", "user_profile.csv"]
+        for file in files:
+            filepath = os.path.join(directory, file)
+            assert os.path.exists(filepath), logger.error("File {} was not created".format(file))
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
     def test_impression(self, caplog) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\n\n\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        destination = "data/test/alibaba/staged/alibaba_staged/impression.parquet"
+        destination = "tests/data/alibaba/vesuvio/staged/impression.parquet"
         assert os.path.exists(destination), logger.error("TestAlibabaETL: Extract Failed")
 
         title = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
@@ -76,7 +95,7 @@ class TestAlibabaETL:
         caplog.set_level(logging.INFO)
         logger.info("\n\n\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        destination = "data/test/alibaba/staged/alibaba_staged/user.parquet"
+        destination = "tests/data/alibaba/vesuvio/staged/user.parquet"
         assert os.path.exists(destination), logger.error("TestAlibabaETL: Extract Failed")
 
         title = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
@@ -88,7 +107,7 @@ class TestAlibabaETL:
         caplog.set_level(logging.INFO)
         logger.info("\n\n\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        destination = "data/test/alibaba/staged/alibaba_staged/ad.parquet"
+        destination = "tests/data/alibaba/vesuvio/staged/ad.parquet"
         assert os.path.exists(destination), logger.error("TestAlibabaETL: Extract Failed")
 
         title = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
@@ -100,7 +119,7 @@ class TestAlibabaETL:
         caplog.set_level(logging.INFO)
         logger.info("\n\n\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        destination = "data/test/alibaba/staged/alibaba_staged/behavior.parquet"
+        destination = "tests/data/alibaba/vesuvio/staged/behavior.parquet"
         assert os.path.exists(destination), logger.error("TestAlibabaETL: Extract Failed")
 
         title = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
@@ -110,7 +129,7 @@ class TestAlibabaETL:
 
     def show(self, filepath, title):
         spark = SparkSession.builder.master("local[18]").appName("Spark DataFrame").getOrCreate()
-        spark.sparkContext.setLogLevel("WARN")
+        spark.sparkContext.setLogLevel("ERROR")
         sdf = spark.read.parquet(filepath)
         printer = Printer()
         print(sdf.rdd.getNumPartitions())

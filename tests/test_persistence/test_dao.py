@@ -22,7 +22,7 @@ import pytest
 import shutil
 import logging
 import logging.config
-from deepctr.persistence.dal import DataTableDAO, DataParam
+from deepctr.persistence.dal import DataAccessObject, DataParam
 from deepctr.utils.printing import Printer
 from deepctr.utils.log_config import LOG_CONFIG
 
@@ -33,8 +33,8 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
 
-@pytest.mark.dao
-class TestDataTableDAO:
+@pytest.mark.DataAccessObject
+class TestDataAccessObject:
     def test_setup(self):
         shutil.rmtree("data/test/alibaba/stage", ignore_errors=True)
 
@@ -43,11 +43,11 @@ class TestDataTableDAO:
         logger.info("\n\n\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
         # Persist data table
-        dao = DataTableDAO()
-        dao.create(data_params=dp_std, data=data, force=force)
+        DataAccessObject = DataAccessObject()
+        DataAccessObject.create(data_params=dp_std, data=data, force=force)
 
         # Check existence of file and location
-        assert os.path.exists(filepath), "TestDataDAO: add failed"
+        assert os.path.exists(filepath), "TestDataDataAccessObject: add failed"
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -72,8 +72,8 @@ class TestDataTableDAO:
         )
 
         # Persist data table
-        dao = DataTableDAO()
-        dao.create(data_params=data_params, data=data, force=force)
+        DataAccessObject = DataAccessObject()
+        DataAccessObject.create(data_params=data_params, data=data, force=force)
 
         # Check existence of file and location
         assert os.path.exists(filepath), "TestDataRepo: add failed"
@@ -100,9 +100,9 @@ class TestDataTableDAO:
         )
 
         # Persist data table
-        dao = DataTableDAO()
+        DataAccessObject = DataAccessObject()
         with pytest.raises(FileExistsError):
-            dao.create(data_params=data_params, data=data, force=force)
+            DataAccessObject.create(data_params=data_params, data=data, force=force)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -125,8 +125,8 @@ class TestDataTableDAO:
         )
 
         # Read data table
-        dao = DataTableDAO()
-        sdf = dao.read(data_params=data_params)
+        DataAccessObject = DataAccessObject()
+        sdf = DataAccessObject.read(data_params=data_params)
 
         title = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
         self.show(sdf, title)
@@ -153,9 +153,9 @@ class TestDataTableDAO:
         )
 
         # Read data table
-        dao = DataTableDAO()
+        DataAccessObject = DataAccessObject()
         with pytest.raises(FileNotFoundError):
-            dao.read(data_params=data_params)
+            DataAccessObject.read(data_params=data_params)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -175,9 +175,9 @@ class TestDataTableDAO:
         data_params = DataParam(
             name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
         )
-        dao = DataTableDAO()
+        DataAccessObject = DataAccessObject()
         with pytest.raises(ValueError):
-            dao.read(data_params=data_params)
+            DataAccessObject.read(data_params=data_params)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -201,9 +201,9 @@ class TestDataTableDAO:
             name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
         )
 
-        dao = DataTableDAO()
+        DataAccessObject = DataAccessObject()
 
-        dao.delete(data_params)
+        DataAccessObject.delete(data_params)
 
         assert not os.path.exists(filepath), logger.error("TestDataRepo: remove failed")
 

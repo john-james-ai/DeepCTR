@@ -35,7 +35,7 @@ from deepctr.persistence.io import TarGZ
 def spark_dataframe():
     filepath = "tests/data/test.parquet"
     spark = SparkSession.builder.master("local[18]").appName("Spark DataFrame").getOrCreate()
-    spark.sparkContext.setLogLevel("WARN")
+    spark.sparkContext.setLogLevel("ERROR")
     return spark.read.parquet(filepath)
 
 

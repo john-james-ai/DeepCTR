@@ -3,7 +3,7 @@
 # ================================================================================================ #
 # Project    : DeepCTR: Deep Learning for CTR Prediction                                           #
 # Version    : 0.1.0                                                                               #
-# Filename   : /log_config.ini                                                                     #
+# Filename   : /log_config.py                                                                      #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
@@ -16,38 +16,24 @@
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
 LOG_CONFIG = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '%(levelname)s | %(asctime)s | %(module)s | %(process)d  | %(thread)d  | %(message)s'
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "%(levelname)s | %(asctime)s | %(module)s | %(process)d  | %(thread)d  | %(message)s"
         },
-        'standard': {
-            'format': '%(levelname)s | %(asctime)s | %(message)s'
-        },
-        'simple': {
-            'format': '%(message)s'
+        "standard": {"format": "%(levelname)s | %(asctime)s | %(message)s"},
+        "simple": {"format": "%(message)s"},
+    },
+    "handlers": {
+        "console": {"level": "INFO", "class": "logging.StreamHandler", "formatter": "simple"},
+        "file": {
+            "level": "DEBUG",
+            "class": "logging.handlers.RotatingFileHandler",
+            "formatter": "verbose",
+            "filename": "logs/deepctr.log",
+            "backupCount": 3,
         },
     },
-    'handlers': {
-        'console':{
-            'level':'DEBUG',
-            'class':'logging.StreamHandler',
-            'formatter': 'standard'
-        },
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'formatter': 'verbose',
-            'filename': 'logs/deepctr.log',
-            'backupCount': 3
-        }
-    },
-    'loggers': {
-        '': {
-            'handlers':['console', 'file'],
-            'propagate': False,
-            'level':'INFO',
-        }
-    }
+    "loggers": {"": {"handlers": ["console", "file"], "propagate": False, "level": "INFO"}},
 }

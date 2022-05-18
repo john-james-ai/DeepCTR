@@ -3,7 +3,7 @@
 # ================================================================================================ #
 # Project  : DeepCTR: Deep Learning and Neural Architecture Selection for CTR Prediction           #
 # Version  : 0.1.0                                                                                 #
-# File     : /dao.py                                                                               #
+# File     : /DataAccessObject.py                                                                               #
 # Language : Python 3.7.12                                                                         #
 # ------------------------------------------------------------------------------------------------ #
 # Author   : John James                                                                            #
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
 
-class DAO:
+class DataAccessObject:
     """Database Access Object"""
 
     __connection = None
@@ -55,16 +55,16 @@ class DAO:
             load_dotenv()
             URI = os.getenv("URI") + database
             engine = create_engine(URI)
-            DAO.__connection = engine.connect()
-            DAO.__database = database
+            DataAccessObject.__connection = engine.connect()
+            DataAccessObject.__database = database
             logger.debug("Connection to {} established.".format(database))
         except Exception as error:
             logger.error("Error: Connection not established.\n{}".format(error))
 
     def close(self) -> None:
         """Closes the current connection."""
-        DAO.__connection.close()
-        DAO.__database = None
+        DataAccessObject.__connection.close()
+        DataAccessObject.__database = None
 
     @query
     def read(self, query: Query, parameters: tuple = None, columns: list = None) -> pd.DataFrame:
@@ -82,7 +82,7 @@ class DAO:
 
         df = pd.read_sql(
             query.statement,
-            con=DAO.__connection,
+            con=DataAccessObject.__connection,
             coerce_float=True,
             params=parameters,
             columns=columns,
@@ -106,8 +106,8 @@ class DAO:
         return query.exists(df)
 
     def _connection_check(self, database: str = "mysql") -> None:
-        if DAO.__connection is None:
+        if DataAccessObject.__connection is None:
             self.connect(database)
-        elif DAO.__database != database:
+        elif DataAccessObject.__database != database:
             self.close()
             self.connect(database)

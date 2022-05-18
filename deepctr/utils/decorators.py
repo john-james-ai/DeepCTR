@@ -77,7 +77,7 @@ def print_start(module: str, classname: str, self: str, start: datetime):
     task_name = self.__dict__["_task_name"]
     print_line[task_name] = 40
 
-    time = start.strftime("%I:%M %p")
+    time = start.strftime("%-I:%M %p")
     dt = "Started at {}".format(time)
     print_line[dt] = 20
 
@@ -100,9 +100,9 @@ def print_end(module: str, classname: str, self: str, start: datetime, end: date
     print_line[task] = 10
 
     task_name = self.__dict__["_task_name"]
-    print_line[task_name] = 50
+    print_line[task_name] = 40
 
-    time = start.strftime("%I:%M %p")
+    time = start.strftime("%-I:%M %p")
     dt = "Completed at {} (Duration: {} seconds.)".format(time, str(round(duration, 2)))
     print_line[dt] = 0
 

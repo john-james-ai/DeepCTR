@@ -6,49 +6,39 @@
 dag_no: 1
 dag_name: alibaba_etl
 dag_description: Extracts, transforms and loads the Alibaba Display Ad Data from Amazon S3
-context:
-  source: alibaba
-  dataset: vesuvio
-  home: data
-  force: False
-  s3_folders:
-    vesuvio: alibaba/vesuvio
-    trieste: alibaba/trieste
-    kerouac: alibaba/kerouac
-
 tasks:
   # ============================================================================================ #
   #                                     EXTRACT                                                  #
   # ============================================================================================ #
   1:
-    task: ExtractS3
+    task: DownloadS3
     module: deepctr.dag.data_operators
     task_no: 1
-    task_name: extract_s3_data
-    task_description: Extracts Alibaba Display Ad Data from Amazon S3
+    task_name: download_s3_data
+    task_description: Downloads Alibaba Display Ad Data from Amazon S3
     task_params:
-      home: data
-      source: alibaba
+      home: tests/data
+      datasource: alibaba
       dataset: vesuvio
-      bucket: deepctr
       stage: extract
+      bucket: deepctr
+      folder: alibaba/vesuvio/
       force: False
   2:
-    task: ExpandGZ
+    task: ExtractGz
     module: deepctr.dag.data_operators
     task_no: 2
     task_name: expand_gzfiles
     task_description: Expands Alibaba Display Ad Data (Production) to raw directory
     task_params:
-      home: data
-      source: alibaba
+      home: tests/data
+      datasource: alibaba
       dataset: vesuvio
-      bucket: deepctr
-      stage: extract
+      stage: raw
+      source: extract
+      destination: raw
       force: False
-      
-      destination: data/test/alibaba/raw/alibaba_raw
-      force: False
+
 
   # ============================================================================================ #
   #                            RAW SAMPLES -> IMPRESSIONS                                        #
@@ -61,8 +51,13 @@ tasks:
     task_name: read_alibaba_raw_sample_csv
     task_description: Read Alibaba Raw Sample CSV
     task_params:
-      name: raw_sample
+      home: tests/data
+      datasource: alibaba
+      dataset: vesuvio
+      filename: raw_sample
       stage: raw
+      format: csv
+      force: False
 
   4:
     task: ReplaceColumnNames
@@ -86,9 +81,13 @@ tasks:
     task_name: stage_impression_data
     task_description: Stage Impression Data
     task_params:
-      name: impression
+      home: tests/data
+      datasource: alibaba
+      dataset: vesuvio
+      filename: impression
       stage: staged
-
+      format: parquet
+      force: False
 
 
   # ============================================================================================ #
@@ -102,9 +101,13 @@ tasks:
     task_name: read_alibaba_user_csv
     task_description: Read Alibaba User CSV
     task_params:
-      name: user_profile
+      home: tests/data
+      datasource: alibaba
+      dataset: vesuvio
+      filename: user_profile
       stage: raw
-
+      format: csv
+      force: False
   7:
     task: ReplaceColumnNames
     module: deepctr.dag.transform_operators
@@ -130,8 +133,13 @@ tasks:
     task_name: stage_user_data
     task_description: Stage User Data
     task_params:
-      name: user
+      home: tests/data
+      datasource: alibaba
+      dataset: vesuvio
+      filename: user
       stage: staged
+      format: parquet
+      force: False
 
 
   # ============================================================================================ #
@@ -144,8 +152,13 @@ tasks:
     task_name: read_alibaba_ad_csv
     task_description: Read Alibaba Ad CSV
     task_params:
-      name: ad_feature
+      home: tests/data
+      datasource: alibaba
+      dataset: vesuvio
+      filename: ad_feature
       stage: raw
+      format: csv
+      force: False
 
   10:
     task: ReplaceColumnNames
@@ -169,8 +182,13 @@ tasks:
     task_name: stage_ad_data
     task_description: Stage Ad Data
     task_params:
-      name: ad
+      home: tests/data
+      datasource: alibaba
+      dataset: vesuvio
+      filename: ad
       stage: staged
+      format: parquet
+      force: False
 
 
 
@@ -184,8 +202,13 @@ tasks:
     task_name: read_alibaba_behavior_csv
     task_description: Read Alibaba Behavior CSV
     task_params:
-      name: behavior_log
+      home: tests/data
+      datasource: alibaba
+      dataset: vesuvio
+      filename: behavior_log
       stage: raw
+      format: csv
+      force: False
 
   13:
     task: ReplaceColumnNames
@@ -208,8 +231,13 @@ tasks:
     task_name: stage_behavior_data
     task_description: Stage Behavior Data
     task_params:
-      name: behavior
+      home: tests/data
+      datasource: alibaba
+      dataset: vesuvio
+      filename: behavior
       stage: staged
+      format: parquet
+      force: False
 
 
 
