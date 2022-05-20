@@ -16,7 +16,10 @@
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
 """Temporary File and Directory classes that accept directory and filenames"""
+import os
 import shutil
+from sklearn.datasets import load_iris
+from pyspark.sql import SparkSession
 
 # ------------------------------------------------------------------------------------------------ #
 
@@ -47,3 +50,61 @@ class TempDirectory:
 
     def __exit__(self, exception_type=None, exception_value=None, traceback=None):
         shutil.rmtree(self._directory, ignore_errors=True)
+
+
+# ------------------------------------------------------------------------------------------------ #
+class FileCreator:
+    def __init__(self, filepath: str, format="csv") -> None:
+        self._filepath = filepath
+        self._format = format
+
+    def __enter__(self):
+        return self._filepath
+
+    def __exit__(self, exception_type=None, exception_value=None, traceback=None):
+        shutil.rmtree(self._filepath, ignore_errors=True)
+
+    def create_csv(self):
+        df = self._get_dataframe()
+        df.to_csv(self._filepath)
+
+    def create_parquet(self):
+        df = self._get_dataframe()
+        spark = SparkSession.builder.master("local[18]").appName("Spark DataFrame").getOrCreate()
+        spark.sparkContext.setLogLevel("ERROR")
+        sdf = spark.createDataFrame(df)
+        sdf.write.parquet(self._filepath)
+
+    def get_dataframe(self):
+        data = load_iris(return_X_y=False, as_frame=True)
+        df = data["data"]
+        df.columns = ["sepal_length", "sepal_width", "petal_length", "petal_width"]
+        return df
+
+
+# ------------------------------------------------------------------------------------------------ #
+def create_dataframe():
+    data = load_iris(return_X_y=False, as_frame=True)
+    df = data["data"]
+    df.columns = ["sepal_length", "sepal_width", "petal_length", "petal_width"]
+    return df
+
+
+# ------------------------------------------------------------------------------------------------ #
+def file_creator(filepath: str):
+
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+
+    df = create_dataframe()
+
+    ext = os.path.splitext(filepath)[1]
+
+    if "csv" in ext:
+        df.to_csv(filepath)
+    elif "parquet" in ext:
+        spark = SparkSession.builder.master("local[18]").appName("Spark DataFrame").getOrCreate()
+        spark.sparkContext.setLogLevel("ERROR")
+        sdf = spark.createDataFrame(df)
+        sdf.write.parquet(filepath)
+    else:
+        raise ValueError("Unrecognized file extension.")

@@ -43,7 +43,7 @@ ZIP = "forbidden.csv.tar.gz"
 DIRECTORY = "unbound"
 
 
-@pytest.mark.file
+@pytest.mark.data_file
 class TestSparkCSV:
     def test_write(self, caplog, spark_dataframe) -> None:
         caplog.set_level(logging.INFO)
@@ -98,7 +98,7 @@ class TestSparkCSV:
         printer.print_spark_dataframe_summary(content=sdf, title=title)
 
 
-@pytest.mark.file
+@pytest.mark.data_file
 class TestSparkParquet:
     def test_write(self, caplog, spark_dataframe) -> None:
         caplog.set_level(logging.INFO)

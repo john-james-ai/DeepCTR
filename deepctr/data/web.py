@@ -23,6 +23,7 @@ import os
 from dotenv import load_dotenv
 import logging
 import uuid
+import inspect
 import tarfile
 import shutil
 import logging.config
@@ -119,37 +120,48 @@ class S3(Cloud):
             )
         else:
 
-            # If compress, both the filepath and object names must be changed.
+            # If compress is True, we create a temporary tar.gz file archive, upload it, then delete it.
             if compress:
-                self._tempfile = filepath + ".tar.gz"
-                with tarfile.open(self._tempfile, "w:gz") as tar:
-                    tar.add(filepath, arcname=os.path.basename(filepath))
-                filepath = self._tempfile
-                object = os.path.join(os.path.dirname(object), os.path.basename(filepath))
+                filepath_compressed = filepath + ".tar.gz"
+                try:
+                    with tarfile.open(filepath_compressed, "w:gz") as tar:
+                        tar.add(filepath, arcname=os.path.basename(filepath))
 
-            s3 = self._get_s3_connection(connection_type="client")
+                    object = os.path.join(
+                        os.path.dirname(object), os.path.basename(filepath_compressed)
+                    )
+                    self._upload_file(filepath=filepath_compressed, bucket=bucket, object=object)
 
-            # Get size of file and provision the progress monitor.
-            size = os.path.getsize(filepath)
-            self._progressbar = progressbar.progressbar.ProgressBar(maxval=size)
-            self._progressbar.start()
+                except tarfile.TarError as e:
+                    logger.error(e)
+                    raise
+                finally:
+                    shutil.rmtree(filepath_compressed, ignore_errors=True)
 
-            try:
-                s3.upload_file(
-                    Filename=filepath,
-                    Bucket=bucket,
-                    Key=object,
-                    Callback=self._callback,
-                    Config=S3.__transfer_config,
-                )
+            else:
+                self._upload_file(filepath=filepath, bucket=bucket, object=object)
 
-            except NoCredentialsError:
-                msg = "Credentials not available for {} bucket".format(bucket)
-                raise NoCredentialsError(msg)
+    def _upload_file(self, filepath: str, bucket: str, object: str) -> None:
+        """Wraps all S3 upload related operations."""
 
-            # Remove the compressed file that was created above.
-            if compress:
-                shutil.rmtree(filepath, ignore_errors=True)
+        s3 = self._get_s3_connection(connection_type="client")
+
+        size = os.path.getsize(filepath)
+        self._progressbar = progressbar.progressbar.ProgressBar(maxval=size)
+        self._progressbar.start()
+
+        try:
+            s3.upload_file(
+                Filename=filepath,
+                Bucket=bucket,
+                Key=object,
+                Callback=self._callback,
+                Config=S3.__transfer_config,
+            )
+
+        except NoCredentialsError:
+            msg = "Credentials not available for {} bucket".format(bucket)
+            raise NoCredentialsError(msg)
 
     def download_file(
         self, bucket: str, object: str, filepath: str, expand: bool = True, force: str = False
@@ -174,49 +186,69 @@ class S3(Cloud):
                 )
             )
         else:
-
             os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
-            s3 = self._get_s3_connection(connection_type="client")
+            # If we expand, we create a temporary file, create the directory for it, then
+            # download the archive to this file which is then extracted to the client provided filepath
+            if expand:
+                download_filepath = os.path.join(
+                    os.path.dirname(filepath), str(uuid.uuid4()), os.path.basename(filepath)
+                )
+                os.makedirs(os.path.dirname(download_filepath), exist_ok=True)
+                self._download_file(bucket=bucket, object=object, filepath=download_filepath)
 
-            # Get the size of the resource and configure the progress monitor
+                try:
+                    with tarfile.open(download_filepath, "r:gz") as tar:
+                        names = tar.getnames()
+                        for name in names:
+                            member_expand_filepath = os.path.join(filepath, name)
+                            # We don't download if data already exists, unless force is True
+                            if os.path.exists(member_expand_filepath) and not force:
+                                logger.warning(
+                                    "\tArchive member {} already exists. To overwrite, set force = True".format(
+                                        name
+                                    )
+                                )
+                            else:
+                                tar.extract(member=name, path=member_expand_filepath)
+
+                except tarfile.TarError as e:
+                    logger.error(e)
+                    raise
+                finally:
+                    # Dispose of the temporary download file
+                    shutil.rmtree(download_filepath, ignore_errors=True)
+
+            else:
+                self._download_file(bucket=bucket, object=object, filepath=filepath)
+
+    def _download_file(self, bucket: str, object: str, filepath: str) -> None:
+        """Wraps all S3 download related operations."""
+        # Get the size of the resource and configure the progress monitor
+        try:
+            s3 = self._get_s3_connection(connection_type="client")
             response = s3.head_object(Bucket=bucket, Key=object)
             size = response["ContentLength"]
             self._progressbar = progressbar.progressbar.ProgressBar(maxval=size)
             self._progressbar.start()
 
-            if expand:
-                self._tempdir = os.path.join(os.path.dirname(filepath), str(uuid.uuid4()))
-                download_filepath = self._tempdir
+            s3.download_file(
+                bucket, object, filepath, Callback=self._callback, Config=S3.__transfer_config,
+            )
+        except botocore.exceptions.ClientError as e:
+            if e.response["Error"]["Code"] == "404":
+                msg = "Object {} does not exist.".format(object)
+                logger.error(msg)
+                raise ValueError(msg)
             else:
-                download_filepath = filepath
-
-            try:
-                s3.download_file(
-                    bucket,
-                    object,
-                    download_filepath,
-                    Callback=self._callback,
-                    Config=S3.__transfer_config,
+                operation_name = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
+                raise botocore.exceptions.ClientError(
+                    error_response=e, operation_name=operation_name
                 )
 
-            except NoCredentialsError:
-                msg = "Credentials not available for {} bucket".format(bucket)
-                raise NoCredentialsError(msg)
-
-            if expand:
-                with tarfile.open(filepath, "r:gz") as tar:
-                    names = tar.getnames()
-                    for name in names:
-                        member_filepath = os.path.join(filepath, name)
-                        if os.path.exists(member_filepath) and not force:
-                            logger.warning(
-                                "\tFile {} already exists. To overwrite, set force = True".format(
-                                    name
-                                )
-                            )
-                        else:
-                            tar.extract(member=name, path=filepath)
+        except NoCredentialsError:
+            msg = "Credentials not available for {} bucket".format(bucket)
+            raise NoCredentialsError(msg)
 
     def delete_object(self, bucket: str, object: str, force: str = False) -> None:
         """Deletes a object from S3 storage
