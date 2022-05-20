@@ -22,8 +22,9 @@ from abc import ABC, abstractmethod
 import os
 from dotenv import load_dotenv
 import logging
-import tempfile
+import uuid
 import tarfile
+import shutil
 import logging.config
 import progressbar
 import boto3
@@ -36,24 +37,6 @@ from deepctr.utils.log_config import LOG_CONFIG
 # ------------------------------------------------------------------------------------------------ #
 logging.config.dictConfig(LOG_CONFIG)
 logger = logging.getLogger(__name__)
-# ------------------------------------------------------------------------------------------------ #
-#                                          COMPRESSION                                             #
-# ------------------------------------------------------------------------------------------------ #
-
-
-class Compression(ABC):
-    """Abstract base class for data compression classes."""
-
-    @abstractmethod
-    @staticmethod
-    def compress(self, source: str, destination: str, force: str = False) -> None:
-        pass
-
-    @abstractmethod
-    @staticmethod
-    def expand(self, source: str, destination: str, force: str = False) -> None:
-        pass
-
 
 # ------------------------------------------------------------------------------------------------ #
 #                                             CLOUD                                                #
@@ -62,6 +45,19 @@ class Compression(ABC):
 
 class Cloud(ABC):
     """Base class for Upload / Download operations with cloud storage providers."""
+
+    def __init__(self) -> None:
+        self._tempfile = None
+        self._tempdir = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self):
+        shutil.rmtree(self._tempfile, ignore_errors=True)
+        shutil.rmtree(self._tempdir, ignore_errors=True)
+        self._tempfile = None
+        self._tempdir = None
 
     @abstractmethod
     def upload_file(self, filepath: str, bucket: str, object: str, force: str = False) -> None:
@@ -122,36 +118,38 @@ class S3(Cloud):
                 )
             )
         else:
-            with tempfile.TemporaryFile() as tempfilename:
-                if compress:
-                    with tarfile.open(tempfilename, "w:gz") as tar:
-                        tar.add(filepath, arcname=os.path.basename(filepath))
-                    filepath = tempfilename
 
-                s3 = self._get_s3_resource()
+            # If compress, both the filepath and object names must be changed.
+            if compress:
+                self._tempfile = filepath + ".tar.gz"
+                with tarfile.open(self._tempfile, "w:gz") as tar:
+                    tar.add(filepath, arcname=os.path.basename(filepath))
+                filepath = self._tempfile
+                object = os.path.join(os.path.dirname(object), os.path.basename(filepath))
 
-                # Get size of file and provision the progress monitor.
+            s3 = self._get_s3_connection(connection_type="client")
 
-                size = os.path.getsize(filepath)
-                self._progressbar = progressbar.progressbar.ProgressBar(maxval=size)
-                self._progressbar.start()
+            # Get size of file and provision the progress monitor.
+            size = os.path.getsize(filepath)
+            self._progressbar = progressbar.progressbar.ProgressBar(maxval=size)
+            self._progressbar.start()
 
-                try:
-                    s3.upload_file(
-                        Filename=filepath,
-                        Bucket=bucket,
-                        Key=object,
-                        Callback=self._callback,
-                        Config=S3.__transfer_config,
-                    )
+            try:
+                s3.upload_file(
+                    Filename=filepath,
+                    Bucket=bucket,
+                    Key=object,
+                    Callback=self._callback,
+                    Config=S3.__transfer_config,
+                )
 
-                except NoCredentialsError:
-                    msg = "Credentials not available for {} bucket".format(bucket)
-                    raise NoCredentialsError(msg)
+            except NoCredentialsError:
+                msg = "Credentials not available for {} bucket".format(bucket)
+                raise NoCredentialsError(msg)
 
-                except FileNotFoundError as e:
-                    logger.error("File {} was not found.".format(filepath))
-                    raise FileExistsError(e)
+            # Remove the compressed file that was created above.
+            if compress:
+                shutil.rmtree(filepath, ignore_errors=True)
 
     def download_file(
         self, bucket: str, object: str, filepath: str, expand: bool = True, force: str = False
@@ -179,44 +177,46 @@ class S3(Cloud):
 
             os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
-            with tempfile.TemporaryFile() as tempfilepath:
+            s3 = self._get_s3_connection(connection_type="client")
 
-                download_filepath = tempfilepath if expand else filepath
+            # Get the size of the resource and configure the progress monitor
+            response = s3.head_object(Bucket=bucket, Key=object)
+            size = response["ContentLength"]
+            self._progressbar = progressbar.progressbar.ProgressBar(maxval=size)
+            self._progressbar.start()
 
-                s3 = self._get_s3_resource()
+            if expand:
+                self._tempdir = os.path.join(os.path.dirname(filepath), str(uuid.uuid4()))
+                download_filepath = self._tempdir
+            else:
+                download_filepath = filepath
 
-                # Get the size of the resource and configure the progress monitor
-                response = s3.head_object(Bucket=bucket, Key=object)
-                size = response["ContentLength"]
-                self._progressbar = progressbar.progressbar.ProgressBar(maxval=size)
-                self._progressbar.start()
+            try:
+                s3.download_file(
+                    bucket,
+                    object,
+                    download_filepath,
+                    Callback=self._callback,
+                    Config=S3.__transfer_config,
+                )
 
-                try:
-                    s3.download_file(
-                        bucket,
-                        object,
-                        download_filepath,
-                        Callback=self._callback,
-                        Config=S3.__transfer_config,
-                    )
+            except NoCredentialsError:
+                msg = "Credentials not available for {} bucket".format(bucket)
+                raise NoCredentialsError(msg)
 
-                except NoCredentialsError:
-                    msg = "Credentials not available for {} bucket".format(bucket)
-                    raise NoCredentialsError(msg)
-
-                if expand:
-                    with tarfile.open(download_filepath, "r:gz") as tar:
-                        names = tar.getnames()
-                        for name in names:
-                            member_filepath = os.path.join(filepath, name)
-                            if os.path.exists(member_filepath) and not force:
-                                logger.warning(
-                                    "\tFile {} already exists. To overwrite, set force = True".format(
-                                        name
-                                    )
+            if expand:
+                with tarfile.open(filepath, "r:gz") as tar:
+                    names = tar.getnames()
+                    for name in names:
+                        member_filepath = os.path.join(filepath, name)
+                        if os.path.exists(member_filepath) and not force:
+                            logger.warning(
+                                "\tFile {} already exists. To overwrite, set force = True".format(
+                                    name
                                 )
-                            else:
-                                tar.extract(member=name, path=filepath)
+                            )
+                        else:
+                            tar.extract(member=name, path=filepath)
 
     def delete_object(self, bucket: str, object: str, force: str = False) -> None:
         """Deletes a object from S3 storage
@@ -225,7 +225,7 @@ class S3(Cloud):
             bucket (str, force: str = False): The S3 bucket name
             object (str, force: str = False): The S3 object key
         """
-        s3 = self._get_s3_resource()
+        s3 = self._get_s3_connection(connection_type="resource")
         s3.Object(bucket, object).delete()
 
     def delete_folder(self, bucket: str, folder: str, force: str = False) -> None:
@@ -235,7 +235,7 @@ class S3(Cloud):
             bucket (str, force: str = False): The S3 bucket name
             folder (str, force: str = False): The S3 folder with trailing backslash
         """
-        s3 = self._get_s3_resource()
+        s3 = self._get_s3_connection(connection_type="resource")
         bucket = s3.Bucket(bucket)
         bucket.objects.filter(Prefix=folder).delete()
 
@@ -247,7 +247,7 @@ class S3(Cloud):
             object (str, force: str = False): The path to the object
 
         """
-        s3 = self._get_s3_resource()
+        s3 = self._get_s3_connection(connection_type="client")
 
         try:
             s3.head_object(Bucket=bucket, Key=object)
@@ -262,7 +262,7 @@ class S3(Cloud):
     def list_objects(self, bucket: str, folder: str = None) -> list:
         """Returns a list of object keys in the designated bucket and folder"""
 
-        s3 = self._get_s3_resource()
+        s3 = self._get_s3_connection(connection_type="resource")
 
         objects = []
 
@@ -276,12 +276,22 @@ class S3(Cloud):
     def _callback(self, size):
         self._progressbar.update(self._progressbar.currval + size)
 
-    def _get_s3_resource(self) -> boto3.resource:
+    def _get_s3_connection(self, connection_type: str = "resource") -> boto3.resource:
         """Obtains an S3 boto3.resource object."""
         load_dotenv()
 
         S3_ACCESS = os.getenv("S3_ACCESS")
         S3_PASSWORD = os.getenv("S3_PASSWORD")
 
-        s3 = boto3.resource("s3", aws_access_key_id=S3_ACCESS, aws_secret_access_key=S3_PASSWORD)
+        if connection_type == "resource":
+            s3 = boto3.resource(
+                "s3", aws_access_key_id=S3_ACCESS, aws_secret_access_key=S3_PASSWORD
+            )
+        else:
+            s3 = boto3.client("s3", aws_access_key_id=S3_ACCESS, aws_secret_access_key=S3_PASSWORD)
         return s3
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                    S3 CONNECTION FACTORY                                         #
+# ------------------------------------------------------------------------------------------------ #

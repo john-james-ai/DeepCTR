@@ -19,7 +19,7 @@ import os
 from abc import ABC, abstractmethod
 from typing import Any
 from difflib import get_close_matches
-from deepctr.dal.params import DatasetParams, S3Params, FileParams
+from deepctr.dal.params import DatasetParams, S3Params, DatasetParams
 
 # ------------------------------------------------------------------------------------------------ #
 #                                          PATH                                                    #
@@ -118,7 +118,7 @@ class RAO(ABC):
 
     @abstractmethod
     def download_entity(
-        self, source: S3Params, destination: FileParams, force: bool = False
+        self, source: S3Params, destination: DatasetParams, force: bool = False
     ) -> None:
         pass
 
@@ -129,7 +129,9 @@ class RAO(ABC):
         pass
 
     @abstractmethod
-    def upload_entity(self, source: FileParams, destination: S3Params, force: bool = False) -> None:
+    def upload_entity(
+        self, source: DatasetParams, destination: S3Params, force: bool = False
+    ) -> None:
         pass
 
     @abstractmethod

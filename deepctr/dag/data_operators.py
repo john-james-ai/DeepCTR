@@ -22,7 +22,7 @@ import pandas as pd
 
 from deepctr.utils.decorators import operator
 from deepctr.dag.base import Operator
-from deepctr.dal.params import DatasetParams, FileParams, S3Params
+from deepctr.dal.params import DatasetParams, DatasetParams, S3Params
 from deepctr.dal.files import FileAccessObject, RemoteAccessObject
 from deepctr.utils.log_config import LOG_CONFIG
 
@@ -93,7 +93,7 @@ class DataReader(Operator):
     def execute(self, data: Any = None) -> Any:
         """Reads from the designated resource"""
 
-        params = FileParams(
+        params = DatasetParams(
             datasource=self._params["datasource"],
             dataset=self._params["dataset"],
             stage=self._params["stage"],

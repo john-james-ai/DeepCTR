@@ -34,8 +34,10 @@ class DatasetParams:
 
 @dataclass
 class FileParams(DatasetParams):
-    filename: str  # The name of the file within the dataset.
-    format: str  # Storage format, either 'csv', 'pickle', or 'parquet' supported
+    """Base class for application parameter objects used to communicate with the DAL."""
+
+    filename: str = None  # The name of the file within the dataset.
+    format: str = None  # Storage format, either 'csv', 'pickle', or 'parquet' supported
 
 
 @dataclass

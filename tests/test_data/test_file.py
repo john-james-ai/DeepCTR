@@ -3,7 +3,7 @@
 # ================================================================================================ #
 # Project    : DeepCTR: Deep Learning for CTR Prediction                                           #
 # Version    : 0.1.0                                                                               #
-# Filename   : /test_dal.py                                                                        #
+# Filename   : /test_file.py                                                                       #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
@@ -17,12 +17,13 @@
 # ================================================================================================ #
 import os
 import inspect
+import shutil
 import pytest
 import logging
 import logging.config
 from pyspark.sql import DataFrame
 
-from deepctr.dal.io import SparkCSV, SparkParquet
+from deepctr.data.file import SparkCSV, SparkParquet
 from deepctr.utils.printing import Printer
 from deepctr.utils.log_config import LOG_CONFIG
 
@@ -33,33 +34,35 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
 
+HOME = "tests/data/test_file/"
+FOLDER = "test/file"
+BUCKET = "deepctr"
+CSVFILE = "binding.csv"
+PARQUET = "sanscontrol.parquet"
+ZIP = "forbidden.csv.tar.gz"
+DIRECTORY = "unbound"
+
+
 @pytest.mark.file
 class TestSparkCSV:
-    def test_write(self, caplog, spark_dataframe, csv_filepath) -> None:
+    def test_write(self, caplog, spark_dataframe) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        sdf = spark_dataframe
-        filepath = csv_filepath
-
-        title = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
-        self.show(sdf, title)
-
+        filepath = os.path.join(HOME, CSVFILE)
         io = SparkCSV()
-        io.write(data=sdf, filepath=filepath)
-
+        io.write(data=spark_dataframe, filepath=filepath)
         assert os.path.exists(filepath), logging.error("SparkCSV failed to write")
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-    def test_read(self, caplog, csv_filepath) -> None:
+    def test_read(self, caplog) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        filepath = csv_filepath
-
+        filepath = os.path.join(HOME, CSVFILE)
         io = SparkCSV()
-        sdf = io.read(filepath, header=True, sep=",")
+        sdf = io.read(filepath=filepath, header=True, sep=",")
 
         title = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
         self.show(sdf, title)
@@ -82,6 +85,14 @@ class TestSparkCSV:
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
+    def test_teardown(self):
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        filepath = os.path.join(HOME, CSVFILE)
+        shutil.rmtree(filepath, ignore_errors=True)
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
     def show(self, sdf, title):
         printer = Printer()
         printer.print_spark_dataframe_summary(content=sdf, title=title)
@@ -89,37 +100,30 @@ class TestSparkCSV:
 
 @pytest.mark.file
 class TestSparkParquet:
-    def test_write(self, caplog, spark_dataframe, parquet_filepath) -> None:
+    def test_write(self, caplog, spark_dataframe) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        sdf = spark_dataframe
-        filepath = parquet_filepath
-
-        title = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
-        self.show(sdf, title)
-
+        filepath = os.path.join(HOME, PARQUET)
         io = SparkParquet()
-        io.write(data=sdf, filepath=filepath)
-
+        io.write(data=spark_dataframe, filepath=filepath)
         assert os.path.exists(filepath), logging.error("SparkParquet failed to write")
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-    def test_read(self, caplog, parquet_filepath) -> None:
+    def test_read(self, caplog) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        filepath = parquet_filepath
-
+        filepath = os.path.join(HOME, PARQUET)
         io = SparkParquet()
-        sdf = io.read(filepath)
+        sdf = io.read(filepath=filepath)
 
         title = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
         self.show(sdf, title)
 
         assert isinstance(sdf, DataFrame), logging.error(
-            "SparkParquet failed to return a pyspark.sql.DataFrame object"
+            "SparkCSV failed to return a pyspark.sql.DataFrame object"
         )
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
@@ -132,7 +136,15 @@ class TestSparkParquet:
 
         io = SparkParquet()
         with pytest.raises(FileNotFoundError):
-            io.read(filepath)
+            io.read(filepath=filepath)
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    def test_teardown(self):
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        filepath = os.path.join(HOME, PARQUET)
+        shutil.rmtree(filepath, ignore_errors=True)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 

@@ -22,7 +22,7 @@ import logging.config
 
 from deepctr.data.base import RAO
 from deepctr.data.web import S3
-from deepctr.data.params import S3Params, DatasetParams, FileParams
+from deepctr.data.params import S3Params, DatasetParams, DatasetParams
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
@@ -42,13 +42,17 @@ class RemoteAccessObject(RAO):
 
     # -------------------------------------------------------------------------------------------- #
     def download_entity(
-        self, source: S3Params, destination: FileParams, expand: bool = True, force: bool = False,
+        self,
+        source: S3Params,
+        destination: DatasetParams,
+        expand: bool = True,
+        force: bool = False,
     ) -> None:
         """Downloads data entity from an S3 Resource
 
         Args:
             source (S3Params): Parameter object for the S3 object
-            destination (FileParams): Parameter object for a file
+            destination (DatasetParams): Parameter object for a file
             expand (bool): Whether the resouce should be expanded from Tar GZip archive.
             force (bool): Overwrite existing data, if it exists IFF True.
         """
@@ -70,7 +74,7 @@ class RemoteAccessObject(RAO):
 
         Args:
             source (S3Params): Parameter object for the S3 folder
-            destination (FileParams): Parameter object for a local directory
+            destination (DatasetParams): Parameter object for a local directory
             expand (bool): Whether the resouce should be expanded from Tar GZip archive.
             force (bool): Overwrite existing data, if it exists IFF True.
         """
@@ -86,12 +90,16 @@ class RemoteAccessObject(RAO):
 
     # -------------------------------------------------------------------------------------------- #
     def upload_entity(
-        self, source: FileParams, destination: S3Params, compress: bool = True, force: bool = False,
+        self,
+        source: DatasetParams,
+        destination: S3Params,
+        compress: bool = True,
+        force: bool = False,
     ) -> None:
         """Uploads a file to an S3 bucket.
 
         Args:
-            source (FileParams): Parameter object for a local file
+            source (DatasetParams): Parameter object for a local file
             destination (S3Params): Parameter object for an S3 resource
             compress (bool): Whether the data entity should be compressed before uploading.
             force (bool): Overwrite existing data, if it exists IFF True.

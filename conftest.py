@@ -22,7 +22,7 @@ import pytest
 import shutil
 import tarfile
 from pyspark.sql import SparkSession
-from deepctr.dal.params import DatasetParams, FileParams, S3Params
+from deepctr.dal.params import DatasetParams, S3Params
 from sklearn.datasets import load_iris
 
 # ------------------------------------------------------------------------------------------------ #
@@ -32,29 +32,12 @@ from sklearn.datasets import load_iris
 
 @pytest.fixture(scope="module")
 def spark_dataframe():
-    filepath = "tests/data/test.parquet"
+    data = load_iris(return_X_y=False, as_frame=True)
+    df = data["data"]
+    df.columns = ["sepal_length", "sepal_width", "petal_length", "petal_width"]
     spark = SparkSession.builder.master("local[18]").appName("Spark DataFrame").getOrCreate()
     spark.sparkContext.setLogLevel("ERROR")
-    return spark.read.parquet(filepath)
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                      TEST FILES                                                  #
-# ------------------------------------------------------------------------------------------------ #
-
-
-@pytest.fixture(scope="class")
-def csv_filepath():
-    filepath = "tests/data/test_write.csv"
-    yield filepath
-    shutil.rmtree(filepath, ignore_errors=True)
-
-
-@pytest.fixture(scope="class")
-def parquet_filepath():
-    filepath = "tests/data/test_write.parquet"
-    yield filepath
-    shutil.rmtree(filepath, ignore_errors=True)
+    return spark.createDataFrame(df)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -70,9 +53,9 @@ def dataset_params():
 
 
 @pytest.fixture(scope="class")
-def data_entity_params():
+def file_params():
 
-    dp = FileParams(
+    dp = DatasetParams(
         datasource="alibaba",
         entity="user",
         dataset="vesuvio",
@@ -94,9 +77,9 @@ def s3_params():
 #                                      CSV FILES                                                   #
 # ------------------------------------------------------------------------------------------------ #
 @pytest.fixture(scope="class")
-def csvfile(dp_std):
+def csvfile():
 
-    home = "tests/data/csvfile/"
+    home = "tests/data/"
     os.makedirs(home, exist_ok=True)
     data = load_iris(return_X_y=False, as_frame=True)
 
@@ -108,9 +91,9 @@ def csvfile(dp_std):
 
 
 @pytest.fixture(scope="class")
-def csvfiles(dp_std):
+def csvfiles():
 
-    directory = "tests/data/csvfiles/"
+    directory = "tests/data/"
     os.makedirs(directory, exist_ok=True)
     data = load_iris(return_X_y=False, as_frame=True)
     for i in range(5):
@@ -125,7 +108,7 @@ def csvfiles(dp_std):
 #                                      ZIP FILES                                                   #
 # ------------------------------------------------------------------------------------------------ #
 @pytest.fixture(scope="class")
-def zipfile(dp_std):
+def zipfile():
 
     source = "tests/data/csvfile/csvfile.csv"
     archive = "tests/data/archive.tar.gz"
@@ -136,7 +119,7 @@ def zipfile(dp_std):
 
 
 @pytest.fixture(scope="class")
-def zipfiles(dp_std):
+def zipfiles():
 
     source = "tests/data/csvfiles"
     archive = "tests/data/archive.tar.gz"

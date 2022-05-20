@@ -3,7 +3,7 @@
 # ================================================================================================ #
 # Project    : DeepCTR: Deep Learning for CTR Prediction                                           #
 # Version    : 0.1.0                                                                               #
-# Filename   : /test_s3.py                                                                         #
+# Filename   : /test_web.py                                                                        #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
@@ -18,11 +18,12 @@
 import os
 import inspect
 import pytest
+import shutil
 import logging
 import logging.config
 
-
-from deepctr.dal.io import S3
+from deepctr.utils.file import TempFile
+from deepctr.data.web import S3
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
@@ -38,22 +39,86 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 HOME = "tests/data/s3/"
 FOLDER = "test/s3"
-BASE = "tests/data/"
+BUCKET = "deepctr"
+FLAT = "binding.csv"
+ZIP = "forbidden.csv.tar.gz"
+DIRECTORY = "unbound"
+
+
+def get_params(compress: str):
+    d = {}
+    d["filepath"] = os.path.join(HOME, FLAT) + ".csv"
+    d["filepath_compressed"] = os.path.join(HOME, ZIP) + ".csv.tar.gz"
+    d["folder"] = "exacerbated"
+    d["object"] = os.path.join(FOLDER, os.path.basename(d["filepath"]))
+    d["object_compressed"] = os.path.join(FOLDER, os.path.basename(d["filepath"])) + ".tar.gz"
+    d["directory"] = os.path.join(HOME, DIRECTORY)
+    os.makedirs(d["directory"], exist_ok=True)
+    return d
 
 
 @pytest.mark.s3
 class TestS3:
-    def test_upload_file(self, caplog, csvfile) -> None:
+    def test_upload_file_uncompressed(self, caplog) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        filepath = os.path.join(BASE, "csvfile", os.path.basename(csvfile))
-        bucket = "deepctr"
-        object = os.path.join(FOLDER, os.path.basename(csvfile))
+        params = get_params(compress=False)
+        with TempFile(params["filepath"]) as tf:
+            io = S3()
+            io.upload_file(
+                filepath=params["filepath"],
+                bucket=BUCKET,
+                object=params["object"],
+                compress=False,
+                force=True,
+            )
 
-        io = S3()
-        io.upload_file(filepath, bucket, object, force=True)
-        assert io.exists(bucket, object), logger.error("File didn't make it.")
+            assert io.exists(BUCKET, params["object"]), logger.error("File didn't make it.")
+            assert os.path.exists(tf), "Tempfile has been removed."
+        assert os.path.exists(tf), "Tempfile has not been removed."
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    def test_upload_file_uncompressed_already_exists(self, caplog, csvfile) -> None:
+        caplog.set_level(logging.INFO)
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        params = get_params(compress=False)
+        with TempFile(params["filepath"]) as tf:
+            io = S3()
+            io.upload_file(
+                filepath=params["filepath"],
+                bucket=BUCKET,
+                object=params["object"],
+                compress=False,
+                force=False,
+            )
+
+            assert io.exists(BUCKET, params["object"]), logger.error("File didn't make it.")
+            assert os.path.exists(tf), "Tempfile has been removed."
+        assert os.path.exists(tf), "Tempfile has not been removed."
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    def test_upload_file_compressed(self, caplog, csvfile) -> None:
+        caplog.set_level(logging.INFO)
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        params = get_params(compress=False)
+        with TempFile(params["filepath"]) as tf:
+            io = S3()
+            io.upload_file(
+                filepath=params["filepath"],
+                bucket=BUCKET,
+                object=params["object"],
+                compress=True,
+                force=True,
+            )
+
+            assert io.exists(BUCKET, params["object"]), logger.error("File didn't make it.")
+            assert os.path.exists(tf), "Tempfile has been removed."
+        assert os.path.exists(tf), "Tempfile has not been removed."
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -61,69 +126,90 @@ class TestS3:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        filepath = os.path.join(HOME, "download_file")
-        bucket = "deepctr"
-        object = os.path.join(FOLDER, os.path.basename(csvfile))
+        params = get_params(compress=False)
+        with TempFile(params["filepath"], data=False) as tf:
+            io = S3()
+            io.download_file(
+                filepath=params["filepath"],
+                bucket=BUCKET,
+                object=params["object"],
+                expand=False,
+                force=True,
+            )
 
-        io = S3()
-        io.download_file(bucket, object, filepath, force=True)
-        assert os.path.exists(filepath), logger.error("File was not downloaded")
+            assert io.exists(BUCKET, params["object"]), logger.error("File didn't make it.")
+            assert os.path.exists(tf), "Tempfile has been removed."
+        assert os.path.exists(tf), "Tempfile has not been removed."
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-    def test_upload_directory(self, caplog, csvfiles) -> None:
+    def test_download_file_overwrite(self, caplog, csvfile) -> None:
+        caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        directory = csvfiles
-        bucket = "deepctr"
-        folder = os.path.join(FOLDER, "upload_directory")
+        params = get_params(compress=False)
+        with TempFile(params["filepath"], data=False) as tf:
+            io = S3()
+            io.download_file(
+                filepath=params["filepath"],
+                bucket=BUCKET,
+                object=params["object"],
+                expand=False,
+                force=True,
+            )
 
-        io = S3()
-        io.upload_directory(directory, bucket, folder, force=True)
-
-        objects = os.listdir(csvfiles)
-        for object in objects:
-            object = os.path.join(folder, os.path.basename(object))
-            assert io.exists(bucket, object), logger.error("File didn't make it.")
+            assert io.exists(BUCKET, params["object"]), logger.error("File didn't make it.")
+            assert os.path.exists(tf), "Tempfile has been removed."
+        assert os.path.exists(tf), "Tempfile has not been removed."
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-    def test_download_directory(self, caplog) -> None:
+    def test_download_file_already_exists(self, caplog, csvfile) -> None:
+        caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        directory = os.path.join(HOME, "download_directory")
-        bucket = "deepctr"
-        folder = os.path.join(FOLDER, "upload_directory")
-        filepath = os.path.join(directory, "dataframe_2.csv")
+        params = get_params(compress=False)
+        with TempFile(params["filepath"], data=False) as tf:
+            io = S3()
+            io.download_file(
+                filepath=params["filepath"],
+                bucket=BUCKET,
+                object=params["object"],
+                expand=False,
+                force=False,
+            )
 
-        io = S3()
-        io.download_directory(bucket, folder, directory, force=True)
-        assert os.path.exists(filepath), logger.error("Download directory failed")
-
-        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-    def test_delete(self, caplog, csvfile) -> None:
-        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-        bucket = "deepctr"
-        object = os.path.join(FOLDER, os.path.basename(csvfile))
-
-        io = S3()
-        assert io.exists(bucket, object), logger.error("Object doesn't exist")
-
-        io.delete_object(bucket, object)
-        assert not io.exists(bucket, object), logger.error("Object not deleted")
+            assert io.exists(BUCKET, params["object"]), logger.error("File didn't make it.")
+            assert os.path.exists(tf), "Tempfile has been removed."
+        assert os.path.exists(tf), "Tempfile has not been removed."
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    # def test_delete_folder(self, caplog, csvfile) -> None:
+    #     logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    #     params = get_params(compress=False)
+    #     with TempFile(params["filepath"], data=False) as tf:
+    #         io = S3()
+    #         io.download_file(
+    #             filepath=params["filepath"],
+    #             bucket=BUCKET,
+    #             object=params["object"],
+    #             expand=False,
+    #             force=False,
+    #         )
+
+    #     io = S3()
+    #     assert io.exists(bucket, object), logger.error("Object doesn't exist")
+
+    #     io.delete_object(bucket, object)
+    #     assert not io.exists(bucket, object), logger.error("Object not deleted")
+
+    #     logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
     def test_teardown(self):
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        # bucket = "deepctr"
-        # folder = "s3/"
-
-        # shutil.rmtree(HOME)
-        # io = S3()
-        # io.delete_folder(bucket, folder)
+        shutil.rmtree(HOME, ignore_errors=True)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
