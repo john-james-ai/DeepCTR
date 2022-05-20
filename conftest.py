@@ -20,11 +20,10 @@
 import os
 import pytest
 import shutil
+import tarfile
 from pyspark.sql import SparkSession
-from deepctr.persistence.dal import DataParam
+from deepctr.dal.params import DatasetParams, FileParams, S3Params
 from sklearn.datasets import load_iris
-
-from deepctr.persistence.io import TarGZ
 
 # ------------------------------------------------------------------------------------------------ #
 #                                     SPARK FIXTURES                                               #
@@ -64,37 +63,31 @@ def parquet_filepath():
 
 
 @pytest.fixture(scope="class")
-def dp_std():
+def dataset_params():
 
-    dp_std = DataParam(
-        name="ad",
-        stage="stagde",
-        dataset="kerouac",
-        source="aliaba",
-        bucket="deepctr",
-        object="test/dp_std",
-        home="test/data",
-        format="parquet",
-        force=False,
-    )
-    return dp_std
+    dp = DatasetParams(datasource="alibaba", dataset="vesuvio", stage="raw", home="tests/data/",)
+    return dp
 
 
 @pytest.fixture(scope="class")
-def dp_mal():
+def data_entity_params():
 
-    dp_mal = DataParam(
-        name="ad",
-        stage="m2k3ls776",
-        dataset="kerouac",
-        source="aliaba",
-        bucket="deepctr",
-        object="test/dp_std",
-        home="test/data",
-        format="8393kk",
-        force=False,
+    dp = FileParams(
+        datasource="alibaba",
+        entity="user",
+        dataset="vesuvio",
+        stage="raw",
+        home="tests/data/",
+        format="csv",
     )
-    return dp_mal
+    return dp
+
+
+@pytest.fixture(scope="class")
+def s3_params():
+
+    dp = S3Params(bucket="deepctr", folder="vesuvio", object="alibaba/vesuvio",)
+    return dp
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -134,28 +127,23 @@ def csvfiles(dp_std):
 @pytest.fixture(scope="class")
 def zipfile(dp_std):
 
-    io = TarGZ()
     source = "tests/data/csvfile/csvfile.csv"
-    archive = "archive.tar.gz"
-    io.compress(source, archive)
+    archive = "tests/data/archive.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        tar.add(source)
     yield archive
-    # shutil.rmtree(archive, ignore_errors=True)
+    shutil.rmtree(archive, ignore_errors=True)
 
 
 @pytest.fixture(scope="class")
 def zipfiles(dp_std):
 
-    io = TarGZ()
-    dataframes = "tests/data/dataframes/"
-    archive = "archive.tar.gz"
-    os.makedirs(dataframes, exist_ok=True)
-
-    df = load_iris(return_X_y=False, as_frame=True)
-    for i in range(5):
-        filename = "dataframe" + "_" + str(i) + ".csv"
-        filepath = os.path.join(dataframes, filename)
-        df["data"].to_csv(filepath)
-    io.compress(dataframes, archive)
-
+    source = "tests/data/csvfiles"
+    archive = "tests/data/archive.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        files = os.listdir(source)
+        for file in files:
+            filepath = os.path.join(source, file)
+            tar.add(filepath)
     yield archive
-    # shutil.rmtree(archive, ignore_errors=True)
+    shutil.rmtree(archive, ignore_errors=True)

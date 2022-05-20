@@ -22,7 +22,8 @@ import pandas as pd
 
 from deepctr.utils.decorators import operator
 from deepctr.dag.base import Operator
-from deepctr.persistence.dal import DataParam, DataAccessObject
+from deepctr.dal.params import DatasetParams, FileParams, S3Params
+from deepctr.dal.files import FileAccessObject, RemoteAccessObject
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
@@ -62,63 +63,19 @@ class DownloadS3(Operator):
     def execute(self, data: Any = None) -> pd.DataFrame:
         """Extracts data from an Amazon AWS S3 resource and persists it."""
 
-        dp = DataParam(
-            datasource=self._params["datasource"],
-            dataset=self._params["dataset"],
-            stage=self._params["stage"],
-            bucket=self._params["bucket"],
-            folder=self._params["folder"],
-            home=self._params["home"],
-            force=self._params["force"],
+        source = S3Params(
+            bucket=self._params["source"]["bucket"], folder=self._params["source"]["folder"]
         )
 
-        dao = DataAccessObject()
-        dao.download(dparam=dp)
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                    EXTRACT GZ                                                    #
-# ------------------------------------------------------------------------------------------------ #
-
-
-class ExtractGz(Operator):
-    """Expandes a gzip archive, stores the raw data
-
-    Args:
-        task_no (int): Task sequence in dag.
-        task_name (str): name of task
-        params (dict): Parameters required by the task, including:
-          source (str): The source directory containing the gzip files
-          destination (str): The directory into which the Expanded data is to be stored
-          force (bool): If True, will execute and overwrite existing data.
-    """
-
-    def __init__(self, task_no: int, task_name: str, task_description: str, params: dict) -> None:
-        super(ExtractGz, self).__init__(
-            task_no=task_no, task_name=task_name, task_description=task_description, params=params
+        destination = DatasetParams(
+            datasource=self._params["destination"]["datasource"],
+            dataset=self._params["destination"]["dataset"],
+            stage=self._params["destination"]["stage"],
+            home=self._params["destination"]["home"],
         )
 
-    @operator
-    def execute(self, data: Any = None) -> pd.DataFrame:
-        """Executes the Expand operation.
-
-        Args:
-            data (pd.DataFrame): None. This method takes no parameter
-
-
-        """
-        dp = DataParam(
-            datasource=self._params["datasource"],
-            dataset=self._params["dataset"],
-            stage=self._params["stage"],
-            source=self._params["source"],
-            destination=self._params["destination"],
-            home=self._params["home"],
-            force=self._params["force"],
-        )
-
-        dao = DataAccessObject()
-        dao.extract(dparam=dp)
+        rao = RemoteAccessObject()
+        rao.download_dataset(source=source, destination=destination, expand=True, force=False)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -136,16 +93,16 @@ class DataReader(Operator):
     def execute(self, data: Any = None) -> Any:
         """Reads from the designated resource"""
 
-        dp = DataParam(
+        params = FileParams(
             datasource=self._params["datasource"],
             dataset=self._params["dataset"],
-            filename=self._params["filename"],
-            format=self._params["format"],
             stage=self._params["stage"],
             home=self._params["home"],
+            filename=self._params["filename"],
+            format=self._params["format"],
         )
 
-        return DataAccessObject().read(dparam=dp)
+        return FileAccessObject().read(params=params)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -163,9 +120,8 @@ class DataWriter(Operator):
     def execute(self, data: Any = None) -> Any:
         """Reads from the designated resource"""
 
-        dp = DataParam(
+        params = FileAccessObject(
             datasource=self._params["datasource"],
-            data=data,
             dataset=self._params["dataset"],
             filename=self._params["filename"],
             format=self._params["format"],
@@ -173,4 +129,4 @@ class DataWriter(Operator):
             home=self._params["home"],
         )
 
-        return DataAccessObject().create(dparam=dp, data=data)
+        return FileAccessObject().create(params=params, data=data)

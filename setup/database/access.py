@@ -3,7 +3,7 @@
 # ================================================================================================ #
 # Project  : DeepCTR: Deep Learning and Neural Architecture Selection for CTR Prediction           #
 # Version  : 0.1.0                                                                                 #
-# File     : /DataAccessObject.py                                                                               #
+# File     : /FileAccessObject.py                                                                               #
 # Language : Python 3.7.12                                                                         #
 # ------------------------------------------------------------------------------------------------ #
 # Author   : John James                                                                            #
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
 
-class DataAccessObject:
+class FileAccessObject:
     """Database Access Object"""
 
     __connection = None
@@ -55,16 +55,16 @@ class DataAccessObject:
             load_dotenv()
             URI = os.getenv("URI") + database
             engine = create_engine(URI)
-            DataAccessObject.__connection = engine.connect()
-            DataAccessObject.__database = database
+            FileAccessObject.__connection = engine.connect()
+            FileAccessObject.__database = database
             logger.debug("Connection to {} established.".format(database))
         except Exception as error:
             logger.error("Error: Connection not established.\n{}".format(error))
 
     def close(self) -> None:
         """Closes the current connection."""
-        DataAccessObject.__connection.close()
-        DataAccessObject.__database = None
+        FileAccessObject.__connection.close()
+        FileAccessObject.__database = None
 
     @query
     def read(self, query: Query, parameters: tuple = None, columns: list = None) -> pd.DataFrame:
@@ -82,7 +82,7 @@ class DataAccessObject:
 
         df = pd.read_sql(
             query.statement,
-            con=DataAccessObject.__connection,
+            con=FileAccessObject.__connection,
             coerce_float=True,
             params=parameters,
             columns=columns,
@@ -106,8 +106,8 @@ class DataAccessObject:
         return query.exists(df)
 
     def _connection_check(self, database: str = "mysql") -> None:
-        if DataAccessObject.__connection is None:
+        if FileAccessObject.__connection is None:
             self.connect(database)
-        elif DataAccessObject.__database != database:
+        elif FileAccessObject.__database != database:
             self.close()
             self.connect(database)

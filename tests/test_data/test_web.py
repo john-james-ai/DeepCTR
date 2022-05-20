@@ -22,7 +22,7 @@ import logging
 import logging.config
 
 
-from deepctr.persistence.io import S3
+from deepctr.dal.io import S3
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #

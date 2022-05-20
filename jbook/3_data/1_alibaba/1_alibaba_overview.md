@@ -89,7 +89,8 @@ Developing the click-through-rate machine learning and deep learning pipelines i
 
 Downsampling the Alibaba Ad Display Click dataset can significantly reduce the computational, network, and IO costs; yet, the samples must be representative of the full dataset. To ensure that the downsamples reflect the characteristics of the original dataset, we implement a class-proportional, distribution-preserving, downsampling strategy inspired by {cite}`lotschOptimalDistributionpreservingDownsampling2021` that repeatedly samples and evaluates the similarity of the sample distribution density with that of the original dataset. The downsample that is most similar to the distribution density of the original dataset is selected.
 
-## Distribution Density Measure
+## Distance Measures
+### Numeric Data
 Several statistical methods are available for measuring and comparing density distributions. For this assignment, we will measure the degree to which the data follow a normal distribution using the Anderson-Darling test. The test statistic is defined as:
 
 $$A^2=-n-S$$
@@ -100,6 +101,9 @@ S=\displaystyle\sum_{i=1}^n\frac{(2i-1)}{n}[\text{ln}\, F(Y_i) + \text{ln}(1-F(Y
 $$
 
 $F$ is the [cumulative distribution function](https://en.wikipedia.org/wiki/Cumulative_distribution_function) of the normal distribution, $Y_i$ is *ordered* data and $n$ is the sample size.
+
+### Categorical Data
+Reference {cite}`boriahSimilarityMeasuresCategorical2008` for a survey of categorical data similarity measures.
 
 ## Selection Criteria
 Using the Anderson Darling test statistic, the best subsample will be that which had the smallest distance in each variable from the distribution of the respective original variable. Concretely, we will select the best sample as:

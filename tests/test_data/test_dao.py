@@ -22,7 +22,8 @@ import pytest
 import shutil
 import logging
 import logging.config
-from deepctr.persistence.dal import DataAccessObject, DataParam
+from deepctr.dal.file import FileAccessObject
+from deepctr.dal.params import
 from deepctr.utils.printing import Printer
 from deepctr.utils.log_config import LOG_CONFIG
 
@@ -33,8 +34,8 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
 
-@pytest.mark.DataAccessObject
-class TestDataAccessObject:
+@pytest.mark.skip()
+class TestFileAccessObject:
     def test_setup(self):
         shutil.rmtree("data/test/alibaba/stage", ignore_errors=True)
 
@@ -43,11 +44,11 @@ class TestDataAccessObject:
         logger.info("\n\n\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
         # Persist data table
-        DataAccessObject = DataAccessObject()
-        DataAccessObject.create(data_params=dp_std, data=data, force=force)
+        FileAccessObject = FileAccessObject()
+        FileAccessObject.create(data_params=dp_std, data=data, force=force)
 
         # Check existence of file and location
-        assert os.path.exists(filepath), "TestDataDataAccessObject: add failed"
+        assert os.path.exists(filepath), "TestDataFileAccessObject: add failed"
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -67,13 +68,13 @@ class TestDataAccessObject:
         force = True
 
         # Create data_params
-        data_params = DataParam(
+        data_params = DataParams(
             name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
         )
 
         # Persist data table
-        DataAccessObject = DataAccessObject()
-        DataAccessObject.create(data_params=data_params, data=data, force=force)
+        FileAccessObject = FileAccessObject()
+        FileAccessObject.create(data_params=data_params, data=data, force=force)
 
         # Check existence of file and location
         assert os.path.exists(filepath), "TestDataRepo: add failed"
@@ -95,14 +96,14 @@ class TestDataAccessObject:
         force = False
 
         # Create data_params
-        data_params = DataParam(
+        data_params = DataParams(
             name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
         )
 
         # Persist data table
-        DataAccessObject = DataAccessObject()
+        FileAccessObject = FileAccessObject()
         with pytest.raises(FileExistsError):
-            DataAccessObject.create(data_params=data_params, data=data, force=force)
+            FileAccessObject.create(data_params=data_params, data=data, force=force)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -120,13 +121,13 @@ class TestDataAccessObject:
         env = parquet_asset["env"]
 
         # Create data_params
-        data_params = DataParam(
+        data_params = DataParams(
             name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
         )
 
         # Read data table
-        DataAccessObject = DataAccessObject()
-        sdf = DataAccessObject.read(data_params=data_params)
+        FileAccessObject = FileAccessObject()
+        sdf = FileAccessObject.read(data_params=data_params)
 
         title = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
         self.show(sdf, title)
@@ -148,14 +149,14 @@ class TestDataAccessObject:
         env = parquet_asset["env"]
 
         # Create data_params
-        data_params = DataParam(
+        data_params = DataParams(
             name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
         )
 
         # Read data table
-        DataAccessObject = DataAccessObject()
+        FileAccessObject = FileAccessObject()
         with pytest.raises(FileNotFoundError):
-            DataAccessObject.read(data_params=data_params)
+            FileAccessObject.read(data_params=data_params)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -172,12 +173,12 @@ class TestDataAccessObject:
         env = parquet_asset["env"]
 
         # Create data_params
-        data_params = DataParam(
+        data_params = DataParams(
             name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
         )
-        DataAccessObject = DataAccessObject()
+        FileAccessObject = FileAccessObject()
         with pytest.raises(ValueError):
-            DataAccessObject.read(data_params=data_params)
+            FileAccessObject.read(data_params=data_params)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -197,13 +198,13 @@ class TestDataAccessObject:
         assert os.path.exists(filepath), logger.error("TestDataRepo: remove - already removed.")
 
         # Create data_params
-        data_params = DataParam(
+        data_params = DataParams(
             name=name, dataset=dataset, asset=asset, stage=stage, env=env, format=format
         )
 
-        DataAccessObject = DataAccessObject()
+        FileAccessObject = FileAccessObject()
 
-        DataAccessObject.delete(data_params)
+        FileAccessObject.delete(data_params)
 
         assert not os.path.exists(filepath), logger.error("TestDataRepo: remove failed")
 

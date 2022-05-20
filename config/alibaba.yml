@@ -8,7 +8,7 @@ dag_name: alibaba_etl
 dag_description: Extracts, transforms and loads the Alibaba Display Ad Data from Amazon S3
 tasks:
   # ============================================================================================ #
-  #                                     EXTRACT                                                  #
+  #                                     DOWNLOAD                                                 #
   # ============================================================================================ #
   1:
     task: DownloadS3
@@ -17,37 +17,24 @@ tasks:
     task_name: download_s3_data
     task_description: Downloads Alibaba Display Ad Data from Amazon S3
     task_params:
-      home: tests/data
-      datasource: alibaba
-      dataset: vesuvio
-      stage: extract
-      bucket: deepctr
-      folder: alibaba/vesuvio/
+      source:
+        bucket: deepctr
+        folder: alibaba/vesuvio/
+      destination:
+        home: tests/data
+        datasource: alibaba
+        dataset: vesuvio
+        stage: extract
       force: False
-  2:
-    task: ExtractGz
-    module: deepctr.dag.data_operators
-    task_no: 2
-    task_name: expand_gzfiles
-    task_description: Expands Alibaba Display Ad Data (Production) to raw directory
-    task_params:
-      home: tests/data
-      datasource: alibaba
-      dataset: vesuvio
-      stage: raw
-      source: extract
-      destination: raw
-      force: False
-
 
   # ============================================================================================ #
   #                            RAW SAMPLES -> IMPRESSIONS                                        #
   # ============================================================================================ #
 
-  3:
+  2:
     task: DataReader
     module: deepctr.dag.data_operators
-    task_no: 3
+    task_no: 2
     task_name: read_alibaba_raw_sample_csv
     task_description: Read Alibaba Raw Sample CSV
     task_params:
@@ -59,10 +46,10 @@ tasks:
       format: csv
       force: False
 
-  4:
+  3:
     task: ReplaceColumnNames
     module: deepctr.dag.transform_operators
-    task_no: 4
+    task_no: 3
     task_name: replace_alibaba_raw_sample_column_names
     task_description: Replace Alibaba Raw Sample Column Names
     task_params:
@@ -74,10 +61,10 @@ tasks:
         nonclk: non_click
         clk: click
 
-  5:
+  4:
     task: DataWriter
     module: deepctr.dag.data_operators
-    task_no: 5
+    task_no: 4
     task_name: stage_impression_data
     task_description: Stage Impression Data
     task_params:
@@ -94,10 +81,10 @@ tasks:
   #                                       USER                                                   #
   # ============================================================================================ #
 
-  6:
+  5:
     task: DataReader
     module: deepctr.dag.data_operators
-    task_no: 6
+    task_no: 5
     task_name: read_alibaba_user_csv
     task_description: Read Alibaba User CSV
     task_params:
@@ -108,10 +95,10 @@ tasks:
       stage: raw
       format: csv
       force: False
-  7:
+  6:
     task: ReplaceColumnNames
     module: deepctr.dag.transform_operators
-    task_no: 7
+    task_no: 6
     task_name: replace_alibaba_user_column_names
     task_description: Replace Alibaba User Column Names
     task_params:
@@ -126,10 +113,10 @@ tasks:
         occupation: student
         new_user_class_level: city_level
 
-  8:
+  7:
     task: DataWriter
     module: deepctr.dag.data_operators
-    task_no: 8
+    task_no: 7
     task_name: stage_user_data
     task_description: Stage User Data
     task_params:
@@ -145,10 +132,10 @@ tasks:
   # ============================================================================================ #
   #                                         AD                                                   #
   # ============================================================================================ #
-  9:
+  8:
     task: DataReader
     module: deepctr.dag.data_operators
-    task_no: 9
+    task_no: 8
     task_name: read_alibaba_ad_csv
     task_description: Read Alibaba Ad CSV
     task_params:
@@ -160,10 +147,10 @@ tasks:
       format: csv
       force: False
 
-  10:
+  9:
     task: ReplaceColumnNames
     module: deepctr.dag.transform_operators
-    task_no: 10
+    task_no: 9
     task_name: transform_alibaba_ad_column_names
     task_description: Transform Alibaba Ad Column Names
     task_params:
@@ -175,10 +162,10 @@ tasks:
         brand: brand_id
         price: price
 
-  11:
+  10:
     task: DataWriter
     module: deepctr.dag.data_operators
-    task_no: 11
+    task_no: 10
     task_name: stage_ad_data
     task_description: Stage Ad Data
     task_params:
@@ -195,10 +182,10 @@ tasks:
   # ============================================================================================ #
   #                                  BEHAVIOR                                                    #
   # ============================================================================================ #
-  12:
+  11:
     task: DataReader
     module: deepctr.dag.data_operators
-    task_no: 12
+    task_no: 11
     task_name: read_alibaba_behavior_csv
     task_description: Read Alibaba Behavior CSV
     task_params:
@@ -210,10 +197,10 @@ tasks:
       format: csv
       force: False
 
-  13:
+  12:
     task: ReplaceColumnNames
     module: deepctr.dag.transform_operators
-    task_no: 13
+    task_no: 12
     task_name: transform_alibaba_behavior_column_names
     task_description: Transform Alibaba Behavior Column Names
     task_params:
@@ -224,10 +211,10 @@ tasks:
         cate: category_id
         brand: brand_id
 
-  14:
+  13:
     task: DataWriter
     module: deepctr.dag.data_operators
-    task_no: 14
+    task_no: 13
     task_name: stage_behavior_data
     task_description: Stage Behavior Data
     task_params:

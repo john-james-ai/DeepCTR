@@ -23,6 +23,7 @@ import os
 from dotenv import load_dotenv
 import logging
 import tarfile
+import pickle
 import logging.config
 import pandas as pd
 import progressbar
@@ -113,7 +114,7 @@ class TarGZ(Compression):
 
 
 # ------------------------------------------------------------------------------------------------ #
-#                                              S3                                                  #
+#                                             CLOUD                                                #
 # ------------------------------------------------------------------------------------------------ #
 
 
@@ -145,6 +146,8 @@ class Cloud(ABC):
         pass
 
 
+# ------------------------------------------------------------------------------------------------ #
+#                                              S3                                                  #
 # ------------------------------------------------------------------------------------------------ #
 class S3(Cloud):
     """Base class for S3 uploading and downloading"""
@@ -388,6 +391,8 @@ class IO(ABC):
 
 
 # ------------------------------------------------------------------------------------------------ #
+#                                         SPARK PARQUET                                            #
+# ------------------------------------------------------------------------------------------------ #
 
 
 class SparkParquet(IO):
@@ -434,7 +439,7 @@ class SparkParquet(IO):
 
 
 # ------------------------------------------------------------------------------------------------ #
-#                                        SPARK                                                     #
+#                                          SPARK CSV                                               #
 # ------------------------------------------------------------------------------------------------ #
 class SparkCSV(IO):
     """IO using the Spark API"""
@@ -490,3 +495,31 @@ class SparkCSV(IO):
         """
 
         data.write.csv(path=filepath, header=header, sep=sep, mode=mode)
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                       PICKLER                                                    #
+# ------------------------------------------------------------------------------------------------ #
+class Pickler(IO):
+    """Wrapper for Pickle class"""
+
+    def read(self, filepath: str) -> Any:
+        """Loads serialized data
+
+        Args:
+            filepath (str): Path to the serialized resource
+        """
+
+        with open(filepath, "rb") as f:
+            return pickle.load(f)
+
+    def write(self, data: Any, filepath: str) -> None:
+        """Serializes the data using the python pickle module.
+
+        Args:
+            data (Any): The data to be serialized
+            filepath (str): Path to the serialized resource
+        """
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        with open(filepath, "wb") as f:
+            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)

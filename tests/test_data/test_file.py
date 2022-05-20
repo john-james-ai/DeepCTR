@@ -22,7 +22,7 @@ import logging
 import logging.config
 from pyspark.sql import DataFrame
 
-from deepctr.persistence.dal import SparkCSV, SparkParquet
+from deepctr.dal.io import SparkCSV, SparkParquet
 from deepctr.utils.printing import Printer
 from deepctr.utils.log_config import LOG_CONFIG
 
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
 
-@pytest.mark.dal
+@pytest.mark.file
 class TestSparkCSV:
     def test_write(self, caplog, spark_dataframe, csv_filepath) -> None:
         caplog.set_level(logging.INFO)
@@ -87,7 +87,7 @@ class TestSparkCSV:
         printer.print_spark_dataframe_summary(content=sdf, title=title)
 
 
-@pytest.mark.dal
+@pytest.mark.file
 class TestSparkParquet:
     def test_write(self, caplog, spark_dataframe, parquet_filepath) -> None:
         caplog.set_level(logging.INFO)
