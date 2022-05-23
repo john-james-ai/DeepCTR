@@ -36,7 +36,7 @@ CREATE TABLE `file` (
     `created` DATETIME NOT NULL,
     PRIMARY KEY (`id`),
     CONSTRAINT `file_key` UNIQUE(`dataset_id`,`name`)
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `dataset` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
@@ -53,7 +53,7 @@ CREATE TABLE `dataset` (
     UNIQUE (`id`),
     INDEX `idx` (`datasource`, `name`, `stage`),
     CONSTRAINT `dataset_key` UNIQUE(`datasource`,`name`,`stage`)
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `dag` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
@@ -64,7 +64,7 @@ CREATE TABLE `dag` (
     `created` DATETIME NULL,
     PRIMARY KEY (`id`),
     UNIQUE (`id`)
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `task` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
@@ -77,7 +77,7 @@ CREATE TABLE `task` (
     `created` DATETIME NULL,
     PRIMARY KEY (`id`),
     UNIQUE (`id`)
-);
+) ENGINE=InnoDB;
 
 ALTER TABLE `file` ADD FOREIGN KEY (`dataset_id`) REFERENCES `dataset`(`id`);
 ALTER TABLE `file` ADD FOREIGN KEY (`task_id`) REFERENCES `task`(`id`);

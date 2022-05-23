@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday May 22nd 2022 08:41:02 pm                                                    #
-# Modified   : Monday May 23rd 2022 07:53:02 am                                                    #
+# Modified   : Monday May 23rd 2022 06:11:17 pm                                                    #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -70,12 +70,12 @@ class FileSelect:
 
     def __post_init__(self) -> None:
         d = {
-            "id": """SELECT * FROM file WHERE id=%s;""",
-            "name": """SELECT * FROM file WHERE name=%s;""",
-            "dataset": """SELECT * FROM file WHERE dataset=%s;""",
-            "datasource": """SELECT * FROM file WHERE datasource=%s;""",
-            "stage": """SELECT * FROM file WHERE stage =%s;""",
-            "storage_type": """SELECT * FROM file WHERE storage_type=%s;""",
+            "id": """SELECT * FROM `file` WHERE id=%s;""",
+            "name": """SELECT * FROM `file` WHERE name=%s;""",
+            "dataset": """SELECT * FROM `file` WHERE dataset=%s;""",
+            "datasource": """SELECT * FROM `file` WHERE datasource=%s;""",
+            "stage": """SELECT * FROM `file` WHERE stage =%s;""",
+            "storage_type": """SELECT * FROM `file` WHERE storage_type=%s;""",
         }
         try:
             self.statement = d[self.column]
@@ -89,7 +89,7 @@ class FileSelect:
 class FileSelectAll:
     column: str = None
     parameters: tuple = None
-    statement: str = """SELECT * FROM file;"""
+    statement: str = """SELECT * FROM `file`;"""
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -101,12 +101,12 @@ class FileExists:
 
     def __post_init__(self) -> None:
         d = {
-            "id": """SELECT EXISTS(SELECT * FROM file WHERE id=%s);""",
-            "name": """SELECT EXISTS(SELECT * FROM file WHERE name=%s);""",
-            "dataset": """SELECT EXISTS(SELECT * FROM file WHERE dataset=%s);""",
-            "datasource": """SELECT EXISTS(SELECT * FROM file WHERE datasource=%s);""",
-            "stage": """SELECT EXISTS(SELECT * FROM file WHERE stage =%s);""",
-            "storage_type": """SELECT EXISTS(SELECT * FROM file WHERE storage_type=%s);""",
+            "id": """SELECT EXISTS(SELECT * FROM `file` WHERE id=%s);""",
+            "name": """SELECT EXISTS(SELECT * FROM `file` WHERE name=%s);""",
+            "dataset": """SELECT EXISTS(SELECT * FROM `file` WHERE dataset=%s);""",
+            "datasource": """SELECT EXISTS(SELECT * FROM `file` WHERE datasource=%s);""",
+            "stage": """SELECT EXISTS(SELECT * FROM `file` WHERE stage =%s);""",
+            "storage_type": """SELECT EXISTS(SELECT * FROM `file` WHERE storage_type=%s);""",
         }
         try:
             self.statement = d[self.column]
@@ -124,12 +124,12 @@ class FileDelete:
 
     def __post_init__(self) -> None:
         d = {
-            "id": """DELETE FROM file WHERE id=%s;""",
-            "name": """DELETE FROM file WHERE name=%s;""",
-            "dataset": """DELETE FROM file WHERE dataset=%s;""",
-            "datasource": """DELETE FROM file WHERE datasource=%s;""",
-            "stage": """DELETE FROM file WHERE stage =%s;""",
-            "storage_type": """DELETE FROM file WHERE storage_type=%s;""",
+            "id": """DELETE FROM `file` WHERE id=%s;""",
+            "name": """DELETE FROM `file` WHERE name=%s;""",
+            "dataset": """DELETE FROM `file` WHERE dataset=%s;""",
+            "datasource": """DELETE FROM `file` WHERE datasource=%s;""",
+            "stage": """DELETE FROM `file` WHERE stage =%s;""",
+            "storage_type": """DELETE FROM `file` WHERE storage_type=%s;""",
         }
         try:
             self.statement = d[self.column]
@@ -176,11 +176,11 @@ class DatasetSelect:
 
     def __post_init__(self) -> None:
         d = {
-            "id": """SELECT * FROM dataset WHERE id=%s;""",
-            "name": """SELECT * FROM dataset WHERE name=%s;""",
-            "datasource": """SELECT * FROM dataset WHERE datasource=%s;""",
-            "stage": """SELECT * FROM dataset WHERE stage =%s;""",
-            "storage_type": """SELECT * FROM dataset WHERE storage_type=%s;""",
+            "id": """SELECT * FROM `dataset` WHERE id=%s;""",
+            "name": """SELECT * FROM `dataset` WHERE name=%s;""",
+            "datasource": """SELECT * FROM `dataset` WHERE datasource=%s;""",
+            "stage": """SELECT * FROM `dataset` WHERE stage =%s;""",
+            "storage_type": """SELECT * FROM `dataset` WHERE storage_type=%s;""",
         }
         try:
             self.statement = d[self.column]
@@ -194,7 +194,7 @@ class DatasetSelect:
 class DatasetSelectAll:
     column: str = None
     parameters: tuple = None
-    statement: str = """SELECT * FROM dataset;"""
+    statement: str = """SELECT * FROM `dataset`;"""
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -206,11 +206,11 @@ class DatasetDelete:
 
     def __post_init__(self) -> None:
         d = {
-            "id": """DELETE FROM dataset WHERE id=%s;""",
-            "name": """DELETE FROM dataset WHERE name=%s;""",
-            "datasource": """DELETE FROM dataset WHERE datasource=%s;""",
-            "stage": """DELETE FROM dataset WHERE stage =%s;""",
-            "storage_type": """DELETE FROM dataset WHERE storage_type=%s;""",
+            "id": """DELETE FROM `dataset` WHERE id=%s;""",
+            "name": """DELETE FROM `dataset` WHERE name=%s;""",
+            "datasource": """DELETE FROM `dataset` WHERE datasource=%s;""",
+            "stage": """DELETE FROM `dataset` WHERE stage =%s;""",
+            "storage_type": """DELETE FROM `dataset` WHERE storage_type=%s;""",
         }
         try:
             self.statement = d[self.column]
@@ -228,11 +228,11 @@ class DatasetExists:
 
     def __post_init__(self) -> None:
         d = {
-            "id": """SELECT EXISTS(SELECT * FROM dataset WHERE id=%s);""",
-            "name": """SELECT EXISTS(SELECT * FROM dataset WHERE name=%s);""",
-            "datasource": """SELECT EXISTS(SELECT * FROM dataset WHERE datasource=%s);""",
-            "stage": """SELECT EXISTS(SELECT * FROM dataset WHERE stage =%s);""",
-            "storage_type": """SELECT EXISTS(SELECT * FROM dataset WHERE storage_type=%s);""",
+            "id": """SELECT EXISTS(SELECT * FROM `dataset` WHERE id=%s);""",
+            "name": """SELECT EXISTS(SELECT * FROM `dataset` WHERE name=%s);""",
+            "datasource": """SELECT EXISTS(SELECT * FROM `dataset` WHERE datasource=%s);""",
+            "stage": """SELECT EXISTS(SELECT * FROM `dataset` WHERE stage =%s);""",
+            "storage_type": """SELECT EXISTS(SELECT * FROM `dataset` WHERE storage_type=%s);""",
         }
         try:
             self.statement = d[self.column]

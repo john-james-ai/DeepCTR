@@ -18,9 +18,17 @@
 # Copyright: (c) 2022 Bryant St. Labs                                                              #
 # ================================================================================================ #
 """Includes fixtures, classes and functions supporting testing."""
+import os
 import pytest
+import pymysql
+from dotenv import load_dotenv
 from pyspark.sql import SparkSession
 from sklearn.datasets import load_iris
+
+# ------------------------------------------------------------------------------------------------ #
+#                                        IGNORE                                                    #
+# ------------------------------------------------------------------------------------------------ #
+collect_ignore_glob = ["tests/old_tests/**/*.py"]
 
 # ------------------------------------------------------------------------------------------------ #
 #                                     SPARK FIXTURES                                               #
@@ -35,3 +43,24 @@ def spark_dataframe():
     spark = SparkSession.builder.master("local[18]").appName("Spark DataFrame").getOrCreate()
     spark.sparkContext.setLogLevel("ERROR")
     return spark.createDataFrame(df)
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                       DATABASE                                                   #
+# ------------------------------------------------------------------------------------------------ #
+@pytest.fixture(scope="module")
+def connection():
+    load_dotenv()
+    connection = pymysql.connections.Connection(
+        host=os.getenv("HOST"),
+        user=os.getenv("USER"),
+        password=os.getenv("PASSWORD"),
+        database="testdb",
+        charset="utf8mb4",
+    )
+    reset = """ALTER TABLE `testtable` AUTO_INCREMENT=1;"""
+    cursor = connection.cursor()
+    cursor.execute(reset)
+    cursor.close()
+    yield connection
+    connection.close()

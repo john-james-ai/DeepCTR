@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday May 21st 2022 11:10:43 pm                                                  #
-# Modified   : Monday May 23rd 2022 07:52:27 am                                                    #
+# Modified   : Monday May 23rd 2022 02:58:52 pm                                                    #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -20,7 +20,7 @@ from typing import Union
 import logging
 from pyspark.sql import DataFrame
 import pymysql
-from pymysql.connections import Connection
+from pymysql.connectionss import Connection
 from typing import Any
 
 from deepctr.dal.base import DAO
@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 class Files(DAO):
     """Collection of in-memory File entities."""
 
-    def __init__(self, connection: pymysql.connector.Connection) -> None:
+    def __init__(self, connection: pymysql.connections.Connection) -> None:
         self._database = Database(connection)
 
     @property
@@ -111,7 +111,7 @@ class Files(DAO):
 class Datasets(DAO):
     """Collection of in-memory Dataset entities."""
 
-    def __init__(self, connection: pymysql.connector.Connection) -> None:
+    def __init__(self, connection: pymysql.connections.Connection) -> None:
         self._database = Database(connection)
 
     @property
