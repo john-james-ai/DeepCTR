@@ -71,7 +71,7 @@ def print_start(module: str, classname: str, self: str, start: datetime):
 
     print_line = {}
 
-    task = "Task " + str(self.__dict__["_task_no"]) + ":"
+    task = "Task " + str(self.__dict__["_task_id"]) + ":"
     print_line[task] = 10
 
     task_name = self.__dict__["_task_name"]
@@ -96,7 +96,7 @@ def print_end(module: str, classname: str, self: str, start: datetime, end: date
 
     print_line = {}
 
-    task = "Task " + str(self.__dict__["_task_no"]) + ":"
+    task = "Task " + str(self.__dict__["_task_id"]) + ":"
     print_line[task] = 10
 
     task_name = self.__dict__["_task_name"]

@@ -27,15 +27,15 @@ class Operator(ABC):
     """Abstract class for operator classes
 
     Args:
-        task_no (int): A number, typically used to indicate the sequence of the task within a DAG
+        task_id (int): A number, typically used to indicate the sequence of the task within a DAG
         task_name (str): String name
         task_description (str): A description for the task
         params (Any): Parameters for the task
 
     """
 
-    def __init__(self, task_no: int, task_name: str, task_description: str, params: dict) -> None:
-        self._task_no = task_no
+    def __init__(self, task_id: int, task_name: str, task_description: str, params: dict) -> None:
+        self._task_id = task_id
         self._task_name = task_name
         self._task_description = task_description
         self._params = params
@@ -43,7 +43,7 @@ class Operator(ABC):
     def __str__(self) -> str:
         return str(
             "Task #: {}\tTask name: {}\tTask Description: {}\tParams: {}".format(
-                self._task_no, self._task_name, self._task_description, self._params
+                self._task_id, self._task_name, self._task_description, self._params
             )
         )
 
@@ -52,8 +52,8 @@ class Operator(ABC):
         pass
 
     @property
-    def task_no(self) -> int:
-        return self._task_no
+    def task_id(self) -> int:
+        return self._task_id
 
     @property
     def task_name(self) -> str:

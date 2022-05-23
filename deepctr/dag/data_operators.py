@@ -22,8 +22,9 @@ import pandas as pd
 
 from deepctr.utils.decorators import operator
 from deepctr.dag.base import Operator
-from deepctr.dal.params import DatasetParams, DatasetParams, S3Params
-from deepctr.dal.files import FileAccessObject, RemoteAccessObject
+from deepctr.dal.entity import File, Dataset
+from deepctr.dal.vfs import FileManager
+from deepctr.dal.web import RemoteAccessObject
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
@@ -41,7 +42,7 @@ class DownloadS3(Operator):
     """Operator that downloads data from Amazon S3 Resources.
 
     Args:
-        task_no (int): Task sequence in dag.
+        task_id (int): Task sequence in dag.
         task_name (str): name of task
         params (dict): Parameters required by the task, including:
           bucket (str): The Amazon S3 bucket name
@@ -52,9 +53,9 @@ class DownloadS3(Operator):
           force (bool): If True, will execute and overwrite existing data.
     """
 
-    def __init__(self, task_no: int, task_name: str, task_description: str, params: dict) -> None:
+    def __init__(self, task_id: int, task_name: str, task_description: str, params: dict) -> None:
         super(DownloadS3, self).__init__(
-            task_no=task_no, task_name=task_name, task_description=task_description, params=params
+            task_id=task_id, task_name=task_name, task_description=task_description, params=params
         )
 
         self._progressbar = None
@@ -63,14 +64,15 @@ class DownloadS3(Operator):
     def execute(self, data: Any = None) -> pd.DataFrame:
         """Extracts data from an Amazon AWS S3 resource and persists it."""
 
-        source = S3Params(
-            bucket=self._params["source"]["bucket"], folder=self._params["source"]["folder"]
-        )
+        source = {
+            bucket: self._params["source"]["bucket"],
+            folder: self._params["source"]["folder"],
+        }
 
-        destination = DatasetParams(
-            datasource=self._params["destination"]["datasource"],
-            dataset=self._params["destination"]["dataset"],
+        destination = Dataset(
+            name=self._params["destination"]["dataset"],
             stage=self._params["destination"]["stage"],
+            datasource=self._params["destination"]["datasource"],
             home=self._params["destination"]["home"],
         )
 
@@ -84,25 +86,27 @@ class DownloadS3(Operator):
 class DataReader(Operator):
     """Reads data from the Data Repository"""
 
-    def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
+    def __init__(self, task_id: int, task_name: str, task_description: str, params: list) -> None:
         super(DataReader, self).__init__(
-            task_no=task_no, task_name=task_name, task_description=task_description, params=params
+            task_id=task_id, task_name=task_name, task_description=task_description, params=params
         )
 
     @operator
     def execute(self, data: Any = None) -> Any:
         """Reads from the designated resource"""
 
-        params = DatasetParams(
-            datasource=self._params["datasource"],
-            dataset=self._params["dataset"],
-            stage=self._params["stage"],
-            home=self._params["home"],
-            filename=self._params["filename"],
-            format=self._params["format"],
+        file = File(
+            name=self._params["file"]["name"],
+            dataset=self._params["file"]["dataset"],
+            datasource=self._params["file"]["datasource"],
+            stage=self._params["file"]["stage"],
+            format=self._params["file"]["format"],
+            compressed=self._params["file"]["compressed"],
+            home=self._params["file"].get("home", "data"),
+            storage_type=self._params["file"]["storage_type"],
         )
 
-        return FileAccessObject().read(params=params)
+        return FileManager().read(file=file)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -111,22 +115,24 @@ class DataReader(Operator):
 class DataWriter(Operator):
     """Reads data from the Data Repository"""
 
-    def __init__(self, task_no: int, task_name: str, task_description: str, params: list) -> None:
+    def __init__(self, task_id: int, task_name: str, task_description: str, params: list) -> None:
         super(DataWriter, self).__init__(
-            task_no=task_no, task_name=task_name, task_description=task_description, params=params
+            task_id=task_id, task_name=task_name, task_description=task_description, params=params
         )
 
     @operator
     def execute(self, data: Any = None) -> Any:
         """Reads from the designated resource"""
 
-        params = FileAccessObject(
-            datasource=self._params["datasource"],
-            dataset=self._params["dataset"],
-            filename=self._params["filename"],
-            format=self._params["format"],
-            stage=self._params["stage"],
-            home=self._params["home"],
+        file = File(
+            name=self._params["file"]["name"],
+            dataset=self._params["file"]["dataset"],
+            datasource=self._params["file"]["datasource"],
+            stage=self._params["file"]["stage"],
+            format=self._params["file"]["format"],
+            compressed=self._params["file"]["compressed"],
+            home=self._params["file"].get("home", "data"),
+            storage_type=self._params["file"]["storage_type"],
         )
 
-        return FileAccessObject().create(params=params, data=data)
+        return FileManager().create(file=file, data=data, force=self._params.get("force", False))

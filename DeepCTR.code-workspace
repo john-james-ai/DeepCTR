@@ -24,9 +24,10 @@
     "psi-header.changes-tracking": {
 
 
+
         "isActive": true,
         "modAuthor": "Modified By:",
-        "modDate": "Last Modified:",
+        "modDate": "Modified:",
         "modDateFormat": "dddd MMMM Do YYYY hh:mm:ss a",
         "include": ["python", "shellscript","yaml", "sql", "ini", "cpp"],
         "includeGlob": ["./**/*/.py"],
@@ -62,13 +63,14 @@
             ],
             "afterHeader": [],
             "modAuthor": "Modified By:",
-            "modDate": "Last Modified:",
+            "modDate": "Modified:",
             "modDateFormat": "dddd MMMM Do YYYY hh:mm:ss a",
             "replace": [
                 "Filename   :",
                 "URL        :",
                 "Project    :",
-                "Version    :"
+                "Version    :",
+                "Modified   :",
             ],
             "ignoreLines": []
         }

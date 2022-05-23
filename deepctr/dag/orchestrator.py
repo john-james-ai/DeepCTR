@@ -37,14 +37,14 @@ class DAG(ABC):
     """Abstract base class for directed acyclic graph of operations.
 
     Args:
-        dag_no (str): Identifier for the dag
+        dag_id (str): Identifier for the dag
         dag_description (str): Brief description
         tasks (list): List of tasks to execute
 
     """
 
-    def __init__(self, dag_no: str, dag_name: str, dag_description: str, tasks: list) -> None:
-        self._dag_no = dag_no
+    def __init__(self, dag_id: str, dag_name: str, dag_description: str, tasks: list) -> None:
+        self._dag_id = dag_id
         self._dag_name = dag_name
         self._dag_description = dag_description
         self._tasks = tasks
@@ -61,22 +61,22 @@ class DataDAG(DAG):
     """Directed acyclic graph for data operations.
 
     Args:
-        dag_no (str): Identifier for the dag
+        dag_id (str): Identifier for the dag
         dag_name (str): name for the dag in lower case, underscore separated
         dag_description (str): Brief description
         tasks (list): List of tasks to execute
 
     """
 
-    def __init__(self, dag_no: str, dag_name: str, dag_description: str, tasks: list) -> None:
+    def __init__(self, dag_id: str, dag_name: str, dag_description: str, tasks: list) -> None:
         super(DataDAG, self).__init__(
-            dag_no=dag_no, dag_name=dag_name, dag_description=dag_description, tasks=tasks,
+            dag_id=dag_id, dag_name=dag_name, dag_description=dag_description, tasks=tasks,
         )
 
     def run(self, start: int = 0, stop: float = float("inf")) -> None:
         data = None
         for task in self._tasks:
-            if task.task_no >= start and task.task_no <= stop:
+            if task.task_id >= start and task.task_id <= stop:
                 result = task.execute(data=data)
                 data = result if result is not None else data
 
@@ -113,7 +113,7 @@ class DAGBuilder(ABC):
             task = getattr(module, task_config["task"])
 
             task_instance = task(
-                task_no=task_config["task_no"],
+                task_id=task_config["task_id"],
                 task_name=task_config["task_name"],
                 task_description=task_config["task_description"],
                 params=task_config["task_params"],
@@ -163,7 +163,7 @@ class DataDAGBuilder(DAGBuilder):
 
         try:
             self._dag = DataDAG(
-                dag_no=config["dag_no"],
+                dag_id=config["dag_no"],
                 dag_name=config["dag_name"],
                 dag_description=config["dag_description"],
                 tasks=tasks,
@@ -176,7 +176,6 @@ class DataDAGBuilder(DAGBuilder):
     def _create_config(self) -> dict:
         config = self._template
         for task_no in config["tasks"].keys():
-            config["tasks"][task_no]["task_params"]["datasource"] = self._datasource
-            config["tasks"][task_no]["task_params"]["dataset"] = self._dataset
-            config["tasks"][task_no]["task_params"]["home"] = self._home
+            config["tasks"][task_no]["dag_no"] = config["dag_no"]
+            config["tasks"][task_no]["dag_name"] = config["dag_name"]
         return config

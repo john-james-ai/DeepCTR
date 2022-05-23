@@ -3,7 +3,7 @@
 # ================================================================================================ #
 # Project    : DeepCTR: Deep Learning for CTR Prediction                                           #
 # Version    : 0.1.0                                                                               #
-# Filename   : /file.py                                                                            #
+# Filename   : /vfs.py                                                                             #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
@@ -22,9 +22,9 @@ import logging.config
 from typing import Any, Union
 import shutil
 
-from deepctr.dal.base import DAO
-from deepctr.dal.params import DatasetParams
-from deepctr.data.file import SparkCSV, SparkParquet, Pickler
+from deepctr.dal.base import FAO
+from deepctr.dal.file import File
+from deepctr.data.datastore import SparkCSV, SparkParquet, Pickler
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
@@ -34,54 +34,64 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
 # ------------------------------------------------------------------------------------------------ #
-#                                  FILE ACCESS OBJECT                                              #
+#                                       FILE MANAGER                                               #
 # ------------------------------------------------------------------------------------------------ #
 
 
-class FileAccessObject(DAO):
-    """Access object for files."""
+class FileManager(FAO):
+    """File operations including, creating, reading/loading, and deleting."""
 
     # -------------------------------------------------------------------------------------------- #
-    def create(self, params: DatasetParams, data: Any, force: bool = False) -> None:
+    def create(self, file: File, data: Any, force: bool = False) -> None:
         """Persists a new data table to storage.
 
         Args:
-            params (DatasetParams): Parameter object for create operations
+            file (File): Parameter object for create operations
         """
-        filepath = DAO.__filepath.get_path(params)
-        if os.path.exists(filepath) and not force:
-            raise FileExistsError("{} already exists.".format(filepath))
+        if os.path.exists(file.filepath) and not force:
+            raise FileExistsError(
+                "{} already exists. Create aborted. To overwrite, set force = True.".format(
+                    file.filepath
+                )
+            )
 
-        io = self._get_io(file_format=params.format)
-        io.write(data=data, filepath=filepath)
+        io = self._get_io(file_format=file.format)
+        io.write(data=data, filepath=file.filepath)
 
     # -------------------------------------------------------------------------------------------- #
-    def read(self, params: DatasetParams) -> Any:
+    def read(self, file: File) -> Any:
         """Obtains an object from persisted storage
 
         Args:
-            params (DatasetParams): Parameter object for file read operations
+            file (File): Parameter object for file read operations
 
         Returns (DataFrame)
         """
-        filepath = DAO.__filepath.get_path(params)
 
         try:
-            io = self._get_io(file_format=params.format)
-            return io.read(filepath=filepath)
+            io = self._get_io(file_format=file.format)
+            return io.read(filepath=file.filepath)
         except FileNotFoundError as e:
-            logger.error("File {} not found.".format(filepath))
+            logger.error("File {} not found.".format(file.filepath))
             raise FileNotFoundError(e)
 
     # -------------------------------------------------------------------------------------------- #
-    def delete(self, params: DatasetParams) -> None:
+    def delete(self, file: File) -> None:
         """Removes a data table from persisted storage
 
         Args:
-            params (DatasetParams): Parameter object for dataasets or data files
+            file (File): Parameter object for dataasets or data files
         """
-        filepath = DAO.__filepath.get_path(params)
-        shutil.rmtree(filepath, ignore_errors=True)
+        shutil.rmtree(file.filepath, ignore_errors=True)
+
+    # -------------------------------------------------------------------------------------------- #
+    def exists(self, file: File) -> None:
+        """Checks existence of Dataset
+
+        Args:
+            file (File): Parameter object for dataasets or data files
+        """
+        return os.path.exists(file.filepath)
 
     # -------------------------------------------------------------------------------------------- #
     def _get_io(self, file_format: str) -> Union[SparkCSV, SparkParquet, Pickler]:

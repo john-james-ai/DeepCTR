@@ -18,59 +18,97 @@
 import os
 from abc import ABC, abstractmethod
 from typing import Any
-from difflib import get_close_matches
-from deepctr.dal.params import DatasetParams, S3Params, DatasetParams
+from deepctr.dal.dto import S3DTO, EntityDTO, DatasetDTO
+from deepctr.dal.entity import File, Entity
 
 # ------------------------------------------------------------------------------------------------ #
 #                                          PATH                                                    #
 # ------------------------------------------------------------------------------------------------ #
 
 
-class Path(ABC):
+class PathFinder(ABC):
     "Base class for file and directory path sublasses responsible for mapping objects to files."
 
-    __stages = ["raw", "staged", "interim", "clean", "processed", "extract"]
-    __datasource = ["alibaba", "avazu", "criteo"]
-    __formats = ["csv", "parquet", "pickle"]
-
     @staticmethod
-    def get_path(self, params: DatasetParams) -> str:
+    def get_path(self, dto: DatasetDTO) -> str:
         pass
 
 
 # ------------------------------------------------------------------------------------------------ #
-class FilePath(Path):
-    """Responsible for mapping file parameter objects to filepaths."""
-
-    @staticmethod
-    def get_path(params: DatasetParams) -> str:
-        try:
-            datasource = get_close_matches(params.datasource, Path.__datasource)[0]
-            stage = get_close_matches(params.stage, Path.__stages)[0]
-            format = get_close_matches(params.format, Path.__formats)[0]
-            return (
-                os.path.join(params.home, datasource, params.dataset, stage, params.entity)
-                + "."
-                + format
-            )
-
-        except IndexError as e:
-            raise ValueError("Unable to parse dataset configuration. {}".format(e))
-
-
-# ------------------------------------------------------------------------------------------------ #
-class Directory(Path):
+class DatasetPathFinder(PathFinder):
     """Responsible for mapping directory parameter objects to directories."""
 
     @staticmethod
-    def get_path(params: DatasetParams) -> str:
-        try:
-            datasource = get_close_matches(params.datasource, Path.__datasource)[0]
-            stage = get_close_matches(params.stage, Path.__stages)[0]
-            return os.path.join(params.home, datasource, params.dataset, stage)
+    def get_path(name: str, datasource: str, stage: str, home: str = "data") -> str:
+        return os.path.join(home, datasource, name, stage)
 
-        except IndexError as e:
-            raise ValueError("Unable to parse dataset configuration. {}".format(e))
+
+# ------------------------------------------------------------------------------------------------ #
+class FilePathFinder(PathFinder):
+    """Responsible for mapping directory parameter objects to directories."""
+
+    @staticmethod
+    def get_path(
+        name: str, datasource: str, dataset: str, stage: str, format: str, home: str = "data"
+    ) -> str:
+        return os.path.join(home, datasource, dataset, stage, name) + "." + format
+
+
+# ------------------------------------------------------------------------------------------------ #
+class ObjectPathFinder(PathFinder):
+    """Responsible for mapping file parameters to S3 object paths."""
+
+    @staticmethod
+    def get_path(object: str, bucket: str = "deepctr") -> str:
+        return os.path.join(bucket, object)
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                            FAO                                                   #
+# ------------------------------------------------------------------------------------------------ #
+
+
+class FAO:
+    """Base class for file managers."""
+
+    @abstractmethod
+    def create(self, file: File, data: Any, force: bool = False) -> None:
+        pass
+        """Persists a new data table to storage.
+
+        Args:
+            file (File): Parameter object for create operations
+        """
+        pass
+
+    @abstractmethod
+    def read(self, file: File) -> Any:
+        """Obtains an object from persisted storage
+
+        Args:
+            file (File): Parameter object for file read operations
+
+        Returns (DataFrame)
+        """
+        pass
+
+    @abstractmethod
+    def delete(self, file: File) -> None:
+        """Removes a data table from persisted storage
+
+        Args:
+            file (File): Parameter object for dataasets or data files
+        """
+        pass
+
+    @abstractmethod
+    def exists(self, file: File) -> None:
+        """Checks existence of Dataset
+
+        Args:
+            file (File): Parameter object for dataasets or data files
+        """
+        pass
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -79,29 +117,31 @@ class Directory(Path):
 
 
 class DAO(ABC):
-    """Defines base class for data access objects."""
-
-    __filepath = FilePath
-    __directory = Directory
+    """Collection of Entity objects of a single type, along with database operations."""
 
     # -------------------------------------------------------------------------------------------- #
     @abstractmethod
-    def create(self, params: DatasetParams, data: Any, force: bool = False) -> None:
+    def add(self, entity: Entity) -> None:
         pass
 
     # -------------------------------------------------------------------------------------------- #
     @abstractmethod
-    def read(self, params: DatasetParams) -> Any:
+    def find(self, id: int) -> Any:
         pass
 
     # -------------------------------------------------------------------------------------------- #
     @abstractmethod
-    def delete(self, params: DatasetParams) -> None:
+    def findall(self) -> Any:
         pass
 
     # -------------------------------------------------------------------------------------------- #
     @abstractmethod
-    def exists(self, params: Any) -> None:
+    def remove(self, id: int) -> None:
+        pass
+
+    # -------------------------------------------------------------------------------------------- #
+    @abstractmethod
+    def exists(self, id: int) -> bool:
         pass
 
 
@@ -113,41 +153,10 @@ class DAO(ABC):
 class RAO(ABC):
     """Defines interface for remote access objects accessing cloud services."""
 
-    __filepath = FilePath
-    __directory = Directory
-
     @abstractmethod
-    def download_entity(
-        self, source: S3Params, destination: DatasetParams, force: bool = False
-    ) -> None:
+    def download(self, source: S3DTO, destination: EntityDTO, force: bool = False) -> None:
         pass
 
     @abstractmethod
-    def download_dataset(
-        self, source: S3Params, destination: DatasetParams, force: bool = False
-    ) -> None:
-        pass
-
-    @abstractmethod
-    def upload_entity(
-        self, source: DatasetParams, destination: S3Params, force: bool = False
-    ) -> None:
-        pass
-
-    @abstractmethod
-    def upload_dataset(
-        self, source: DatasetParams, destination: S3Params, force: bool = False
-    ) -> None:
-        pass
-
-    @abstractmethod
-    def compress(
-        self, source: DatasetParams, destination: DatasetParams, force: bool = False
-    ) -> None:
-        pass
-
-    @abstractmethod
-    def expand(
-        self, source: DatasetParams, destination: DatasetParams, force: bool = False
-    ) -> None:
+    def upload(self, source: EntityDTO, destination: S3DTO, force: bool = False) -> None:
         pass

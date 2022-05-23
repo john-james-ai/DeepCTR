@@ -43,6 +43,7 @@ data_dev/**
 
 # Notes and internal documents
 notes/*.*
+notes/
 */_build/
 **/lab/*
 

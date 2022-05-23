@@ -23,7 +23,9 @@ import logging
 import logging.config
 from pyspark.sql import DataFrame
 
-from deepctr.data.datastore import SparkCSV, SparkParquet
+from deepctr.dal.base import FilePathFinder
+from deepctr.dal.file import FileAccessObject
+from deepctr.dal.params import EntityParams
 from deepctr.utils.printing import Printer
 from deepctr.utils.log_config import LOG_CONFIG
 
@@ -34,25 +36,64 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
 
-HOME = "tests/data/test_file/"
-FOLDER = "test/file"
-BUCKET = "deepctr"
-CSVFILE = "binding.csv"
-PARQUET = "sanscontrol.parquet"
-ZIP = "forbidden.csv.tar.gz"
-DIRECTORY = "unbound"
+HOME = "tests/data/dal/test_file/"
+DATASET = "vesuvio"
+DATASOURCE = "alibaba"
+STAGE = "staged"
 
 
-@pytest.mark.data_file
-class TestSparkCSV:
-    def test_write(self, caplog, spark_dataframe) -> None:
+def get_params(format: str):
+    params = EntityParams(
+        datasource=DATASOURCE,
+        dataset=DATASET,
+        stage=STAGE,
+        home=HOME,
+        name="avoidance",
+        format=format,
+    )
+    return params
+
+
+@pytest.mark.dal_file
+class TestFileAccessObject:
+
+    FORMAT = "csv"
+
+    def test_create(self, caplog, spark_dataframe) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        filepath = os.path.join(HOME, CSVFILE)
-        io = SparkCSV()
-        io.write(data=spark_dataframe, filepath=filepath)
-        assert os.path.exists(filepath), logging.error("SparkCSV failed to write")
+        params = get_params(format=TestFileAccessObject.FORMAT)
+        fao = FileAccessObject()
+        fao.create(params=params, data=spark_dataframe, force=False)
+
+        path = FilePathFinder().get_path(params)
+        assert os.path.exists(path), "File not created"
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    def test_create_already_exists(self, caplog, spark_dataframe) -> None:
+        caplog.set_level(logging.INFO)
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        params = get_params(format=TestFileAccessObject.FORMAT)
+        fao = FileAccessObject()
+        with pytest.raises(FileExistsError):
+            fao.create(params=params, data=spark_dataframe, force=False)
+
+        path = FilePathFinder().get_path(params)
+        assert os.path.exists(path), "File not created"
+
+    def test_create_already_exists_overwrite(self, caplog, spark_dataframe) -> None:
+        caplog.set_level(logging.INFO)
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        params = get_params(format=TestFileAccessObject.FORMAT)
+        fao = FileAccessObject()
+        fao.create(params=params, data=spark_dataframe, force=True)
+
+        path = FilePathFinder().get_path(params)
+        assert os.path.exists(path), "File not created"
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -60,9 +101,9 @@ class TestSparkCSV:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        filepath = os.path.join(HOME, CSVFILE)
-        io = SparkCSV()
-        sdf = io.read(filepath=filepath, header=True, sep=",")
+        params = get_params(format=TestFileAccessObject.FORMAT)
+        fao = FileAccessObject()
+        sdf = fao.read(params=params)
 
         title = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
         self.show(sdf, title)
@@ -77,74 +118,18 @@ class TestSparkCSV:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        filepath = "test/filenotfound.txt"
-
-        io = SparkCSV()
+        params = get_params(format=TestFileAccessObject.FORMAT)
+        params.name = "adlnaos"
+        fao = FileAccessObject()
         with pytest.raises(FileNotFoundError):
-            io.read(filepath)
+            fao.read(params=params)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
     def test_teardown(self):
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        filepath = os.path.join(HOME, CSVFILE)
-        shutil.rmtree(filepath, ignore_errors=True)
-
-        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-    def show(self, sdf, title):
-        printer = Printer()
-        printer.print_spark_dataframe_summary(content=sdf, title=title)
-
-
-@pytest.mark.data_file
-class TestSparkParquet:
-    def test_write(self, caplog, spark_dataframe) -> None:
-        caplog.set_level(logging.INFO)
-        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-        filepath = os.path.join(HOME, PARQUET)
-        io = SparkParquet()
-        io.write(data=spark_dataframe, filepath=filepath)
-        assert os.path.exists(filepath), logging.error("SparkParquet failed to write")
-
-        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-    def test_read(self, caplog) -> None:
-        caplog.set_level(logging.INFO)
-        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-        filepath = os.path.join(HOME, PARQUET)
-        io = SparkParquet()
-        sdf = io.read(filepath=filepath)
-
-        title = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
-        self.show(sdf, title)
-
-        assert isinstance(sdf, DataFrame), logging.error(
-            "SparkCSV failed to return a pyspark.sql.DataFrame object"
-        )
-
-        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-    def test_read_fail(self, caplog) -> None:
-        caplog.set_level(logging.INFO)
-        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-        filepath = "test/filenotfound.txt"
-
-        io = SparkParquet()
-        with pytest.raises(FileNotFoundError):
-            io.read(filepath=filepath)
-
-        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-    def test_teardown(self):
-        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-        filepath = os.path.join(HOME, PARQUET)
-        shutil.rmtree(filepath, ignore_errors=True)
+        shutil.rmtree(HOME, ignore_errors=True)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 

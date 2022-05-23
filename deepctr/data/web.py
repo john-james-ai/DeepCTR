@@ -271,7 +271,7 @@ class S3(Cloud):
         bucket = s3.Bucket(bucket)
         bucket.objects.filter(Prefix=folder).delete()
 
-    def exists(self, bucket: str, object: str, force: str = False) -> bool:
+    def exists(self, bucket: str, object: str) -> bool:
         """Checks if a file exists in an S3 bucket
 
         Args:

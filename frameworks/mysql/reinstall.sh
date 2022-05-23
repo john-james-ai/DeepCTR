@@ -35,11 +35,9 @@ sudo apt autoremove
 sudo apt autoclean
 # Follow instructions at https://docs.microsoft.com/en-us/windows/wsl/tutorials/wsl-database
 # use wsl terminal
-echo $'\nUpdating distribution...'
-sudo apt-get dist-upgrade
 
-echo $'\nUpdating packages...'
-sudo apt update
+echo $'\nUpdating and upgrading distribution'
+sudo apt-get update && sudo apt-get dist-upgrade
 
 echo $'\nInstalling MySQL Server...'
 sudo apt-get install mysql-server
@@ -47,11 +45,19 @@ sudo apt-get install mysql-server
 echo $'\nStarting MySQL Server...'
 sudo /etc/init.d/mysql start
 
+echo $'\nSet root user authentication'
+sudo mysql -u root -p < frameworks/mysql/auth.sql
+
 echo $'\nRunning secure installation...'
 sudo mysql_secure_installation
 
+echo $'\nSetting home directory...'
+sudo /etc/init.d/mysql stop
+sudo usermod -d /var/lib/mysql/ mysql
+sudo /etc/init.d/mysql restart
+
 echo $'\nOpen MySQL Prompt...'
-sudo mysql -u root -p < frameworks/mysql/auth.sql
+sudo mysql -u root -p < frameworks/mysql/metadata_ddl.sql
 
 echo $'\nRestarting MySQL..'
 sudo /etc/init.d/mysql restart
