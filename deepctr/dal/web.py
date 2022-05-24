@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday May 13th 2022 02:51:48 pm                                                    #
-# Modified   : Sunday May 15th 2022 11:22:36 pm                                                    #
+# Modified   : Monday May 23rd 2022 11:53:00 pm                                                    #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -42,7 +42,7 @@ class RemoteAccessObject(RAO):
     """Remote access object for Amazon S3 web resources."""
 
     # -------------------------------------------------------------------------------------------- #
-    def download_entity(
+    def download_file(
         self, source: S3Params, destination: EntityParams, expand: bool = True, force: bool = False,
     ) -> None:
         """Downloads data entity from an S3 Resource
