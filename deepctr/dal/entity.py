@@ -10,13 +10,13 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 19th 2022 06:43:34 pm                                                  #
-# Modified   : Monday May 23rd 2022 10:20:55 pm                                                    #
+# Modified   : Tuesday May 24th 2022 12:31:50 am                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from datetime import datetime
 import logging
@@ -49,7 +49,7 @@ class Entity(ABC):
     name: str
     state: str = "added"
     created: datetime = datetime.now()
-    id: int = 0     # Have the data access object update the id
+    id: int = 0  # Have the data access object update the id
 
 
 # ------------------------------------------------------------------------------------------------ #
