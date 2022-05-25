@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 19th 2022 06:43:34 pm                                                  #
-# Modified   : Wednesday May 25th 2022 02:04:48 am                                                 #
+# Modified   : Wednesday May 25th 2022 10:33:52 am                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -147,10 +147,6 @@ class AbstractDataset(ABC):
     def to_dict(self) -> dict:
         pass
 
-    @abstractmethod
-    def save(self, connection) -> None:
-        pass
-
 
 # ------------------------------------------------------------------------------------------------ #
 #                                     LOCAL DATASET                                                #
@@ -173,7 +169,6 @@ class LocalDataset(AbstractDataset):
     def to_dict(self) -> dict:
         d = {
             "name": self.name,
-            "dataset": self.dataset,
             "stage": self.stage,
             "state": self.state,
             "size": self.size,
@@ -296,14 +291,14 @@ class LocalEntityFactory(AbstractFactory):
         dto = self._validate(dto)
 
         # Folder's are assigned based upon a specified file organization
-        folder = os.path.join(dto.home, dto.datasource, dto.dataset, dto.stage)
+        folder = os.path.join(dto.home, dto.datasource, dto.name, dto.stage)
 
         dataset = LocalDataset(
             name=dto.name,
             datasource=dto.datasource,
             stage=dto.stage,
             state=dto.state,
-            size=0,
+            size=dto.size,
             folder=folder,
             storage_type=dto.storage_type,
             dag_id=dto.dag_id,
@@ -356,9 +351,9 @@ class S3EntityFactory(AbstractFactory):
         dto = self._validate(dto)
 
         # Folder's are assigned based upon a specified file organization
-        folder = os.path.join(dto.home, dto.datasource, dto.dataset, dto.stage)
+        folder = os.path.join(dto.datasource, dto.name)
 
-        dataset = LocalDataset(
+        dataset = S3Dataset(
             name=dto.name,
             datasource=dto.datasource,
             stage=dto.stage,
@@ -367,7 +362,6 @@ class S3EntityFactory(AbstractFactory):
             folder=folder,
             storage_type=dto.storage_type,
             dag_id=dto.dag_id,
-            home=dto.home,
         )
 
         return dataset
