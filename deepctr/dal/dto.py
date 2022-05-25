@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 19th 2022 06:43:34 pm                                                  #
-# Modified   : Wednesday May 25th 2022 01:52:25 am                                                 #
+# Modified   : Wednesday May 25th 2022 11:44:09 am                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -35,7 +35,6 @@ class AbstractFileDTO(DTO):
     datasource: str
     stage: str
     format: str
-    state: str
     size: int
     compressed: bool
     storage_type: str
@@ -52,7 +51,6 @@ class LocalFileDTO(AbstractFileDTO):
     datasource: str
     stage: str
     format: str
-    state: str
     size: int
     compressed: bool
     storage_type: str
@@ -70,7 +68,6 @@ class S3FileDTO(AbstractFileDTO):
     datasource: str
     format: str
     stage: str
-    state: str
     size: int
     object_key: str
     bucket: str
@@ -92,7 +89,6 @@ class AbstractDatasetDTO(DTO):
     name: str
     datasource: str
     stage: str
-    state: str
     size: int
     storage_type: str
     dag_id: int
@@ -105,7 +101,6 @@ class LocalDatasetDTO(AbstractDatasetDTO):
     name: str
     datasource: str
     stage: str
-    state: str
     size: int
     storage_type: str
     dag_id: int
@@ -121,7 +116,6 @@ class S3FDatasetDTO(AbstractDatasetDTO):
     bucket: str
     folder: str
     stage: str
-    state: str
     size: int
     storage_type: str
     dag_id: int

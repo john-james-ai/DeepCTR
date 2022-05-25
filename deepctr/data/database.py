@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 19th 2022 06:39:17 pm                                                  #
-# Modified   : Monday May 23rd 2022 06:18:49 pm                                                    #
+# Modified   : Wednesday May 25th 2022 01:12:38 pm                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -129,7 +129,7 @@ class Database:
         cursor = self._query(statement=statement, parameters=parameters)
         return cursor.fetchone()
 
-    def select_exists(self, statement: str, parameters: tuple = None):
+    def exists(self, statement: str, parameters: tuple = None):
         """Select query that returns one row.
 
         Args:
@@ -160,3 +160,6 @@ class Database:
         """
 
         return self._execute(statement=statement, parameters=parameters)
+
+    def save(self) -> None:
+        self._connection.commit()

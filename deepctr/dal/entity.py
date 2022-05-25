@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 19th 2022 06:43:34 pm                                                  #
-# Modified   : Wednesday May 25th 2022 10:33:52 am                                                 #
+# Modified   : Wednesday May 25th 2022 01:08:18 pm                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -23,6 +23,7 @@ from datetime import datetime
 import logging
 from difflib import get_close_matches
 
+from deepctr.dal.base import Entity
 from deepctr.dal.dto import DTO
 from deepctr.utils.log_config import LOG_CONFIG
 
@@ -32,18 +33,22 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 BUCKETS = ["deepctr"]
 STAGES = ["raw", "staged", "interim", "clean", "processed", "extract", "archive"]
-STATES = ["added", "modified", "deleted"]
 DATASOURCES = ["alibaba", "avazu", "criteo"]
 FORMATS = ["csv", "parquet", "pickle", "tar.gz"]
 STORAGE_TYPES = ["local", "s3"]
-
 
 # ------------------------------------------------------------------------------------------------ #
 #                                    ABSTRACT FILE                                                 #
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class AbstractFile(ABC):
+class AbstractFile(Entity):
     """Defines the interface for File objects."""
+
+    name: str  # Name of file without the extension
+    dataset: str  # Name of the dataset, distinguishing it from the original
+    datasource: str  # Original datasource, i.e. 'alibaba', 'criter', etc....
+    stage: str  # Stage of the development life cycle
+    format: str  # Supported formats include 'csv',  and 'parquet'.
 
     @abstractmethod
     def to_dict(self) -> dict:
@@ -62,7 +67,6 @@ class LocalFile(AbstractFile):
     datasource: str
     stage: str
     format: str
-    state: str = "added"
     size: int = 0
     compressed: bool = False
     filename: str = None
@@ -80,7 +84,6 @@ class LocalFile(AbstractFile):
             "datasource": self.datasource,
             "stage": self.stage,
             "format": self.format,
-            "state": self.state,
             "size": self.size,
             "compressed": self.compressed,
             "filename": self.filename,
@@ -108,7 +111,6 @@ class S3File(AbstractFile):
     format: str
     object_key: str
     bucket: str = "deepctr"
-    state: str = "added"
     size: int = 0
     compressed: bool = True
     storage_type: str = "s3"
@@ -125,7 +127,6 @@ class S3File(AbstractFile):
             "format": self.format,
             "object_key": self.object_key,
             "bucket": self.bucket,
-            "state": self.state,
             "size": self.size,
             "compressed": self.compressed,
             "storage_type": self.storage_type,
@@ -158,7 +159,6 @@ class LocalDataset(AbstractDataset):
     name: str
     datasource: str
     stage: str
-    state: str = "added"
     size: int = 0
     folder: str = None
     storage_type: str = "local"
@@ -169,8 +169,8 @@ class LocalDataset(AbstractDataset):
     def to_dict(self) -> dict:
         d = {
             "name": self.name,
+            "datasource": self.datasource,
             "stage": self.stage,
-            "state": self.state,
             "size": self.size,
             "folder": self.folder,
             "storage_type": self.storage_type,
@@ -193,7 +193,6 @@ class S3Dataset(AbstractDataset):
     stage: str
     folder: str
     bucket: str = "deepctr"
-    state: str = "added"
     size: int = 0
     storage_type: str = "s3"
     dag_id: int = None
@@ -206,7 +205,6 @@ class S3Dataset(AbstractDataset):
             "stage": self.stage,
             "folder": self.folder,
             "bucket": self.bucket,
-            "state": self.state,
             "size": self.size,
             "storage_type": self.storage_type,
             "dag_id": self.dag_id,
@@ -232,7 +230,6 @@ class AbstractFactory(ABC):
     def _validate(self, dto: DTO) -> DTO:
         """ Validates / coerces dto parameters and returns a valid DTO."""
         try:
-            dto.state = get_close_matches(dto.state, STATES)[0]
             dto.stage = get_close_matches(dto.stage, STAGES)[0]
             dto.datasource = get_close_matches(dto.datasource, DATASOURCES)[0]
             dto.storage_type = get_close_matches(dto.storage_type, STORAGE_TYPES)[0]
@@ -273,7 +270,6 @@ class LocalEntityFactory(AbstractFactory):
             datasource=dto.datasource,
             stage=dto.stage,
             format=dto.format,
-            state=dto.state,
             size=dto.size,
             compressed=dto.compressed,
             filename=filename,
@@ -297,7 +293,6 @@ class LocalEntityFactory(AbstractFactory):
             name=dto.name,
             datasource=dto.datasource,
             stage=dto.stage,
-            state=dto.state,
             size=dto.size,
             folder=folder,
             storage_type=dto.storage_type,
@@ -334,7 +329,6 @@ class S3EntityFactory(AbstractFactory):
             datasource=dto.datasource,
             stage=dto.stage,
             format=dto.format,
-            state=dto.state,
             size=dto.size,
             compressed=dto.compressed,
             bucket=dto.bucket,
@@ -357,7 +351,6 @@ class S3EntityFactory(AbstractFactory):
             name=dto.name,
             datasource=dto.datasource,
             stage=dto.stage,
-            state=dto.state,
             size=dto.size,
             folder=folder,
             storage_type=dto.storage_type,
