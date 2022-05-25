@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 19th 2022 07:48:15 pm                                                  #
-# Modified   : Wednesday May 25th 2022 01:24:48 am                                                 #
+# Modified   : Wednesday May 25th 2022 01:31:20 pm                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -29,6 +29,10 @@ from deepctr.dal.dto import EntityDTO
 class Entity(ABC):
     """Base class for File classes including the members and validation common to all subclasses."""
 
+    @property
+    def queries(self) -> dict:
+        pass
+
     @abstractmethod
     def __post_init__(self) -> None:
         pass
@@ -36,6 +40,17 @@ class Entity(ABC):
     @abstractmethod
     def to_dict(self) -> dict:
         pass
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                     ABSTRACT COMMAND                                              #
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class AbstractCommand:
+    command: str
+    table: str
+    parameters: list
+    sequel: str
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -92,7 +107,12 @@ class FAO:
 
 
 class DAO(ABC):
-    """Collection of Entity objects of a single type, along with database operations."""
+    """Table level access to the database."""
+
+    # -------------------------------------------------------------------------------------------- #
+    @abstractmethod
+    def create(self, dto: EntityDTO) -> Entity:
+        pass
 
     # -------------------------------------------------------------------------------------------- #
     @abstractmethod
@@ -101,12 +121,12 @@ class DAO(ABC):
 
     # -------------------------------------------------------------------------------------------- #
     @abstractmethod
-    def find(self, id: int) -> Any:
+    def get(self, id: int) -> Entity:
         pass
 
     # -------------------------------------------------------------------------------------------- #
     @abstractmethod
-    def findall(self) -> Any:
+    def findall(self) -> list:
         pass
 
     # -------------------------------------------------------------------------------------------- #
@@ -117,6 +137,11 @@ class DAO(ABC):
     # -------------------------------------------------------------------------------------------- #
     @abstractmethod
     def exists(self, id: int) -> bool:
+        pass
+
+    # -------------------------------------------------------------------------------------------- #
+    @abstractmethod
+    def save(self) -> None:
         pass
 
 
