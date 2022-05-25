@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday May 13th 2022 02:51:48 pm                                                    #
-# Modified   : Monday May 23rd 2022 11:53:00 pm                                                    #
+# Modified   : Wednesday May 25th 2022 12:49:02 am                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -30,8 +30,6 @@ from deepctr.utils.log_config import LOG_CONFIG
 logging.config.dictConfig(LOG_CONFIG)
 logging.getLogger("py4j").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
-# ------------------------------------------------------------------------------------------------ #
-
 
 # ------------------------------------------------------------------------------------------------ #
 #                                    REMOTE ACCESS OBJECT                                          #

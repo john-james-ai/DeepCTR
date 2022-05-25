@@ -3,64 +3,39 @@
 # ================================================================================================ #
 # Project    : DeepCTR: Deep Learning for CTR Prediction                                           #
 # Version    : 0.1.0                                                                               #
-# Filename   : /base.py                                                                            #
+# Entityname   : /base.py                                                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 19th 2022 07:48:15 pm                                                  #
-# Modified   : Thursday May 19th 2022 07:48:15 pm                                                  #
+# Modified   : Wednesday May 25th 2022 01:24:48 am                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
-import os
+from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from typing import Any
-from deepctr.dal.dto import S3DTO, EntityDTO, DatasetDTO
-from deepctr.dal.entity import File, Entity
+from deepctr.dal.dto import EntityDTO
 
 # ------------------------------------------------------------------------------------------------ #
-#                                          PATH                                                    #
+#                                    ENTITY CLASSES                                                #
 # ------------------------------------------------------------------------------------------------ #
 
 
-class PathFinder(ABC):
-    "Base class for file and directory path sublasses responsible for mapping objects to files."
+@dataclass
+class Entity(ABC):
+    """Base class for File classes including the members and validation common to all subclasses."""
 
-    @staticmethod
-    def get_path(self, dto: DatasetDTO) -> str:
+    @abstractmethod
+    def __post_init__(self) -> None:
         pass
 
-
-# ------------------------------------------------------------------------------------------------ #
-class DatasetPathFinder(PathFinder):
-    """Responsible for mapping directory parameter objects to directories."""
-
-    @staticmethod
-    def get_path(name: str, datasource: str, stage: str, home: str = "data") -> str:
-        return os.path.join(home, datasource, name, stage)
-
-
-# ------------------------------------------------------------------------------------------------ #
-class FilePathFinder(PathFinder):
-    """Responsible for mapping directory parameter objects to directories."""
-
-    @staticmethod
-    def get_path(
-        name: str, datasource: str, dataset: str, stage: str, format: str, home: str = "data"
-    ) -> str:
-        return os.path.join(home, datasource, dataset, stage, name) + "." + format
-
-
-# ------------------------------------------------------------------------------------------------ #
-class ObjectPathFinder(PathFinder):
-    """Responsible for mapping file parameters to S3 object paths."""
-
-    @staticmethod
-    def get_path(object: str, bucket: str = "deepctr") -> str:
-        return os.path.join(bucket, object)
+    @abstractmethod
+    def to_dict(self) -> dict:
+        pass
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -72,41 +47,41 @@ class FAO:
     """Base class for file managers."""
 
     @abstractmethod
-    def create(self, file: File, data: Any, force: bool = False) -> None:
+    def create(self, file: Entity, data: Any, force: bool = False) -> None:
         pass
         """Persists a new data table to storage.
 
         Args:
-            file (File): Parameter object for create operations
+            file (Entity): Parameter object for create operations
         """
         pass
 
     @abstractmethod
-    def read(self, file: File) -> Any:
+    def read(self, file: Entity) -> Any:
         """Obtains an object from persisted storage
 
         Args:
-            file (File): Parameter object for file read operations
+            file (Entity): Parameter object for file read operations
 
         Returns (DataFrame)
         """
         pass
 
     @abstractmethod
-    def delete(self, file: File) -> None:
+    def delete(self, file: Entity) -> None:
         """Removes a data table from persisted storage
 
         Args:
-            file (File): Parameter object for dataasets or data files
+            file (Entity): Parameter object for dataasets or data files
         """
         pass
 
     @abstractmethod
-    def exists(self, file: File) -> None:
+    def exists(self, file: Entity) -> None:
         """Checks existence of Dataset
 
         Args:
-            file (File): Parameter object for dataasets or data files
+            file (Entity): Parameter object for dataasets or data files
         """
         pass
 
@@ -154,9 +129,9 @@ class RAO(ABC):
     """Defines interface for remote access objects accessing cloud services."""
 
     @abstractmethod
-    def download(self, source: S3DTO, destination: EntityDTO, force: bool = False) -> None:
+    def download(self, source: EntityDTO, destination: EntityDTO, force: bool = False) -> None:
         pass
 
     @abstractmethod
-    def upload(self, source: EntityDTO, destination: S3DTO, force: bool = False) -> None:
+    def upload(self, source: EntityDTO, destination: EntityDTO, force: bool = False) -> None:
         pass
