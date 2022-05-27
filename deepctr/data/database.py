@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 19th 2022 06:39:17 pm                                                  #
-# Modified   : Wednesday May 25th 2022 01:12:38 pm                                                 #
+# Modified   : Thursday May 26th 2022 10:08:01 pm                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -18,6 +18,7 @@
 from dataclasses import dataclass
 import os
 import logging
+import logging.config
 from dotenv import load_dotenv
 import pymysql
 
@@ -54,6 +55,7 @@ class ConnectionFactory:
                 user=config.user,
                 password=config.password,
                 database=database,
+                cursorclass=pymysql.cursors.DictCursor,
                 charset="utf8mb4",
             )
         except pymysql.err.MySQLError as e:
@@ -113,7 +115,7 @@ class Database:
         """
         return self.select(statement=statement, parameters=parameters)
 
-    def select_one(self, statement: str, parameters: tuple = None):
+    def select_one(self, statement: str, parameters: tuple = None) -> dict:
         """Select query that returns one row.
 
         Args:
@@ -129,7 +131,7 @@ class Database:
         cursor = self._query(statement=statement, parameters=parameters)
         return cursor.fetchone()
 
-    def exists(self, statement: str, parameters: tuple = None):
+    def exists(self, statement: str, parameters: tuple = None) -> bool:
         """Select query that returns one row.
 
         Args:
@@ -143,7 +145,7 @@ class Database:
             MySQL Error if execute is not successful.
         """
         cursor = self._query(statement=statement, parameters=parameters)
-        return cursor.fetchone()[0]
+        return 1 == tuple(cursor.fetchone().items())[0][1]
 
     def execute(self, statement: str, parameters: tuple = None):
         """Executes a command that changes the data.
@@ -160,6 +162,12 @@ class Database:
         """
 
         return self._execute(statement=statement, parameters=parameters)
+
+    def begin_transaction(self) -> None:
+        self._connection.begin()
+
+    def rollback(self) -> None:
+        self._connection.rollback()
 
     def save(self) -> None:
         self._connection.commit()

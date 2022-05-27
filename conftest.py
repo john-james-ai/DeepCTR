@@ -18,14 +18,12 @@
 # Copyright: (c) 2022 Bryant St. Labs                                                              #
 # ================================================================================================ #
 """Includes fixtures, classes and functions supporting testing."""
-import os
 import pytest
-import pymysql
 from datetime import datetime
-from dotenv import load_dotenv
 from pyspark.sql import SparkSession
 from sklearn.datasets import load_iris
 from deepctr.dal.dto import LocalFileDTO, S3FDatasetDTO, LocalDatasetDTO, S3FileDTO
+from deepctr.data.database import ConnectionFactory
 
 # ------------------------------------------------------------------------------------------------ #
 #                                        IGNORE                                                    #
@@ -52,18 +50,7 @@ def spark_dataframe():
 # ------------------------------------------------------------------------------------------------ #
 @pytest.fixture(scope="module")
 def connection():
-    load_dotenv()
-    connection = pymysql.connections.Connection(
-        host=os.getenv("HOST"),
-        user=os.getenv("USER"),
-        password=os.getenv("PASSWORD"),
-        database="testdb",
-        charset="utf8mb4",
-    )
-    reset = """ALTER TABLE `testtable` AUTO_INCREMENT=1;"""
-    cursor = connection.cursor()
-    cursor.execute(reset)
-    cursor.close()
+    connection = ConnectionFactory().get_connection()
     yield connection
     connection.close()
 
@@ -76,10 +63,10 @@ def valid_local_file_dto():
     return LocalFileDTO(
         name="test_file",
         dataset="test_dataset",
+        dataset_id=101,
         datasource="avazu",
         stage="staged",
         format="csv",
-        state="added",
         size=100,
         compressed=False,
         storage_type="local",
@@ -94,10 +81,10 @@ def valid_local_file_result():
     result = {
         "name": "test_file",
         "dataset": "test_dataset",
+        "dataset_id": 101,
         "datasource": "avazu",
         "stage": "staged",
         "format": "csv",
-        "state": "added",
         "size": 100,
         "compressed": False,
         "filename": "test_file.csv",
@@ -119,10 +106,10 @@ def invalid_local_file_dto():
     return LocalFileDTO(
         name="test_file",
         dataset="test_dataset",
+        dataset_id=101,
         datasource="avazu",
         stage="xxx",
         format="csv",
-        state="added",
         size=100,
         compressed=False,
         storage_type="local",
@@ -137,10 +124,10 @@ def valid_s3_file_dto():
     return S3FileDTO(
         name="test_file",
         dataset="test_dataset",
+        dataset_id=101,
         datasource="avazu",
         format="csv",
         stage="staged",
-        state="added",
         size=100,
         object_key="avazu/test_dataset/test_file.csv.tar.gz",
         bucket="deepctr",
@@ -156,10 +143,10 @@ def valid_s3_file_result():
     result = {
         "name": "test_file",
         "dataset": "test_dataset",
+        "dataset_id": 101,
         "datasource": "avazu",
         "stage": "staged",
         "format": "csv",
-        "state": "added",
         "size": 100,
         "compressed": True,
         "folder": "avazu/test_dataset",
@@ -178,10 +165,10 @@ def invalid_s3_file_dto():
     return S3FileDTO(
         name="test_file",
         dataset="test_dataset",
+        dataset_id=101,
         datasource="avazu",
         format="csv",
         stage="XXXX",
-        state="added",
         size=100,
         object_key="test_dataset/test_file.csv.tar.gz",
         bucket="deepctr",
@@ -201,7 +188,6 @@ def valid_local_dataset_dto():
         name="test_dataset",
         datasource="avazu",
         stage="staged",
-        state="added",
         size=100,
         storage_type="local",
         dag_id=99,
@@ -215,7 +201,6 @@ def valid_local_dataset_result():
         "name": "test_dataset",
         "datasource": "avazu",
         "stage": "staged",
-        "state": "added",
         "size": 100,
         "folder": "test/data/avazu/test_dataset/staged",
         "storage_type": "local",
@@ -232,7 +217,6 @@ def invalid_local_dataset_dto():
         name="test_dataset",
         datasource="XXX",
         stage="staged",
-        state="added",
         size=100,
         storage_type="local",
         dag_id=99,
@@ -246,7 +230,6 @@ def valid_s3_dataset_dto():
         name="test_dataset",
         datasource="avazu",
         stage="staged",
-        state="added",
         size=400,
         folder="avazu/test_dataset",
         bucket="deepctr",
@@ -261,7 +244,6 @@ def valid_s3_dataset_result():
         "name": "test_dataset",
         "datasource": "avazu",
         "stage": "staged",
-        "state": "added",
         "size": 400,
         "folder": "avazu/test_dataset",
         "bucket": "deepctr",
@@ -278,7 +260,6 @@ def invalid_s3_dataset_dto():
         name="test_dataset",
         datasource="xxxx",
         stage="staged",
-        state="added",
         size=400,
         folder="avazu/test_dataset",
         bucket="deepctr",

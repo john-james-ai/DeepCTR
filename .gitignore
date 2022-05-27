@@ -34,6 +34,7 @@ var/
 # Credentials
 **/credentials.*
 **/auth*.sql
+**/signin*.*
 
 # Data
 data/**

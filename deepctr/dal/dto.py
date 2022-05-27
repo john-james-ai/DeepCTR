@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 19th 2022 06:43:34 pm                                                  #
-# Modified   : Wednesday May 25th 2022 11:44:09 am                                                 #
+# Modified   : Thursday May 26th 2022 10:53:35 pm                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -30,10 +30,9 @@ class DTO(ABC):
 class AbstractFileDTO(DTO):
     """File DTO for intra and inter layer transfer of parameter data."""
 
-    name: str
     dataset: str
+    dataset_id: int
     datasource: str
-    stage: str
     format: str
     size: int
     compressed: bool
@@ -46,16 +45,7 @@ class AbstractFileDTO(DTO):
 class LocalFileDTO(AbstractFileDTO):
     """File DTO for intra and inter layer transfer of parameter data."""
 
-    name: str
-    dataset: str
-    datasource: str
     stage: str
-    format: str
-    size: int
-    compressed: bool
-    storage_type: str
-    dag_id: int
-    task_id: int
     home: str
 
 
@@ -63,18 +53,8 @@ class LocalFileDTO(AbstractFileDTO):
 class S3FileDTO(AbstractFileDTO):
     """File DTO for intra and inter layer transfer of parameter data."""
 
-    name: str
-    dataset: str
-    datasource: str
-    format: str
-    stage: str
-    size: int
     object_key: str
     bucket: str
-    compressed: bool
-    storage_type: str
-    dag_id: int
-    task_id: int
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -88,9 +68,8 @@ class AbstractDatasetDTO(DTO):
 
     name: str
     datasource: str
-    stage: str
-    size: int
     storage_type: str
+    size: int
     dag_id: int
 
 
@@ -98,12 +77,7 @@ class AbstractDatasetDTO(DTO):
 class LocalDatasetDTO(AbstractDatasetDTO):
     """Dataset DTO for intra and inter layer transfer of parameter data."""
 
-    name: str
-    datasource: str
     stage: str
-    size: int
-    storage_type: str
-    dag_id: int
     home: str
 
 
@@ -111,11 +85,5 @@ class LocalDatasetDTO(AbstractDatasetDTO):
 class S3FDatasetDTO(AbstractDatasetDTO):
     """Dataset DTO for intra and inter layer transfer of parameter data."""
 
-    name: str
-    datasource: str
-    bucket: str
     folder: str
-    stage: str
-    size: int
-    storage_type: str
-    dag_id: int
+    bucket: str

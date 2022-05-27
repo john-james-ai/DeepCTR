@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday May 22nd 2022 01:40:01 am                                                    #
-# Modified   : Wednesday May 25th 2022 10:35:13 am                                                 #
+# Modified   : Thursday May 26th 2022 03:20:13 pm                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
 
-@pytest.mark.entity
+@pytest.mark.skip()
 class TestFile:
     def test_local_file(self, caplog, valid_local_file_dto, valid_local_file_result) -> None:
         caplog.set_level(logging.INFO)

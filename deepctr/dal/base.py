@@ -10,36 +10,15 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 19th 2022 07:48:15 pm                                                  #
-# Modified   : Wednesday May 25th 2022 01:31:20 pm                                                 #
+# Modified   : Thursday May 26th 2022 08:55:25 pm                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
-from typing import Any
-from deepctr.dal.dto import EntityDTO
-
-# ------------------------------------------------------------------------------------------------ #
-#                                    ENTITY CLASSES                                                #
-# ------------------------------------------------------------------------------------------------ #
-
-
-@dataclass
-class Entity(ABC):
-    """Base class for File classes including the members and validation common to all subclasses."""
-
-    @property
-    def queries(self) -> dict:
-        pass
-
-    @abstractmethod
-    def __post_init__(self) -> None:
-        pass
-
-    @abstractmethod
-    def to_dict(self) -> dict:
-        pass
+from typing import Any, Union
+from deepctr.dal.dto import DTO
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -51,6 +30,18 @@ class AbstractCommand:
     table: str
     parameters: list
     sequel: str
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                    ENTITY CLASSES                                                #
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class Entity(ABC):
+    """Base class for File classes including the members and validation common to all subclasses."""
+
+    @abstractmethod
+    def to_dict(self) -> dict:
+        pass
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -111,7 +102,7 @@ class DAO(ABC):
 
     # -------------------------------------------------------------------------------------------- #
     @abstractmethod
-    def create(self, dto: EntityDTO) -> Entity:
+    def create(self, data: Union[dict, DTO]) -> Entity:
         pass
 
     # -------------------------------------------------------------------------------------------- #
@@ -121,12 +112,22 @@ class DAO(ABC):
 
     # -------------------------------------------------------------------------------------------- #
     @abstractmethod
-    def get(self, id: int) -> Entity:
+    def find(self, id: int) -> Entity:
         pass
 
     # -------------------------------------------------------------------------------------------- #
     @abstractmethod
-    def findall(self) -> list:
+    def find_by_key(self, name: str, datasource: str, **kwargs) -> Entity:
+        pass
+
+    # -------------------------------------------------------------------------------------------- #
+    @abstractmethod
+    def find_by_column(self, column: str, value: Any) -> Union[list, Entity]:
+        pass
+
+    # -------------------------------------------------------------------------------------------- #
+    @abstractmethod
+    def findall(self) -> dict:
         pass
 
     # -------------------------------------------------------------------------------------------- #
@@ -136,7 +137,12 @@ class DAO(ABC):
 
     # -------------------------------------------------------------------------------------------- #
     @abstractmethod
-    def exists(self, id: int) -> bool:
+    def exists(self, name: str, datasource: str, **kwargs) -> bool:
+        pass
+
+    # -------------------------------------------------------------------------------------------- #
+    @abstractmethod
+    def rollback(self) -> None:
         pass
 
     # -------------------------------------------------------------------------------------------- #
@@ -154,9 +160,9 @@ class RAO(ABC):
     """Defines interface for remote access objects accessing cloud services."""
 
     @abstractmethod
-    def download(self, source: EntityDTO, destination: EntityDTO, force: bool = False) -> None:
+    def download(self, source: Entity, destination: Entity, force: bool = False) -> None:
         pass
 
     @abstractmethod
-    def upload(self, source: EntityDTO, destination: EntityDTO, force: bool = False) -> None:
+    def upload(self, source: Entity, destination: Entity, force: bool = False) -> None:
         pass
