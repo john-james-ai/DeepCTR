@@ -49,9 +49,34 @@ def spark_dataframe():
 #                                       DATABASE                                                   #
 # ------------------------------------------------------------------------------------------------ #
 @pytest.fixture(scope="module")
-def connection():
+def connection_deepctr():
     connection = ConnectionFactory().get_connection()
     yield connection
+    connection.close()
+
+
+@pytest.fixture(scope="module")
+def connection():
+    connection = ConnectionFactory().get_connection(database="testdb")
+    yield connection
+    connection.close()
+
+
+@pytest.fixture(scope="module")
+def transaction_deepctr():
+    connection = ConnectionFactory().get_connection()
+    connection.begin()
+    yield connection
+    connection.commit()
+    connection.close()
+
+
+@pytest.fixture(scope="module")
+def transaction():
+    connection = ConnectionFactory().get_connection(database="testdb")
+    connection.begin()
+    yield connection
+    connection.commit()
     connection.close()
 
 

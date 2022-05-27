@@ -6,9 +6,8 @@
  *
  * Copyright (c) 2022 John James
  */
-USE testdb;
-DROP TABLE testtable;
-DROP DATABASE testdb;
+DROP TABLE IF EXISTS testtable;
+DROP DATABASE IF EXISTS testdb;
 
 CREATE DATABASE IF NOT EXISTS testdb;
 USE testdb;
@@ -19,5 +18,5 @@ CREATE TABLE IF NOT EXISTS testtable (
         `letters` VARCHAR(32) NOT NULL,
         PRIMARY KEY (`id`)
     )  ENGINE=InnoDB;
-
+ALTER TABLE `testtable` AUTO_INCREMENT=1;
 GRANT ALL PRIVILEGES ON testdb TO 'john'@'localhost' WITH GRANT OPTION;

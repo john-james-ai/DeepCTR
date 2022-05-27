@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 19th 2022 06:39:17 pm                                                  #
-# Modified   : Thursday May 26th 2022 10:08:01 pm                                                  #
+# Modified   : Friday May 27th 2022 05:29:25 am                                                    #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -50,7 +50,7 @@ class ConnectionFactory:
 
     def get_connection(self, database: str = "deepctr", config: DBConfig = DBConfig()) -> None:
         try:
-            return pymysql.connect(
+            connection = pymysql.connect(
                 host=config.host,
                 user=config.user,
                 password=config.password,
@@ -58,6 +58,8 @@ class ConnectionFactory:
                 cursorclass=pymysql.cursors.DictCursor,
                 charset="utf8mb4",
             )
+            logger.info("Database {} opened by {}".format(database, config.user))
+            return connection
         except pymysql.err.MySQLError as e:
             logger.error("Execute error %d: %s" % (e.args[0], e.args[1]))
 

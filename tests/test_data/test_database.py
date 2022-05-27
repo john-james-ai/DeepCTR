@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday May 22nd 2022 01:40:01 am                                                    #
-# Modified   : Thursday May 26th 2022 10:12:20 pm                                                  #
+# Modified   : Friday May 27th 2022 05:45:01 am                                                    #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -23,16 +23,30 @@ import logging.config
 
 from deepctr.utils.log_config import LOG_CONFIG
 from deepctr.data.database import DBConfig, ConnectionFactory, Database
+from deepctr.utils.database import parse_sql
 
 # ------------------------------------------------------------------------------------------------ #
 logging.config.dictConfig(LOG_CONFIG)
 logging.getLogger("py4j").setLevel(logging.WARN)
 logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
+BUILDFILE = "tests/test_data/test_db_setup.sql"
+TEARDOWNFILE = "tests/test_data/test_db_teardown.sh"
 
 
-@pytest.mark.skip()
+@pytest.mark.db
 class TestDatabase:
+    def test_setup(self, caplog, connection_deepctr):
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        statements = parse_sql(filename=BUILDFILE)
+        with connection_deepctr.cursor() as cursor:
+            for statement in statements:
+                cursor.execute(statement)
+            connection_deepctr.commit()
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
     def test_config(self, caplog) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
@@ -133,5 +147,18 @@ class TestDatabase:
         result = database.exists(statement, parameters)
         # assert isinstance(result, bool), logger.error("Execute error")
         assert result is True, logger.error("Execute error")
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    def test_teardown(self, caplog, connection_deepctr):
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        connection = connection_deepctr
+
+        statements = parse_sql(filename=TEARDOWNFILE)
+        with connection.cursor() as cursor:
+            for statement in statements:
+                cursor.execute(statement)
+            connection.commit()
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
