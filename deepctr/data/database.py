@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 19th 2022 06:39:17 pm                                                  #
-# Modified   : Friday May 27th 2022 05:29:25 am                                                    #
+# Modified   : Saturday May 28th 2022 04:49:01 am                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -71,6 +71,14 @@ class Database:
     def __init__(self, connection: pymysql.connections.Connection) -> None:
         self._connection = connection
 
+    def _insert(self, statement, parameters=None):
+        try:
+            cursor = self._connection.cursor()
+            cursor.execute(statement, parameters)
+            return cursor.execute("SELECT LAST_INSERT_ID();")
+        except pymysql.err.MySQLError as e:
+            logger.error("Execute error %d: %s" % (e.args[0], e.args[1]))
+
     def _execute(self, statement, parameters=None):
         try:
             cursor = self._connection.cursor()
@@ -86,8 +94,8 @@ class Database:
         except pymysql.err.MySQLError as e:
             logger.error("Execute error %d: %s" % (e.args[0], e.args[1]))
 
-    def select(self, statement: str, parameters: tuple = None):
-        """Select query that returns many rows.
+    def select(self, statement: str, parameters: tuple = None, todf: bool = False):
+        """Select query that returns mulltiple rows.
 
         Args:
             statement (str): The SQL query statement
@@ -102,7 +110,7 @@ class Database:
         cursor = self._query(statement=statement, parameters=parameters)
         return cursor.fetchall()
 
-    def select_all(self, statement: str, parameters: tuple = None):
+    def select_all(self, statement: str, parameters: tuple = None, todf: bool = False):
         """Select query that returns many rows. Alias for select.
 
         Args:
@@ -133,7 +141,7 @@ class Database:
         cursor = self._query(statement=statement, parameters=parameters)
         return cursor.fetchone()
 
-    def exists(self, statement: str, parameters: tuple = None) -> bool:
+    def exists(self, statement: str, parameters: tuple = None, id: bool = False) -> bool:
         """Select query that returns one row.
 
         Args:
@@ -147,7 +155,26 @@ class Database:
             MySQL Error if execute is not successful.
         """
         cursor = self._query(statement=statement, parameters=parameters)
-        return 1 == tuple(cursor.fetchone().items())[0][1]
+        if id:
+            return tuple(cursor.fetchone().items())[0][1]
+        else:
+            return 1 == tuple(cursor.fetchone().items())[0][1]
+
+    def insert(self, statement: str, parameters: tuple = None):
+        """Executes an insert command and returns the last inserted primary key.
+
+        Args:
+            statement (str): The SQL query statement
+            parameters (tuple): The parameters for the query
+
+        Returns:
+            Single row of data
+
+        Raises:
+            MySQL Error if execute is not successful.
+        """
+
+        return self._insert(statement=statement, parameters=parameters)
 
     def execute(self, statement: str, parameters: tuple = None):
         """Executes a command that changes the data.

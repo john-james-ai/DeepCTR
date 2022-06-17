@@ -1,5 +1,5 @@
 /*
- * Filename: /home/john/projects/DeepCTR/tests/test_dal/testdb.sql
+ * Filename: /home/john/projects/DeepCTR/tests/test_dal/test_db_setup.sql
  * Path: /home/john/projects/DeepCTR/notes
  * Created Date: Saturday, May 21st 2022, 4:38:17 am
  * Author: John James
@@ -16,29 +16,72 @@ DROP TABLE IF EXISTS `localdataset`;
 DROP TABLE IF EXISTS `s3file`;
 DROP TABLE IF EXISTS `s3dataset`;
 DROP TABLE IF EXISTS `dag`;
-DROP TABLE IF EXISTS `tasks`;
+DROP TABLE IF EXISTS `task`;
 SET FOREIGN_KEY_CHECKS = 1;
 
-CREATE TABLE `localdataset` (
+CREATE TABLE `dataset` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(64) NOT NULL,
+    `desc` VARCHAR(256) NULL,
+    `status` VARCHAR(32) NOT NULL,
+    `datasource` VARCHAR(32) NOT NULL,
+    `storage_type` VARCHAR(16) NOT NULL,
+    `table` VARCHAR(32) NOT NULL,
+    `dag_id` INTEGER NULL,
+    `tasK_id` INTEGER NULL,
+    `created` DATETIME NOT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE (`id`),
+    INDEX `idx` (`datasource`, `name`, `storage_type`),
+    CONSTRAINT `dataset_key` UNIQUE(`datasource`,`name`,`storage_type`)
+) ENGINE=InnoDB;
+
+
+CREATE TABLE `localdataset` (
+    `id` INTEGER NOT NULL,
+    `name` VARCHAR(64) NOT NULL,
+    `desc` VARCHAR(256) NULL,
+    `status` VARCHAR(32) NOT NULL,
     `datasource` VARCHAR(32) NOT NULL,
     `stage` VARCHAR(16) NOT NULL,
     `storage_type` VARCHAR(16) NOT NULL,
     `folder` VARCHAR(64) NOT NULL,
     `size` BIGINT NULL,
     `dag_id` INTEGER NULL,
+    `tasK_id` INTEGER NULL,
     `home` VARCHAR(64) NOT NULL,
     `created` DATETIME NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE (`id`),
-    INDEX `idx` (`datasource`, `name`, `stage`),
-    CONSTRAINT `dataset_key` UNIQUE(`datasource`,`name`,`stage`)
+    INDEX `idx` (`datasource`, `name`, `storage_type`),
+    CONSTRAINT `dataset_key` UNIQUE(`datasource`,`name`,`storage_type`)
 ) ENGINE=InnoDB;
 
+
+CREATE TABLE `s3dataset` (
+    `id` INTEGER NOT NULL,
+    `name` VARCHAR(64) NOT NULL,
+    `desc` VARCHAR(256) NULL,
+    `status` VARCHAR(32) NOT NULL,
+    `datasource` VARCHAR(32) NOT NULL,
+    `storage_type` VARCHAR(16) NOT NULL,
+    `bucket` VARCHAR(32) NOT NULL,
+    `folder` VARCHAR(256) NOT NULL,
+    `size` BIGINT NULL,
+    `dag_id` INTEGER NULL,
+    `tasK_id` INTEGER NULL,
+    `created` DATETIME NOT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE (`id`),
+    INDEX `idx` (`datasource`, `name`),
+    CONSTRAINT `dataset_key` UNIQUE(`datasource`,`name`)
+) ENGINE=InnoDB;
+
+
 CREATE TABLE `localfile` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `id` INTEGER NOT NULL,
     `name` VARCHAR(128) NOT NULL,
+    `desc` VARCHAR(256) NULL,
     `dataset` VARCHAR(32) NOT NULL,
     `dataset_id` INTEGER NOT NULL,
     `datasource` VARCHAR(32) NOT NULL,
@@ -58,25 +101,12 @@ CREATE TABLE `localfile` (
 ) ENGINE=InnoDB;
 
 
-CREATE TABLE `s3dataset` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `name` VARCHAR(64) NOT NULL,
-    `datasource` VARCHAR(32) NOT NULL,
-    `storage_type` VARCHAR(16) NOT NULL,
-    `bucket` VARCHAR(32) NOT NULL,
-    `folder` VARCHAR(256) NOT NULL,
-    `size` BIGINT NULL,
-    `dag_id` INTEGER NULL,
-    `created` DATETIME NOT NULL,
-    PRIMARY KEY (`id`),
-    UNIQUE (`id`),
-    INDEX `idx` (`datasource`, `name`),
-    CONSTRAINT `dataset_key` UNIQUE(`datasource`,`name`)
-) ENGINE=InnoDB;
+
 
 CREATE TABLE `s3file` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `id` INTEGER NOT NULL,
     `name` VARCHAR(128) NOT NULL,
+    `desc` VARCHAR(256) NULL,
     `dataset` VARCHAR(32) NOT NULL,
     `dataset_id` INTEGER NOT NULL,
     `datasource` VARCHAR(32) NOT NULL,
@@ -94,12 +124,13 @@ CREATE TABLE `s3file` (
 ) ENGINE=InnoDB;
 
 
-
 CREATE TABLE `dag` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `seq` INTEGER NOT NULL,
     `name` VARCHAR(64) NOT NULL,
+    `desc` VARCHAR(256) NULL,
     `start` DATETIME NULL,
-    `end` DATETIME NULL,
+    `stop` DATETIME NULL,
     `duration` BIGINT NULL,
     `created` DATETIME NULL,
     PRIMARY KEY (`id`),
@@ -108,11 +139,12 @@ CREATE TABLE `dag` (
 
 CREATE TABLE `task` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `seq` INTEGER NOT NULL,
     `name` VARCHAR(64) NOT NULL,
-    `task_no` INTEGER NULL,
+    `desc` VARCHAR(256) NULL,
     `dag_id` INTEGER NULL,
     `start` DATETIME NULL,
-    `end` DATETIME NULL,
+    `stop` DATETIME NULL,
     `duration` BIGINT NULL,
     `created` DATETIME NULL,
     PRIMARY KEY (`id`),
@@ -131,3 +163,4 @@ ALTER TABLE `s3dataset` ADD FOREIGN KEY (`dag_id`) REFERENCES `dag`(`id`);
 
 ALTER TABLE `task` ADD FOREIGN KEY (`dag_id`) REFERENCES `dag`(`id`);
 
+GRANT ALL PRIVILEGES ON testdb TO 'john'@'localhost' WITH GRANT OPTION;

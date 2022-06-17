@@ -1,0 +1,51 @@
+---
+# ================================================================================================ #
+#                                      ALIBABA ETL                                                 #
+# ================================================================================================ #
+
+dag_seq: 1
+dag_name: test_dag
+dag_desc: Makes_a_cake
+tasks:
+  # ============================================================================================ #
+  #                                     DOWNLOAD                                                 #
+  # ============================================================================================ #
+  1:
+    task: MixIngredients
+    module: tests.dag.test_operators
+    task_seq: 1
+    task_name: mix_ingredients
+    task_desc: Mix_the_ingredients
+    task_params:
+
+  2:
+    task: PreheatOven
+    module: tests.dag.test_operators
+    task_seq: 2
+    task_name: preheat_oven
+    task_desc: Preheat_oven_to_350
+    task_params:
+
+  3:
+    task: OilPan
+    module: tests.dag.test_operators
+    task_seq: 3
+    task_name: oil_pan
+    task_desc: Oil_Pan
+    task_params:
+
+  4:
+    task: Bake
+    module: tests.dag.test_operators
+    task_seq: 4
+    task_name: bake
+    task_desc: Bake
+    task_params:
+
+  5:
+    task: Cool
+    module: tests.dag.test_operators
+    task_seq: 5
+    task_name: bake
+    task_desc: Bake
+    task_params:

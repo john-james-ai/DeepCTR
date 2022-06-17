@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday May 10th 2022 03:30:15 pm                                                   #
-# Modified   : Thursday May 26th 2022 07:29:09 pm                                                  #
+# Modified   : Friday May 27th 2022 03:32:21 pm                                                    #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -42,8 +42,8 @@ class DownloadS3(Operator):
     """Operator that downloads data from Amazon S3 Resources.
 
     Args:
-        task_id (int): Task sequence in dag.
-        task_name (str): name of task
+        seq (int): Task sequence in dag.
+        name (str): name of task
         params (dict): Parameters required by the task, including:
           bucket (str): The Amazon S3 bucket name
           key (str): The access key to the S3 bucket
@@ -53,10 +53,8 @@ class DownloadS3(Operator):
           force (bool): If True, will execute and overwrite existing data.
     """
 
-    def __init__(self, task_id: int, task_name: str, task_description: str, params: dict) -> None:
-        super(DownloadS3, self).__init__(
-            task_id=task_id, task_name=task_name, task_description=task_description, params=params
-        )
+    def __init__(self, seq: int, name: str, desc: str, params: dict) -> None:
+        super(DownloadS3, self).__init__(seq=seq, name=name, desc=desc, params=params)
 
         self._progressbar = None
 
@@ -65,8 +63,8 @@ class DownloadS3(Operator):
         """Extracts data from an Amazon AWS S3 resource and persists it."""
 
         source = {
-            bucket: self._params["source"]["bucket"],
-            folder: self._params["source"]["folder"],
+            "bucket": self._params["source"]["bucket"],
+            "folder": self._params["source"]["folder"],
         }
 
         destination = Dataset(
@@ -86,10 +84,8 @@ class DownloadS3(Operator):
 class DataReader(Operator):
     """Reads data from the Data Repository"""
 
-    def __init__(self, task_id: int, task_name: str, task_description: str, params: list) -> None:
-        super(DataReader, self).__init__(
-            task_id=task_id, task_name=task_name, task_description=task_description, params=params
-        )
+    def __init__(self, seq: int, name: str, desc: str, params: list) -> None:
+        super(DataReader, self).__init__(seq=seq, name=name, desc=desc, params=params)
 
     @operator
     def execute(self, data: Any = None) -> Any:
@@ -114,10 +110,8 @@ class DataReader(Operator):
 class DataWriter(Operator):
     """Reads data from the Data Repository"""
 
-    def __init__(self, task_id: int, task_name: str, task_description: str, params: list) -> None:
-        super(DataWriter, self).__init__(
-            task_id=task_id, task_name=task_name, task_description=task_description, params=params
-        )
+    def __init__(self, seq: int, name: str, desc: str, params: list) -> None:
+        super(DataWriter, self).__init__(seq=seq, name=name, desc=desc, params=params)
 
     @operator
     def execute(self, data: Any = None) -> Any:

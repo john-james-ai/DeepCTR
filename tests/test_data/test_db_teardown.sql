@@ -7,5 +7,5 @@
  * Copyright (c) 2022 John James
  */
 USE testdb;
-DROP TABLE testtable;
-DROP DATABASE testdb;
+DROP TABLE IF EXISTS testtable;
+DROP DATABASE IF EXISTS testdb;

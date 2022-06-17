@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Monday May 16th 2022 03:00:48 pm                                                    #
-# Modified   : Monday May 16th 2022 03:00:48 pm                                                    #
+# Modified   : Friday May 27th 2022 04:58:07 pm                                                    #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -26,7 +26,7 @@ LOG_CONFIG = {
         "simple": {"format": "%(message)s"},
     },
     "handlers": {
-        "console": {"level": "INFO", "class": "logging.StreamHandler", "formatter": "simple"},
+        "console": {"level": "DEBUG", "class": "logging.StreamHandler", "formatter": "simple"},
         "file": {
             "level": "DEBUG",
             "class": "logging.handlers.RotatingFileHandler",
@@ -35,5 +35,5 @@ LOG_CONFIG = {
             "backupCount": 3,
         },
     },
-    "loggers": {"": {"handlers": ["console", "file"], "propagate": False, "level": "INFO"}},
+    "loggers": {"": {"handlers": ["console", "file"], "propagate": False, "level": "DEBUG"}},
 }

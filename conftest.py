@@ -24,6 +24,18 @@ from pyspark.sql import SparkSession
 from sklearn.datasets import load_iris
 from deepctr.dal.dto import LocalFileDTO, S3FDatasetDTO, LocalDatasetDTO, S3FileDTO
 from deepctr.data.database import ConnectionFactory
+from deepctr.utils.database import parse_sql
+
+CONNECTIONS = {
+    "DATA": {
+        "setup": "tests/test_data/test_db_setup.sql",
+        "teardown": "tests/test_data/test_db_teardown.sql",
+    },
+    "DAL": {
+        "setup": "tests/test_dal/test_db_setup.sql",
+        "teardown": "tests/test_dal/test_db_teardown.sql",
+    },
+}
 
 # ------------------------------------------------------------------------------------------------ #
 #                                        IGNORE                                                    #
@@ -45,38 +57,46 @@ def spark_dataframe():
     return spark.createDataFrame(df)
 
 
-# ------------------------------------------------------------------------------------------------ #
-#                                       DATABASE                                                   #
-# ------------------------------------------------------------------------------------------------ #
+# ================================================================================================ #
+#                                          DATABASE                                                #
+# ================================================================================================ #
 @pytest.fixture(scope="module")
-def connection_deepctr():
+def connection_data():
     connection = ConnectionFactory().get_connection()
-    yield connection
+    statements = parse_sql(filename=CONNECTIONS["DATA"].get("setup"))
+    with connection.cursor() as cursor:
+        for statement in statements:
+            cursor.execute(statement)
+        connection.commit()
     connection.close()
-
-
-@pytest.fixture(scope="module")
-def connection():
     connection = ConnectionFactory().get_connection(database="testdb")
     yield connection
+    statements = parse_sql(filename=CONNECTIONS["DATA"].get("teardown"))
+    with connection.cursor() as cursor:
+        for statement in statements:
+            cursor.execute(statement)
+        connection.commit()
     connection.close()
 
 
+# ------------------------------------------------------------------------------------------------ #
 @pytest.fixture(scope="module")
-def transaction_deepctr():
+def connection_dal():
     connection = ConnectionFactory().get_connection()
-    connection.begin()
-    yield connection
-    connection.commit()
+    statements = parse_sql(filename=CONNECTIONS["DAL"].get("setup"))
+    with connection.cursor() as cursor:
+        for statement in statements:
+            cursor.execute(statement)
+        connection.commit()
     connection.close()
-
-
-@pytest.fixture(scope="module")
-def transaction():
     connection = ConnectionFactory().get_connection(database="testdb")
     connection.begin()
     yield connection
-    connection.commit()
+    statements = parse_sql(filename=CONNECTIONS["DAL"].get("teardown"))
+    with connection.cursor() as cursor:
+        for statement in statements:
+            cursor.execute(statement)
+        connection.commit()
     connection.close()
 
 

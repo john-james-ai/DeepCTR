@@ -38,6 +38,33 @@ logging.config.dictConfig(LOG_CONFIG)
 logging.getLogger("py4j").setLevel(logging.WARN)
 # ------------------------------------------------------------------------------------------------ #
 # ------------------------------------------------------------------------------------------------ #
+#                                     TRACER DECORATOR                                             #
+# ------------------------------------------------------------------------------------------------ #
+
+
+def tracer(func):
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+
+        module = func.__module__
+        classname = func.__qualname__
+        logger = logging.getLogger(module)
+        logger.setLevel("DEBUG")
+
+        try:
+            logger.debug("Entering {}: {} - {}".format(module, classname, func.__name__))
+            result = func(self, *args, **kwargs)
+            logger.debug("Leaving {}: {} - {}".format(module, classname, func.__name__))
+            return result
+
+        except Exception as e:
+            logger.exception(f"Exception raised in {func.__name__}. exception: {str(e)}")
+            raise e
+
+    return wrapper
+
+
+# ------------------------------------------------------------------------------------------------ #
 #                                   OPERATOR DECORATOR                                             #
 # ------------------------------------------------------------------------------------------------ #
 
@@ -71,11 +98,11 @@ def print_start(module: str, classname: str, self: str, start: datetime):
 
     print_line = {}
 
-    task = "Task " + str(self.__dict__["_task_id"]) + ":"
+    task = "Task " + str(self.__dict__["_seq"]) + ":"
     print_line[task] = 10
 
-    task_name = self.__dict__["_task_name"]
-    print_line[task_name] = 40
+    name = self.__dict__["_name"]
+    print_line[name] = 40
 
     time = start.strftime("%-I:%M %p")
     dt = "Started at {}".format(time)
@@ -96,11 +123,11 @@ def print_end(module: str, classname: str, self: str, start: datetime, end: date
 
     print_line = {}
 
-    task = "Task " + str(self.__dict__["_task_id"]) + ":"
+    task = "Task " + str(self.__dict__["_seq"]) + ":"
     print_line[task] = 10
 
-    task_name = self.__dict__["_task_name"]
-    print_line[task_name] = 40
+    name = self.__dict__["_name"]
+    print_line[name] = 40
 
     time = start.strftime("%-I:%M %p")
     dt = "Completed at {} (Duration: {} seconds.)".format(time, str(round(duration, 2)))

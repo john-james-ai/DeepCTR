@@ -10,12 +10,13 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 19th 2022 06:43:34 pm                                                  #
-# Modified   : Thursday May 26th 2022 10:53:35 pm                                                  #
+# Modified   : Saturday May 28th 2022 04:19:18 am                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
 from abc import ABC
+from datetime import datetime
 from dataclasses import dataclass
 
 # ------------------------------------------------------------------------------------------------ #
@@ -26,6 +27,42 @@ class DTO(ABC):
     name: str
 
 
+# ------------------------------------------------------------------------------------------------ #
+#                                     DAG TRANSFER OBJECTS                                         #
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class DagDTO(DTO):
+    """DTO for directed acyclic graphs."""
+
+    seq: int
+    desc: str
+    created: datetime
+    start: datetime = None
+    stop: datetime = None
+    duration: int = None
+    id: int = 0
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                     TASK TRANSFER OBJECTS                                        #
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class TaskDTO(DTO):
+    """DTO for tasks within directed acyclic graphs."""
+
+    seq: int
+    desc: str
+    dag_id: int
+    created: datetime
+    start: datetime = None
+    stop: datetime = None
+    duration: int = None
+    id: int = 0
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                  FILE DATA TRANSFER OBJECTS                                      #
+# ------------------------------------------------------------------------------------------------ #
 @dataclass
 class AbstractFileDTO(DTO):
     """File DTO for intra and inter layer transfer of parameter data."""
@@ -66,7 +103,6 @@ class S3FileDTO(AbstractFileDTO):
 class AbstractDatasetDTO(DTO):
     """File DTO for intra and inter layer transfer of parameter data."""
 
-    name: str
     datasource: str
     storage_type: str
     size: int

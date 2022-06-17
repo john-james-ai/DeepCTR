@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday May 14th 2022 02:30:32 am                                                  #
-# Modified   : Saturday May 14th 2022 02:30:32 am                                                  #
+# Modified   : Saturday May 28th 2022 06:06:09 am                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
 
-@pytest.mark.alibaba
+@pytest.mark.skip()
 class TestAlibabaETL:
     def test_setup(self, caplog) -> None:
         caplog.set_level(logging.INFO)
@@ -60,6 +60,7 @@ class TestAlibabaETL:
             .dataset("vesuvio")
             .at("tests/data")
             .with_template(config_template)
+            .and_context(context)
             .build()
             .dag
         )

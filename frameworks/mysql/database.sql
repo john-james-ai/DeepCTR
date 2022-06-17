@@ -98,6 +98,7 @@ CREATE TABLE `s3file` (
 CREATE TABLE `dag` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(64) NOT NULL,
+    `desc` VARCHAR(256) NULL,
     `start` DATETIME NULL,
     `end` DATETIME NULL,
     `duration` BIGINT NULL,
@@ -109,6 +110,7 @@ CREATE TABLE `dag` (
 CREATE TABLE `task` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(64) NOT NULL,
+    `desc` VARCHAR(256) NULL,
     `task_no` INTEGER NULL,
     `dag_id` INTEGER NULL,
     `start` DATETIME NULL,

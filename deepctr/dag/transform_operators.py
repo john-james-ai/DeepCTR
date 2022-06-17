@@ -37,16 +37,14 @@ class ReplaceColumnNames(Operator):
     """Replace column names in a DataFrame.
 
     Args:
-        task_id (int): A number, typically used to indicate the sequence of the task within a DAG
-        task_name (str): String name
-        task_description (str): A description for the task
+        seq (int): A number, typically used to indicate the sequence of the task within a DAG
+        name (str): String name
+        desc (str): A description for the task
         params (Any): Parameters for the task
     """
 
-    def __init__(self, task_id: int, task_name: str, task_description: str, params: list) -> None:
-        super(ReplaceColumnNames, self).__init__(
-            task_id=task_id, task_name=task_name, task_description=task_description, params=params
-        )
+    def __init__(self, seq: int, name: str, desc: str, params: list) -> None:
+        super(ReplaceColumnNames, self).__init__(seq=seq, name=name, desc=desc, params=params)
 
     @operator
     def execute(self, data: Any = None, context: dict = None) -> pd.DataFrame:

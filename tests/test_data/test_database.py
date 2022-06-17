@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday May 22nd 2022 01:40:01 am                                                    #
-# Modified   : Friday May 27th 2022 05:45:01 am                                                    #
+# Modified   : Friday May 27th 2022 06:32:14 am                                                    #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -22,31 +22,17 @@ import numpy as np
 import logging.config
 
 from deepctr.utils.log_config import LOG_CONFIG
-from deepctr.data.database import DBConfig, ConnectionFactory, Database
-from deepctr.utils.database import parse_sql
+from deepctr.data.database import DBConfig, Database
 
 # ------------------------------------------------------------------------------------------------ #
 logging.config.dictConfig(LOG_CONFIG)
 logging.getLogger("py4j").setLevel(logging.WARN)
 logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
-BUILDFILE = "tests/test_data/test_db_setup.sql"
-TEARDOWNFILE = "tests/test_data/test_db_teardown.sh"
 
 
 @pytest.mark.db
 class TestDatabase:
-    def test_setup(self, caplog, connection_deepctr):
-        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-        statements = parse_sql(filename=BUILDFILE)
-        with connection_deepctr.cursor() as cursor:
-            for statement in statements:
-                cursor.execute(statement)
-            connection_deepctr.commit()
-
-        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
     def test_config(self, caplog) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
@@ -60,20 +46,11 @@ class TestDatabase:
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-    def test_connection(self, caplog) -> None:
+    def test_insert(self, caplog, connection_data) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        factory = ConnectionFactory()
-        connection = factory.get_connection(database="testdb")
-
-        assert connection.open, logger.error("Connection error")
-
-        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-    def test_insert(self, caplog, connection) -> None:
-        caplog.set_level(logging.INFO)
-        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+        connection = connection_data
 
         assert connection.open, logger.error("Connection error")
         database = Database(connection)
@@ -86,10 +63,11 @@ class TestDatabase:
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-    def test_database_select_all(self, caplog, connection) -> None:
+    def test_database_select_all(self, caplog, connection_data) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
+        connection = connection_data
         database = Database(connection)
 
         statement = """SELECT * FROM `testtable`;"""
@@ -101,10 +79,11 @@ class TestDatabase:
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-    def test_database_select_one(self, caplog, connection) -> None:
+    def test_database_select_one(self, caplog, connection_data) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
+        connection = connection_data
         database = Database(connection)
 
         statement = """SELECT * FROM `testtable` WHERE `id`= %s;"""
@@ -116,10 +95,11 @@ class TestDatabase:
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-    def test_database_execute(self, caplog, connection) -> None:
+    def test_database_execute(self, caplog, connection_data) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
+        connection = connection_data
         database = Database(connection)
 
         statement = """INSERT INTO `testtable` (number, letters) VALUES (%s, %s);"""
@@ -136,10 +116,11 @@ class TestDatabase:
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-    def test_database_exists(self, caplog, connection) -> None:
+    def test_database_exists(self, caplog, connection_data) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
+        connection = connection_data
         database = Database(connection)
 
         statement = """SELECT EXISTS(SELECT * FROM `testtable` WHERE id=%s);"""
@@ -147,18 +128,5 @@ class TestDatabase:
         result = database.exists(statement, parameters)
         # assert isinstance(result, bool), logger.error("Execute error")
         assert result is True, logger.error("Execute error")
-
-        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-    def test_teardown(self, caplog, connection_deepctr):
-        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-        connection = connection_deepctr
-
-        statements = parse_sql(filename=TEARDOWNFILE)
-        with connection.cursor() as cursor:
-            for statement in statements:
-                cursor.execute(statement)
-            connection.commit()
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))

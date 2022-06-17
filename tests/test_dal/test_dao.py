@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 26th 2022 07:03:22 pm                                                  #
-# Modified   : Thursday May 26th 2022 11:06:05 pm                                                  #
+# Modified   : Friday May 27th 2022 08:13:08 am                                                    #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -22,35 +22,27 @@ import logging.config
 
 from deepctr.utils.log_config import LOG_CONFIG
 from deepctr.dal.entity import LocalDataset
-from deepctr.utils.database import parse_sql
 from deepctr.dal.dao import LocalDatasetDAO
+from deepctr.dal.dto import DagDTO, TaskDTO
 
 # ------------------------------------------------------------------------------------------------ #
 logging.config.dictConfig(LOG_CONFIG)
 logging.getLogger("py4j").setLevel(logging.WARN)
 logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
-BUILDFILE = "tests/database/build.sql"
-TEARDOWNFILE = "tests/database/teardown.sql"
 
 
 @pytest.mark.dao
 class TestLocalDatasetDAO:
-    def test_setup(self, caplog, connection):
-        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-        statements = parse_sql(filename=BUILDFILE)
-        with connection.cursor() as cursor:
-            for statement in statements:
-                cursor.execute(statement)
-            connection.commit()
-
-        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+    def test_create_dag(self, caplog, connection_dal):
+        factory = Dag
 
     def test_create_local_dataset_from_dto(
-        self, caplog, valid_local_dataset_dto, valid_local_dataset_result, connection
+        self, caplog, valid_local_dataset_dto, valid_local_dataset_result, connection_dal
     ):
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        connection = connection_dal
 
         dao = LocalDatasetDAO(connection)
         dataset = dao.create(valid_local_dataset_dto)
@@ -70,9 +62,10 @@ class TestLocalDatasetDAO:
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-    def test_add_local_dataset(self, caplog, connection, valid_local_dataset_dto) -> None:
+    def test_add_local_dataset(self, caplog, connection_dal, valid_local_dataset_dto) -> None:
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
+        connection = connection_dal
         dao = LocalDatasetDAO(connection)
         dataset = dao.create(valid_local_dataset_dto)
         dao.add(dataset)
@@ -82,29 +75,19 @@ class TestLocalDatasetDAO:
         print("# ", 76 * "=", " #")
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-    def test_local_dataset_exists(self, connection, valid_local_dataset_dto):
-        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+    # def test_local_dataset_exists(self, connection_dal, valid_local_dataset_dto):
+    #     logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        dao = LocalDatasetDAO(connection)
-        dataset = dao.create(valid_local_dataset_dto)
+    #     connection = connection_dal
+    #     dao = LocalDatasetDAO(connection)
+    #     dataset = dao.create(valid_local_dataset_dto)
 
-        print("\n# ", 76 * "=", " #")
-        print(dao.exists(dataset.name, dataset.datasource, dataset.stage))
-        print("# ", 76 * "=", " #")
+    #     print("\n# ", 76 * "=", " #")
+    #     print(dao.exists(dataset.name, dataset.datasource, dataset.stage))
+    #     print("# ", 76 * "=", " #")
 
-        assert dao.exists(
-            dataset.name, dataset.datasource, dataset.stage
-        ), "Dataset exists or add failed"
+    #     assert dao.exists(
+    #         dataset.name, dataset.datasource, dataset.stage
+    #     ), "Dataset exists or add failed"
 
-        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-    def test_teardown(self, caplog, connection):
-        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-
-        statements = parse_sql(filename=TEARDOWNFILE)
-        with connection.cursor() as cursor:
-            for statement in statements:
-                cursor.execute(statement)
-            connection.commit()
-
-        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+    #     logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
