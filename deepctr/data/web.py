@@ -61,7 +61,15 @@ class Cloud(ABC):
         self._tempdir = None
 
     @abstractmethod
-    def upload_file(self, filepath: str, bucket: str, object: str, force: str = False) -> None:
+    def upload_file(
+        self,
+        filepath: str,
+        bucket: str,
+        folder: str = None,
+        object_name: str = None,
+        compress: bool = True,
+        force: str = False,
+    ) -> None:
         pass
 
     @abstractmethod
@@ -69,7 +77,7 @@ class Cloud(ABC):
         pass
 
     @abstractmethod
-    def delete_object(self, bucket: str, object: str, force: str = False) -> None:
+    def delete_object(self, bucket: str, object_name: str, force: str = False) -> None:
         pass
 
     @abstractmethod
@@ -81,7 +89,7 @@ class Cloud(ABC):
         pass
 
     @abstractmethod
-    def exists(self, bucket: str, object: str, force: str = False) -> bool:
+    def exists(self, bucket: str, object_name: str) -> bool:
         pass
 
 
@@ -101,21 +109,31 @@ class S3(Cloud):
     )
 
     def upload_file(
-        self, filepath: str, bucket: str, object: str, compress: bool = True, force: str = False
+        self,
+        filepath: str,
+        bucket: str,
+        object_key: str = None,
+        compress: bool = True,
+        force: str = False,
     ) -> None:
         """Uploads a file to an S3 resource
 
         Args:
-            filepath (str, force: str = False): The path to the file to be uploaded
-            bucket (str, force: str = False): The name of the S3 bucket
-            object (str, force: str = False): The S3 folder or key, including prefix, to the object
+            filepath (str): The path to the file to be uploaded
+            bucket (str): The name of the S3 bucket
+            object_key (str): The optional path to the object. Defaults to basename of filepath.
+            compress (bool): True to compress, otherwise False. Default = True
+            force (bool): True to upload even if exists, False otherwise. Default = False
 
         """
+        object_key = self._get_object_key(
+            filepath=filepath, object_key=object_key, compress=compress
+        )
 
-        if self.exists(bucket, object) and not force:
+        if self.exists(bucket, object_key) and not force:
             logger.warning(
                 "S3 Resource {} in {} already exists. Upload aborted. To overwrite the object, set force = True.".format(
-                    object, bucket
+                    object_key, bucket
                 )
             )
         else:
@@ -127,10 +145,9 @@ class S3(Cloud):
                     with tarfile.open(filepath_compressed, "w:gz") as tar:
                         tar.add(filepath, arcname=os.path.basename(filepath))
 
-                    object = os.path.join(
-                        os.path.dirname(object), os.path.basename(filepath_compressed)
+                    self._upload_file(
+                        filepath=filepath_compressed, bucket=bucket, object_key=object_key
                     )
-                    self._upload_file(filepath=filepath_compressed, bucket=bucket, object=object)
 
                 except tarfile.TarError as e:
                     logger.error(e)
@@ -139,9 +156,9 @@ class S3(Cloud):
                     shutil.rmtree(filepath_compressed, ignore_errors=True)
 
             else:
-                self._upload_file(filepath=filepath, bucket=bucket, object=object)
+                self._upload_file(filepath=filepath, bucket=bucket, object_key=object_key)
 
-    def _upload_file(self, filepath: str, bucket: str, object: str) -> None:
+    def _upload_file(self, filepath: str, bucket: str, object_key: str) -> None:
         """Wraps all S3 upload related operations."""
 
         s3 = self._get_s3_connection(connection_type="client")
@@ -154,7 +171,7 @@ class S3(Cloud):
             s3.upload_file(
                 Filename=filepath,
                 Bucket=bucket,
-                Key=object,
+                Key=object_key,
                 Callback=self._callback,
                 Config=S3.__transfer_config,
             )
@@ -164,13 +181,13 @@ class S3(Cloud):
             raise NoCredentialsError(msg)
 
     def download_file(
-        self, bucket: str, object: str, filepath: str, expand: bool = True, force: str = False
+        self, bucket: str, object_key: str, filepath: str, expand: bool = True, force: str = False
     ) -> None:
         """Downloads a file from an S3 resource
 
         Args:
             bucket (str): The S3 bucket from which the file will be downloaded
-            object (str): The object name w/o the bucket name
+            object_key (str): The path to the object within the bucket
             filepath (str): The destination for the file. If expand is False, filepath will be
                 a path to a file. Otherwise, filepath will actually be a directory in to which thee
                 archive will be expanded.
@@ -195,7 +212,9 @@ class S3(Cloud):
                     os.path.dirname(filepath), str(uuid.uuid4()), os.path.basename(filepath)
                 )
                 os.makedirs(os.path.dirname(download_filepath), exist_ok=True)
-                self._download_file(bucket=bucket, object=object, filepath=download_filepath)
+                self._download_file(
+                    bucket=bucket, object_key=object_key, filepath=download_filepath
+                )
 
                 try:
                     with tarfile.open(download_filepath, "r:gz") as tar:
@@ -217,27 +236,42 @@ class S3(Cloud):
                     raise
                 finally:
                     # Dispose of the temporary download file
-                    shutil.rmtree(download_filepath, ignore_errors=True)
+                    shutil.rmtree(os.path.dirname(download_filepath), ignore_errors=True)
 
             else:
-                self._download_file(bucket=bucket, object=object, filepath=filepath)
+                os.makedirs(os.path.dirname(filepath), exist_ok=True)
+                self._download_file(bucket=bucket, object_key=object_key, filepath=filepath)
 
-    def _download_file(self, bucket: str, object: str, filepath: str) -> None:
+    def _download_file(self, bucket: str, object_key: str, filepath: str) -> None:
         """Wraps all S3 download related operations."""
-        # Get the size of the resource and configure the progress monitor
+
         try:
+            # Get the size of the resource
             s3 = self._get_s3_connection(connection_type="client")
-            response = s3.head_object(Bucket=bucket, Key=object)
+            response = s3.head_object(Bucket=bucket, Key=object_key)
             size = response["ContentLength"]
+
+            # Configure the progress monitor
             self._progressbar = progressbar.progressbar.ProgressBar(maxval=size)
             self._progressbar.start()
 
-            s3.download_file(
-                bucket, object, filepath, Callback=self._callback, Config=S3.__transfer_config,
-            )
+            # Download the file (or file object for compressed files)
+            if "tar.gz" in filepath:
+                with open(filepath, "wb") as f:
+                    s3.download_fileobj(
+                        bucket, object_key, f, Callback=self._callback, Config=S3.__transfer_config,
+                    )
+            else:
+                s3.download_file(
+                    bucket,
+                    object_key,
+                    filepath,
+                    Callback=self._callback,
+                    Config=S3.__transfer_config,
+                )
         except botocore.exceptions.ClientError as e:
             if e.response["Error"]["Code"] == "404":
-                msg = "Object {} does not exist.".format(object)
+                msg = "Object {} does not exist.".format(object_key)
                 logger.error(msg)
                 raise ValueError(msg)
             else:
@@ -250,15 +284,15 @@ class S3(Cloud):
             msg = "Credentials not available for {} bucket".format(bucket)
             raise NoCredentialsError(msg)
 
-    def delete_object(self, bucket: str, object: str, force: str = False) -> None:
-        """Deletes a object from S3 storage
+    def delete_object(self, bucket: str, object_key: str, force: str = False) -> None:
+        """Deletes a object_name from S3 storage
 
         Args:
             bucket (str, force: str = False): The S3 bucket name
-            object (str, force: str = False): The S3 object key
+            object_key (str, force: str = False): The path to the object
         """
         s3 = self._get_s3_connection(connection_type="resource")
-        s3.Object(bucket, object).delete()
+        s3.Object(bucket, object_key).delete()
 
     def delete_folder(self, bucket: str, folder: str, force: str = False) -> None:
         """Deletes a object from S3 storage
@@ -271,18 +305,18 @@ class S3(Cloud):
         bucket = s3.Bucket(bucket)
         bucket.objects.filter(Prefix=folder).delete()
 
-    def exists(self, bucket: str, object: str) -> bool:
+    def exists(self, bucket: str, object_key: str) -> bool:
         """Checks if a file exists in an S3 bucket
 
         Args:
             bucket (str, force: str = False): The S3 bucket containing the resource
-            object (str, force: str = False): The path to the object
+            object_key (str, force: str = False): The path of the object
 
         """
         s3 = self._get_s3_connection(connection_type="client")
 
         try:
-            s3.head_object(Bucket=bucket, Key=object)
+            s3.head_object(Bucket=bucket, Key=object_key)
         except botocore.exceptions.ClientError as e:
             if e.response["Error"]["Code"] == "404":
                 return False
@@ -304,6 +338,14 @@ class S3(Cloud):
                 objects.append(object.key)
 
         return objects
+
+    def _get_object_key(self, filepath: str, object_key, compress: bool) -> str:
+        """Returns the object_name name given a filepath, folder and compress flag"""
+        object_key = os.path.basename(filepath) if not object_key else object_key
+        object_key = (
+            object_key + ".tar.gz" if compress and ".tar.gz" not in object_key else object_key
+        )
+        return object_key
 
     def _callback(self, size):
         self._progressbar.update(self._progressbar.currval + size)
