@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday May 22nd 2022 01:40:01 am                                                    #
-# Modified   : Friday June 17th 2022 11:09:19 pm                                                   #
+# Modified   : Friday June 17th 2022 11:16:39 pm                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -140,40 +140,46 @@ class TestWeb:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
         bucket = "deepctr"
+        folder = "test/no_compression/"
         s3 = S3()
-        assert len(s3.list_objects(bucket=bucket, folder="test")) == 1, logger.error(
+        assert len(s3.list_objects(bucket=bucket, folder=folder)) == 3, logger.error(
             "List object failed."
         )
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-    # def test_delete_object(self, caplog) -> None:
-    #     caplog.set_level(logging.INFO)
-    #     logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-    #     bucket = "deepctr"
-    #     object = "test/iris.csv"
-    #     s3 = S3()
-    #     s3.delete_object(bucket=bucket, object=object)
-    #     assert not s3.exists(bucket=bucket, object=object), logger.error("Delete object failed.")
+    def test_delete_object(self, caplog) -> None:
+        caplog.set_level(logging.INFO)
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+        bucket = "deepctr"
+        object_key = "test/no_compression/csvfile.csv"
+        s3 = S3()
+        s3.delete_object(bucket=bucket, object_key=object_key)
+        assert not s3.exists(bucket=bucket, object_key=object_key), logger.error(
+            "Delete object failed."
+        )
 
-    #     logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-    # def test_delete_folder(self, caplog) -> None:
-    #     caplog.set_level(logging.INFO)
-    #     logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+    def test_delete_folder(self, caplog) -> None:
+        caplog.set_level(logging.INFO)
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-    #     bucket = "deepctr"
-    #     object = "test/iris.csv"
-    #     s3 = S3()
-    #     s3.delete_object(bucket=bucket, folder="test")
-    #     assert not s3.exists(bucket=bucket, object=object), logger.error("Delete folder failed.")
+        bucket = "deepctr"
+        folder = "test"
+        object_key = "test/no_compression/csvfile.csv"
+        s3 = S3()
+        s3.delete_folder(bucket=bucket, folder=folder)
+        assert not s3.exists(bucket=bucket, object_key=object_key), logger.error(
+            "Delete folder failed."
+        )
 
-    #     logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
     def test_teardown(self, caplog) -> None:
         caplog.set_level(logging.INFO)
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-        delete_file(bucket=BUCKET, object_key=OBJECT_KEY)
+        delete_file(bucket=BUCKET, object_key="test")
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
