@@ -10,16 +10,21 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday May 25th 2022 12:05:22 am                                                 #
-# Modified   : Friday June 17th 2022 06:31:18 pm                                                   #
+# Modified   : Saturday June 18th 2022 06:38:16 am                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
 import logging
 import boto3
-from botocore.exceptions import ClientError
+import botocore
+from botocore.exceptions import ClientError, NoCredentialsError
 import os
+from deepctr.utils.log_config import LOG_CONFIG
 
+# ------------------------------------------------------------------------------------------------ #
+logging.config.dictConfig(LOG_CONFIG)
+logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 def upload_file(filepath, bucket, object_key=None):
     """Upload a file to an S3 bucket
@@ -49,6 +54,7 @@ def upload_file(filepath, bucket, object_key=None):
     return True
 
 
+# ------------------------------------------------------------------------------------------------ #
 def delete_file(bucket, object_key) -> None:
     """Deletes an S3 file.
 
@@ -59,3 +65,32 @@ def delete_file(bucket, object_key) -> None:
 
     s3 = boto3.resource("s3")
     s3.Object(bucket, object_key).delete()
+
+
+# ------------------------------------------------------------------------------------------------ #
+def get_size_aws(bucket: str, object_key: str) -> int:
+    """Checks the existence of an S3 object, then returns its size.
+
+    Args:
+        bucket (str): The name of the S3 bucket containing the target resource.
+        object_key (str): The path to the resource within the bucket.
+
+    Returns:
+        int: The size of the resource in bytes if it exists.
+    """
+    s3 = boto3.client("s3")
+    try:
+        response = s3.head_object(Bucket=bucket, Key=object_key)
+        return response["ContentLength"]
+    except botocore.exceptions.ClientError as e:
+        if e.response["Error"]["Code"] == "404":
+            msg = "Object {} does not exist.".format(object_key)
+            logger.error(msg)
+            return 0
+        else:
+            logger.error(e)
+            return 0
+
+    except NoCredentialsError:
+        msg = "Credentials not available for {} bucket".format(bucket)
+        raise NoCredentialsError(msg)

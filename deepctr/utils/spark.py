@@ -3,24 +3,35 @@
 # ================================================================================================ #
 # Project    : DeepCTR: Deep Learning for CTR Prediction                                           #
 # Version    : 0.1.0                                                                               #
-# Filename   : /build.sh                                                                           #
+# Filename   : /spark.py                                                                           #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Saturday May 21st 2022 03:10:32 am                                                  #
-# Modified   : Friday June 17th 2022 11:45:11 pm                                                   #
+# Created    : Saturday June 18th 2022 05:54:32 am                                                 #
+# Modified   : Saturday June 18th 2022 06:06:56 am                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
+from pyspark.sql import SparkSession, DataFrame
+import pandas as pd
+# ------------------------------------------------------------------------------------------------ #
+def get_size_spark(data: DataFrame, fraction: float = 0.001, seed=None) -> int:
+    """Estimates size of a Spark DataFrame
 
-echo $'\nRestarting MySQL - Pre-build...'
-sudo /etc/init.d/mysql restart
+    This function takes a sample from the Spark Dataframe, converts it to a pandas DataFrame, 
+    then uses pandas memory_usage method to obtain the size of the sample in memory. We 
+    multiply that value by the inverse of our  sampling fraction to get an estimate for the
+    size of the entire Spark DataFrame.
 
-echo $'\nBuild DeepCTR Dataset Database'
-sudo mysql -u john -p < /home/john/projects/DeepCTR/deepctr/data/database.sql
+    Args:
+        data: (DataFrame) The Spark DataFrame
+        fraction (float): The fraction of the Spark DataFrame to sample
+    Returns:
+        (int) Size of Spark DataFrame in bytes.
+    """
+    df_sample = data.sample(withReplacement=False, fraction=fraction, seed=seed).toPandas()
+    return df_sample.memory_usage(deep=True).sum()
 
-echo $'\nRestarting MySQL - Post-build...'
-sudo /etc/init.d/mysql restart

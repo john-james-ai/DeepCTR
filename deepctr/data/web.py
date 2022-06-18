@@ -65,19 +65,20 @@ class Cloud(ABC):
         self,
         filepath: str,
         bucket: str,
-        folder: str = None,
-        object_name: str = None,
+        object_key: str = None,
         compress: bool = True,
         force: str = False,
     ) -> None:
         pass
 
     @abstractmethod
-    def download_file(self, bucket: str, object: str, filepath: str, force: str = False) -> None:
+    def download_file(
+        self, bucket: str, object_key: str, filepath: str, expand: bool = True, force: str = False
+    ) -> None:
         pass
 
     @abstractmethod
-    def delete_object(self, bucket: str, object_name: str, force: str = False) -> None:
+    def delete_object(self, bucket: str, object_key: str, force: str = False) -> None:
         pass
 
     @abstractmethod
@@ -89,7 +90,7 @@ class Cloud(ABC):
         pass
 
     @abstractmethod
-    def exists(self, bucket: str, object_name: str) -> bool:
+    def exists(self, bucket: str, object_key: str) -> bool:
         pass
 
 

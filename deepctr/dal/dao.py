@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday May 21st 2022 11:10:43 pm                                                  #
-# Modified   : Saturday May 28th 2022 05:23:26 am                                                  #
+# Modified   : Saturday June 18th 2022 07:42:01 am                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -23,17 +23,7 @@ from pymysql.connections import Connection
 
 from deepctr.dal.base import DAO
 from deepctr.utils.decorators import tracer
-from deepctr.dal.entity import (
-    File,
-    LocalFile,
-    LocalDataset,
-    DagORM,
-    TaskORM,
-    S3File,
-    S3Dataset,
-    Dataset,
-)
-from deepctr.dal.entity import LocalEntityFactory, DagFactory, S3EntityFactory, EntityFactory
+
 from deepctr.dal.dto import DTO
 from deepctr.dal.sequel import (
     DagInsert,
@@ -121,7 +111,7 @@ logger = logging.getLogger(__name__)
 
 
 class DagDAO(DAO):
-    """Provides access to local dataset ."""
+    """Provides access to dag table ."""
 
     def __init__(self, connection: Connection) -> None:
         super(DagDAO, self).__init__(connection)
@@ -200,7 +190,7 @@ class DagDAO(DAO):
 
 
 class TaskDAO(DAO):
-    """Provides access to local dataset ."""
+    """Provides access to task table ."""
 
     def __init__(self, connection: Connection) -> None:
         super(TaskDAO, self).__init__(connection)
@@ -279,213 +269,6 @@ class TaskDAO(DAO):
 
 
 # ------------------------------------------------------------------------------------------------ #
-#                                          DATASET DAO                                             #
-# ------------------------------------------------------------------------------------------------ #
-
-
-class DatasetDAO(DAO):
-    """Provides access to the Dataset table which contains all datasets."""
-
-    def __init__(self, connection: Connection) -> None:
-        super(DatasetDAO, self).__init__(connection)
-
-    def create(self, data: Union[dict, DTO]) -> Dataset:
-        factory = EntityFactory()
-        return factory.create_dataset(data)
-
-    def add(self, dataset: Dataset) -> None:
-        """Sets state of Dataset entity to 'added' and stores and adds its  store."""
-        sequel = DatasetInsert(dataset)
-        id = self._database.insert(sequel.statement, sequel.parameters)
-        dataset.id = id
-        logger.info("Executed command: {}".format(sequel.command))
-        return dataset
-
-    def find(self, id: int) -> Union[Dataset, None]:
-        """Finds a Dataset entity by the designated column and value"""
-        sequel = DatasetSelectOne(parameters=(id))
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
-
-    def find_by_key(self, name: str, datasource: str, stage: str) -> Union[Dataset, None]:
-        """Finds a Dataset entity by the designated column and value"""
-        sequel = DatasetSelectByKey(name=name, datasource=datasource, stage=stage)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
-
-    def find_by_column(self, column: str, value: Any) -> Union[Dataset, list]:
-        """Finds a Dataset entity by the designated column and value"""
-        sequel = DatasetSelectByColumn(column=column, value=value)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
-
-    def findall(self) -> list:
-        """Returns all datasets in the database."""
-        sequel = DatasetSelectAll()
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select_all(sequel.statement)
-
-    def update(self, dataset: Dataset) -> list:
-        """Updates the dataset in the database."""
-        sequel = DatasetUpdate(
-            dataset.name,
-            dataset.desc,
-            dataset.status,
-            dataset.datasource,
-            dataset.storage_type,
-            dataset.table,
-            dataset.dag_id,
-            dataset.task_id,
-            dataset.created,
-        )
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.execute(sequel.statement, sequel.parameters)
-
-    def update_size(self, dataset: Dataset) -> list:
-        """Updates the dataset in the database."""
-        sequel = DatasetUpdate(
-            dataset.name,
-            dataset.desc,
-            dataset.status,
-            dataset.datasource,
-            dataset.storage_type,
-            dataset.table,
-            dataset.dag_id,
-            dataset.task_id,
-            dataset.created,
-        )
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.execute(sequel.statement, sequel.parameters)
-
-    def remove(self, id: int) -> None:
-        """Removes the dataset based upon the selection criteria"""
-        sequel = DatasetDelete(id=id)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.execute(sequel.statement, sequel.parameters)
-
-    def exists(self, dataset: Dataset, id: bool = False) -> bool:
-        """Determines if a dataset exists.
-
-        Args:
-            dataset (Dataset): The DatasetORM object
-            id (bool): If True, the primary key for the object matching if exists.
-        """
-        sequel = DatasetExists(
-            name=dataset.name, datasource=dataset.datasource, stage=dataset.storage_type
-        )
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.exists(sequel.statement, sequel.parameters, id)
-
-    def get_dataset_id(self, name: str, datasource: str, stage: str) -> Union[Dataset, None]:
-        row = self.find_by_key(name, datasource, stage)
-        try:
-            return row["id"]
-        except KeyError as e:
-            message = "No Dataset Found for name: {}\tdatasource: {}\t: stage: {}\t{}".format(
-                name, datasource, stage, e
-            )
-            logger.error(message)
-            raise ValueError(message)
-
-    def begin_transaction(self) -> None:
-        self._database.begin_transaction()
-
-    def rollback(self) -> None:
-        self._database.rollback()
-
-    def save(self) -> None:
-        self._database.save()
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                       LOCAL DATASET DAO                                          #
-# ------------------------------------------------------------------------------------------------ #
-
-
-class LocalDatasetDAO(DAO):
-    """Provides access to local dataset ."""
-
-    def __init__(self, connection: Connection) -> None:
-        super(LocalDatasetDAO, self).__init__(connection)
-
-    def create(self, data: Union[dict, DTO]) -> LocalDataset:
-        factory = LocalEntityFactory()
-        return factory.create_dataset(data)
-
-    def add(self, dataset: LocalDataset) -> None:
-        """Sets state of LocalDataset entity to 'added' and stores and adds its local store."""
-        sequel = LocalDatasetInsert(dataset)
-        id = self._database.insert(sequel.statement, sequel.parameters)
-        dataset.id = id
-        logger.info("Executed command: {}".format(sequel.command))
-        return dataset
-
-    def find(self, id: int) -> Union[LocalDataset, None]:
-        """Finds a LocalDataset entity by the designated column and value"""
-        sequel = LocalDatasetSelectOne(parameters=(id))
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
-
-    def find_by_key(self, name: str, datasource: str, stage: str) -> Union[LocalDataset, None]:
-        """Finds a LocalDataset entity by the designated column and value"""
-        sequel = LocalDatasetSelectByKey(name=name, datasource=datasource, stage=stage)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
-
-    def find_by_column(self, column: str, value: Any) -> Union[LocalDataset, list]:
-        """Finds a LocalDataset entity by the designated column and value"""
-        sequel = LocalDatasetSelectByColumn(column=column, value=value)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
-
-    def findall(self) -> list:
-        """Returns all datasets in the database."""
-        sequel = LocalDatasetSelectAll()
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select_all(sequel.statement)
-
-    def remove(self, id: int) -> None:
-        """Removes the dataset based upon the selection criteria"""
-        sequel = LocalDatasetDelete(id=id)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.execute(sequel.statement, sequel.parameters)
-
-    def exists(self, dataset: Dataset, id: bool = False) -> bool:
-        """Determines if a dataset exists.
-
-        Args:
-            dataset (Dataset): The DatasetORM object
-            id (bool): If True, the primary key for the object matching if exists.
-        """
-
-        sequel = LocalDatasetExists(
-            name=dataset.name, datasource=dataset.datasource, stage=dataset.storage_type
-        )
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.exists(sequel.statement, sequel.parameters)
-
-    def get_dataset_id(self, name: str, datasource: str, stage: str) -> Union[LocalDataset, None]:
-        row = self.find_by_key(name, datasource, stage)
-        try:
-            return row["id"]
-        except KeyError as e:
-            message = "No Dataset Found for name: {}\tdatasource: {}\t: stage: {}\t{}".format(
-                name, datasource, stage, e
-            )
-            logger.error(message)
-            raise ValueError(message)
-
-    def begin_transaction(self) -> None:
-        self._database.begin_transaction()
-
-    def rollback(self) -> None:
-        self._database.rollback()
-
-    def save(self) -> None:
-        self._database.save()
-
-
-# ------------------------------------------------------------------------------------------------ #
 #                                         LOCAL FILE DAO                                           #
 # ------------------------------------------------------------------------------------------------ #
 class LocalFileDAO(DAO):
@@ -557,94 +340,6 @@ class LocalFileDAO(DAO):
         )
         logger.info("Executed command: {}".format(sequel.command))
         return self._database.exists(sequel.statement, sequel.parameters)
-
-    def begin_transaction(self) -> None:
-        self._database.begin_transaction()
-
-    def rollback(self) -> None:
-        self._database.rollback()
-
-    def save(self) -> None:
-        self._database.save()
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                       S3 DATASET DAO                                          #
-# ------------------------------------------------------------------------------------------------ #
-
-
-class S3DatasetDAO(DAO):
-    """Provides access to s3 dataset ."""
-
-    def __init__(self, connection: Connection) -> None:
-        super(S3DatasetDAO, self).__init__(connection)
-
-    def create(self, data: Union[dict, DTO]) -> S3Dataset:
-        factory = S3EntityFactory()
-        return factory.create_dataset(data)
-
-    def add(self, dataset: S3Dataset) -> None:
-        """Sets state of S3Dataset entity to 'added' and stores and adds its s3 store."""
-        sequel = S3DatasetInsert(dataset)
-        id = self._database.insert(sequel.statement, sequel.parameters)
-        dataset.id = id
-        logger.info("Executed command: {}".format(sequel.command))
-        return dataset
-
-    def find(self, id: int) -> Union[S3Dataset, None]:
-        """Finds a S3Dataset entity by the designated column and value"""
-        sequel = S3DatasetSelectOne(parameters=(id))
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
-
-    def find_by_key(self, name: str, datasource: str, stage: str) -> Union[S3Dataset, None]:
-        """Finds a S3Dataset entity by the designated column and value"""
-        sequel = S3DatasetSelectByKey(name=name, datasource=datasource, stage=stage)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
-
-    def find_by_column(self, column: str, value: Any) -> Union[S3Dataset, list]:
-        """Finds a S3Dataset entity by the designated column and value"""
-        sequel = S3DatasetSelectByColumn(column=column, value=value)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
-
-    def findall(self) -> list:
-        """Returns all datasets in the database."""
-        sequel = S3DatasetSelectAll()
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select_all(sequel.statement)
-
-    def remove(self, id: int) -> None:
-        """Removes the dataset based upon the selection criteria"""
-        sequel = S3DatasetDelete(id=id)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.execute(sequel.statement, sequel.parameters)
-
-    def exists(self, dataset: Dataset, id: bool = False) -> bool:
-        """Determines if a dataset exists.
-
-        Args:
-            dataset (Dataset): The DatasetORM object
-            id (bool): If True, the primary key for the object matching if exists.
-        """
-
-        sequel = S3DatasetExists(
-            name=dataset.name, datasource=dataset.datasource, storage_type=dataset.storage_type
-        )
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.exists(sequel.statement, sequel.parameters)
-
-    def get_dataset_id(self, name: str, datasource: str, stage: str) -> Union[S3Dataset, None]:
-        row = self.find_by_key(name, datasource, stage)
-        try:
-            return row["id"]
-        except KeyError as e:
-            message = "No Dataset Found for name: {}\tdatasource: {}\t: stage: {}\t{}".format(
-                name, datasource, stage, e
-            )
-            logger.error(message)
-            raise ValueError(message)
 
     def begin_transaction(self) -> None:
         self._database.begin_transaction()
