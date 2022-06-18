@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday May 21st 2022 11:10:43 pm                                                  #
-# Modified   : Saturday June 18th 2022 07:42:01 am                                                 #
+# Modified   : Saturday June 18th 2022 02:47:49 pm                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -47,16 +47,6 @@ from deepctr.dal.sequel import (
     TaskStop,
 )
 
-from deepctr.dal.sequel import (
-    DatasetInsert,
-    DatasetSelectOne,
-    DatasetSelectByColumn,
-    DatasetSelectByKey,
-    DatasetSelectAll,
-    DatasetUpdate,
-    DatasetDelete,
-    DatasetExists,
-)
 
 from deepctr.dal.sequel import (
     LocalFileInsert,
@@ -69,16 +59,6 @@ from deepctr.dal.sequel import (
 )
 
 from deepctr.dal.sequel import (
-    LocalDatasetInsert,
-    LocalDatasetSelectOne,
-    LocalDatasetSelectByColumn,
-    LocalDatasetSelectByKey,
-    LocalDatasetSelectAll,
-    LocalDatasetDelete,
-    LocalDatasetExists,
-)
-
-from deepctr.dal.sequel import (
     S3FileInsert,
     S3FileSelectOne,
     S3FileSelectByColumn,
@@ -86,16 +66,6 @@ from deepctr.dal.sequel import (
     S3FileSelectAll,
     S3FileDelete,
     S3FileExists,
-)
-
-from deepctr.dal.sequel import (
-    S3DatasetInsert,
-    S3DatasetSelectOne,
-    S3DatasetSelectByColumn,
-    S3DatasetSelectByKey,
-    S3DatasetSelectAll,
-    S3DatasetDelete,
-    S3DatasetExists,
 )
 
 
@@ -116,12 +86,10 @@ class DagDAO(DAO):
     def __init__(self, connection: Connection) -> None:
         super(DagDAO, self).__init__(connection)
 
-    @tracer
-    def create(self, data: Union[dict, DTO]) -> DagORM:
+    def create(self, data: Union[dict, DTO]) -> Dag:
         factory = DagFactory()
         return factory.create_dag(data)
 
-    @tracer
     def add(self, dag: DagORM) -> None:
         """Sets state of LocalDataset entity to 'added' and stores and adds its local store."""
         sequel = DagInsert(dag)
