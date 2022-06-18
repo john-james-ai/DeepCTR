@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday May 13th 2022 02:51:48 pm                                                    #
-# Modified   : Saturday June 18th 2022 07:40:02 am                                                 #
+# Modified   : Saturday June 18th 2022 02:20:39 pm                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -24,6 +24,8 @@ import logging
 import logging.config
 from typing import Any, Union, ClassVar
 import shutil
+
+from deepctr.dal import STATES
 from deepctr.utils.aws import get_size_aws
 from deepctr.data.datastore import SparkCSV, SparkParquet, Pickler
 from deepctr.data.web import S3
@@ -33,6 +35,26 @@ from deepctr.utils.log_config import LOG_CONFIG
 logging.config.dictConfig(LOG_CONFIG)
 logging.getLogger("py4j").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
+# ------------------------------------------------------------------------------------------------ #
+#                                          DATASET                                                 #
+# ------------------------------------------------------------------------------------------------ #
+@dataclass()
+class Dataset:
+    """Defines the parameters of local datasets to which the Files belong"""
+
+    name: str  # The name of the dataset, i.e. vesuvio
+    source: str  # The external data source
+    stage_id: int  # The data processing stage number
+    stage_name: str  # The data processing stage name
+    storage_type: str  # Where the data are stored. Either 's3', or 'local'
+    folder: str  # The folder containing the files
+    format: str  # The format, either csv or parquet
+    compressed: bool  # Indicates whether the data are compressed.
+    dag_id: int = 0  # The dag id for the dag that created the Dataset object.
+    task_id: int  # The task_id for the task that created the Dataset.
+    bucket: str = None  # The bucket containing the files if the dataset has an 's3' storage type.
+
+
 # ------------------------------------------------------------------------------------------------ #
 #                                        FILE                                                      #
 # ------------------------------------------------------------------------------------------------ #
@@ -45,22 +67,14 @@ class File(ABC):
     dataset: str  # The collection to which the file belongs
     stage_id: int  # The stage identifier. See lab_book.md for stage_ids
     stage_name: str  # The human readable name of the stage
+    folder: str  # The folder containing the file.
     format: str  # The format of the data, i.e. csv, parquet
     dag_id: int  # The dag_id for the dag in which the file was created.
     task_id: int  # The task_id for the task that created the file.
 
     __sources: ClassVar[list[str]] = ["alibaba", "avazu", "criteo"]
-    __stage_ids: ClassVar[list[int]] = list(range(0, 8))
-    __stage_names: ClassVar[list[str]] = [
-        "external",
-        "raw",
-        "loaded",
-        "prepared",
-        "clean",
-        "transformed",
-        "enriched",
-        "processed",
-    ]
+    __stage_ids: ClassVar[list[int]] = list(STATES.keys())
+    __stage_names: ClassVar[list[str]] = list(STATES.values())
     __formats: ClassVar[list[str]] = ["csv", "parquet"]
 
     def _validate(self) -> None:
@@ -91,6 +105,50 @@ class File(ABC):
     def to_dict(self) -> dict:
         pass
 
+    @staticmethod
+    def factory(dataset: Dataset, filepath: str):
+        """Creates an object of the LocalFile or S3File class.
+
+        Args:
+            dataset (Dataset): The dataset containing the file
+            filepath (str): The path to the file if local. If an S3File, the filepath
+                is synonymous with object_key.
+        """
+        # The name of the File is given by the filepath with the extension removed.
+        name = os.path.splitext(os.path.basename(filepath))[0]
+
+        if dataset.storage_type == "local":
+            return LocalFile(
+                name=name,
+                source=dataset.source,
+                dataset=dataset.name,
+                stage_id=dataset.stage_id,
+                stage_name=dataset.stage_name,
+                format=dataset.format,
+                dag_id=dataset.dag_id,
+                task_id=dataset.task_id,
+                filepath=filepath,
+                folder=os.path.dirname(filepath),
+                filename=os.path.basename(filepath),
+                compressed=dataset.compressed,
+            )
+
+        else:
+            return S3File(
+                name=name,
+                source=dataset.source,
+                dataset=dataset.name,
+                stage_id=dataset.stage_id,
+                stage_name=dataset.stage_name,
+                format=dataset.format,
+                dag_id=dataset.dag_id,
+                task_id=dataset.task_id,
+                folder=os.path.dirname(filepath),
+                bucket=dataset.bucket,
+                object_key=filepath,
+                compressed=dataset.compressed,
+            )
+
 
 # ------------------------------------------------------------------------------------------------ #
 #                                     LOCAL FILE                                                   #
@@ -100,7 +158,6 @@ class LocalFile(File):
     """Defines the file objects stored locally."""
 
     filepath: str = None  # Path to the file
-    directory: str = None  # The folder containing the file
     filename: str = None  # The name of the file i.e basename from filepath
     compressed: bool = False  # Indicates if the file is compressed
     size: int = 0  # The size of the file in bytes
@@ -116,9 +173,8 @@ class LocalFile(File):
         stage = str(self.stage_id) + "_" + self.stage_name
         if not self.filepath:
             self.filename = self.name + "." + self.format.replace(".", "").lower()
-            self.directory = os.path.join("data", self.source, self.dataset, stage)
-            self.filepath = os.path.join(self.directory, self.filename)
-        super(LocalFile, self).__post_init__()
+            self.folder = os.path.join("data", self.source, self.dataset, stage)
+            self.filepath = os.path.join(self.folder, self.filename)
 
     def _set_size(self) -> None:
         # Get size from the file if filepath isn't None and the file is present
@@ -136,7 +192,7 @@ class LocalFile(File):
             "stage_id": self.stage_id,
             "stage_name": self.stage_name,
             "filepath": self.filepath,
-            "directory": self.directory,
+            "folder": self.folder,
             "filename": self.filename,
             "format": self.format,
             "compressed": self.compressed,
@@ -164,6 +220,11 @@ class S3File(File):
 
     def __post_init__(self) -> None:
         self._validate()
+        self._set_filepath()
+        self._set_size()
+
+    def _set_filepath(self) -> None:
+        self.folder = os.path.dirname(self.object_key)
         self.filename = os.path.basename(self.object_key)
 
     def _set_size(self) -> None:
@@ -179,6 +240,7 @@ class S3File(File):
             "stage_name": self.stage_name,
             "bucket": self.bucket,
             "object_key": self.object_key,
+            "folder": self.folder,
             "filename": self.filename,
             "format": self.format,
             "compressed": self.compressed,
@@ -320,14 +382,26 @@ class RAO(ABC):
     """Defines interface for remote access objects accessing cloud services."""
 
     @abstractmethod
-    def download(
+    def download_file(
         source: S3File, destination: File, expand: bool = True, force: bool = False
     ) -> None:
         pass
 
     @abstractmethod
-    def upload(
+    def download_dataset(
+        source: Dataset, destination: Dataset, expand: bool = True, force: bool = False
+    ) -> None:
+        pass
+
+    @abstractmethod
+    def upload_file(
         self, source: File, destination: S3File, compress: bool = True, force: bool = False
+    ) -> None:
+        pass
+
+    @abstractmethod
+    def upload_dataset(
+        self, source: Dataset, destination: Dataset, compress: bool = True, force: bool = False
     ) -> None:
         pass
 
@@ -341,14 +415,14 @@ class RemoteAccessObject(RAO):
     """Remote access object for Amazon S3 web resources."""
 
     # -------------------------------------------------------------------------------------------- #
-    def download(
-        source: S3File, destination: File, expand: bool = True, force: bool = False
+    def download_file(
+        source: S3File, destination: LocalFile, expand: bool = True, force: bool = False
     ) -> None:
         """Downloads data entity from an S3 Resource
 
         Args:
             source (S3File): An S3File object
-            destination (File): A File object
+            destination (LocalFile): A local file object
             expand (bool): If True, the data is decompressed.
             force (bool): If True, existing data will be overwritten.
         """
@@ -363,15 +437,43 @@ class RemoteAccessObject(RAO):
         )
 
     # -------------------------------------------------------------------------------------------- #
-    def upload(
-        self, source: File, destination: S3File, compress: bool = True, force: bool = False
+    def download_dataset(
+        self, source: Dataset, destination: Dataset, expand: bool = True, force: bool = False
+    ) -> None:
+        """Downloads data entity from an S3 Resource
+
+        Args:
+            source (Dataset): The Dataset containing the files to be downloaded
+            destination (Dataset): The downloaded Dataset
+            expand (bool): If True, the data is decompressed.
+            force (bool): If True, existing data will be overwritten.
+        """
+
+        io = S3()
+
+        object_keys = io.list_objects(bucket=source.bucket, folder=source.folder)
+
+        for object_key in object_keys:
+            source_file = File.factory(dataset=source, filepath=object_key)
+            # destination filepath is constructed from the destination folder and the base of the object_key
+            destination_file = File.factory(
+                dataset=destination,
+                filepath=os.path.join(destination.folder, os.path.basename(object_key)),
+            )
+            self.download_file(
+                source=source_file, destination=destination_file, expand=expand, force=force
+            )
+
+    # -------------------------------------------------------------------------------------------- #
+    def upload_file(
+        self, source: LocalFile, destination: S3File, compress: bool = True, force: bool = False
     ) -> None:
         """Uploads a entity to an S3 bucket.
 
         Args:
-            source (File): A File object
+            source (LocalFile): A File object
             destination (S3File): An S3File object
-            expand (bool): If True, the data is decompressed.
+            compress (bool): If True, the data is decompressed.
             force (bool): If True, existing data will be overwritten.
         """
 
@@ -385,7 +487,36 @@ class RemoteAccessObject(RAO):
         )
 
     # -------------------------------------------------------------------------------------------- #
-    def delete(self, file: S3File) -> None:
+    def upload_dataset(
+        self, source: Dataset, destination: Dataset, compress: bool = True, force: bool = False
+    ) -> None:
+        """Uploads all files of a dataset to an S3 bucket
+
+        Args:
+            source (Dataset): The Dataset to be uploaded
+            destination (Dataset): The target S3 Dataset
+            compress (bool): If True, the data is decompressed.
+            force (bool): If True, existing data will be overwritten.
+        """
+        filepaths = os.listdir(source.folder)
+        for filepath in filepaths:
+            source_file = File.factory(dataset=source, filepath=filepath)
+
+            state = str(destination.state_id) + "_" + destination.stage_name
+
+            # The S3 object_key is formed by joining the bucket, dataset name,
+            # the state, i.e. (2_external), and the basename from the filepath.
+
+            object_key = os.path.join(
+                destination.bucket, destination.name, state, os.path.basename(filepath)
+            )
+            destination_file = File.factory(dataset=destination, filepath=object_key)
+            self.upload_file(
+                source=source_file, destination=destination_file, compress=compress, force=force
+            )
+
+    # -------------------------------------------------------------------------------------------- #
+    def delete_object(self, file: S3File) -> None:
         """Deletes a object from S3 storage
 
         Args:
@@ -394,6 +525,22 @@ class RemoteAccessObject(RAO):
         """
         io = S3()
         io.delete_object(bucket=file.bucket, object_key=file.object_key)
+
+    # -------------------------------------------------------------------------------------------- #
+    def delete_dataset(self, dataset: Dataset) -> None:
+        """Deletes a dataset and the files it contains.
+
+        Args:
+            dataset (Dataset): Dataset to delete
+        """
+        if dataset.storage_type == "local":
+            shutil.rmtree(dataset.folder, ignore_errors=True)
+        else:
+            io = S3()
+            object_keys = io.list_objects(bucket=dataset.bucket, folder=dataset.folder)
+            for object_key in object_keys:
+                file = File.factory(dataset, object_key)
+                self.delete_object(file)
 
     # -------------------------------------------------------------------------------------------- #
     def exists(self, file: S3File) -> bool:

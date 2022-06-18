@@ -190,7 +190,7 @@ class S3(Cloud):
             bucket (str): The S3 bucket from which the file will be downloaded
             object_key (str): The path to the object within the bucket
             filepath (str): The destination for the file. If expand is False, filepath will be
-                a path to a file. Otherwise, filepath will actually be a directory in to which thee
+                a path to a file. Otherwise, filepath will actually be a folder in to which thee
                 archive will be expanded.
             expand (bool): True if the resource should be expanded, False otherwise.
             force (bool): If True, overwrite the object data if it exists; otherwise, upload only if
@@ -206,7 +206,7 @@ class S3(Cloud):
         else:
             os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
-            # If we expand, we create a temporary file, create the directory for it, then
+            # If we expand, we create a temporary file, create the folder for it, then
             # download the archive to this file which is then extracted to the client provided filepath
             if expand:
                 download_filepath = os.path.join(
@@ -327,7 +327,13 @@ class S3(Cloud):
         return True
 
     def list_objects(self, bucket: str, folder: str = None) -> list:
-        """Returns a list of object keys in the designated bucket and folder"""
+        """Returns a list of object keys in the designated bucket and folder
+
+        Args:
+            bucket (str, force: str = False): The S3 bucket containing the resource
+            folder (str, force: str = False): The path of the object
+
+        """
 
         s3 = self._get_s3_connection(connection_type="resource")
 

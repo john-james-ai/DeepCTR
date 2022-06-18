@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday May 10th 2022 03:30:15 pm                                                   #
-# Modified   : Saturday May 28th 2022 05:59:59 am                                                  #
+# Modified   : Saturday June 18th 2022 09:39:17 am                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -23,10 +23,8 @@ import importlib
 import logging
 import logging.config
 
-from deepctr.dal.dto import DagDTO
 from deepctr.dal.context import Context
 from deepctr.utils.log_config import LOG_CONFIG
-from deepctr.utils.decorators import tracer
 
 # ------------------------------------------------------------------------------------------------ #
 logging.config.dictConfig(LOG_CONFIG)
@@ -42,24 +40,29 @@ class DAG(ABC):
     """Abstract base class for directed acyclic graph of operations.
 
     Args:
-        seq (int): A number assigned by the configurer
+        name (str): A brief and unique name for the dag
         dag_desc (str): Brief description
         tasks (list): List of tasks to execute
 
     """
 
-    def __init__(self, name: str, seq: int, desc: str, tasks: list) -> None:
+    def __init__(self, name: str, desc: str, tasks: list) -> None:
         self._id = 0
         self._name = name
-        self._seq = seq
         self._desc = desc
         self._tasks = tasks
         self._start = None
         self._stop = None
+        self._duration = None
         self._created = datetime.now()
-        self._dag_orm = None
 
-        logger.info("Instantiated dag: {}".format(self._name))
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def desc(self) -> str:
+        return self._desc
 
     @property
     def start(self) -> datetime:
@@ -70,6 +73,14 @@ class DAG(ABC):
         return self._stop
 
     @property
+    def duration(self) -> datetime:
+        return self._duration
+
+    @property
+    def created(self) -> datetime:
+        return self._created
+
+    @property
     def context(self) -> Context:
         return self._context
 
@@ -78,30 +89,10 @@ class DAG(ABC):
         self._context = context
 
     def run(self, start: int = 0, stop: float = float("inf")) -> None:
-        self.create_dag_orm()
-        self.start_dag_orm()
+        self._start = datetime.now()
         self.execute(start=start, stop=stop, context=self._context)
-        self.stop_dag_orm()
-
-    @tracer
-    def create_dag_orm(self) -> None:
-
-        dto = DagDTO(seq=self._seq, name=self._name, desc=self._desc, created=self._created,)
-        self._dag_orm = self._context.dags.create(data=dto)  # Creates the DAG ORM representation.
-        self._context.dags.add(dag=self._dag_orm)  # Adds the DAG ORM object to the database
-        self._context.dag = self._dag_orm  # Set the dag property on the context
-
-    @tracer
-    def start_dag_orm(self) -> None:
-        self._dag_orm = self._context.dags.start(dag=self._dag_orm)
-        self._context.dags.add(dag=self._dag_orm)  # Updates DAG ORM object in the database
-        self._context.dag = self._dag_orm  # Reset the dag property on the context
-
-    @tracer
-    def stop_dag_orm(self) -> None:
-        self._dag_orm = self._context.dags.stop(dag=self._dag_orm)
-        self._context.dags.add(dag=self._dag_orm)  # Updates DAG ORM object in the database
-        self._context.dag = self._dag_orm  # Reset the dag property on the context
+        self._stop = datetime.now()
+        self._duration = (self._stop - self._start).total_seconds()
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -118,8 +109,8 @@ class DataDAG(DAG):
 
     """
 
-    def __init__(self, name: str, seq: str, desc: str, tasks: list) -> None:
-        super(DataDAG, self).__init__(name=name, seq=seq, desc=desc, tasks=tasks)
+    def __init__(self, name: str, desc: str, tasks: list) -> None:
+        super(DataDAG, self).__init__(name=name, desc=desc, tasks=tasks)
 
     def execute(self, start: int = 0, stop: float = float("inf"), context: Context = None) -> None:
         data = None
@@ -215,20 +206,11 @@ class DataDAGBuilder(DAGBuilder):
         # Create a configuration from the template
         config = self._create_config()
 
-        # Create the file objects to process
-        files = self._build_files(config)
-
         # Create the tasks that will be performed on the files.
         tasks = self._build_tasks(config)
 
         try:
-            self._dag = DataDAG(
-                name=config["dag_name"],
-                seq=config["dag_seq"],
-                desc=config["dag_desc"],
-                files=files,
-                tasks=tasks,
-            )
+            self._dag = DataDAG(name=config["dag_name"], desc=config["dag_desc"], tasks=tasks,)
         except KeyError as e:
             logger.error("Invalid configuration parameters")
             raise ValueError(e)

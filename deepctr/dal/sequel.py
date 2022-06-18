@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday May 22nd 2022 08:41:02 pm                                                    #
-# Modified   : Saturday May 28th 2022 03:43:00 am                                                  #
+# Modified   : Saturday June 18th 2022 09:26:32 am                                                 #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -18,9 +18,10 @@
 """Module contains SQL command objects for each entity type."""
 import logging
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any
-from deepctr.dal.entity import Dataset, LocalFile, LocalDataset, S3File, S3Dataset, DagORM, TaskORM
+from deepctr.dag.base import Operator
+from deepctr.dag.orchestrator import DAG
+from deepctr.dal.fao import LocalFile, S3File
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
 class DagInsert:
-    entity: DagORM
+    entity: DAG
     statement: str = None
     parameters: tuple = None
     command: str = "dag_insert"
@@ -122,7 +123,7 @@ class DagExists:
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
 class DagStart:
-    dag: DagORM
+    dag: DAG
     parameters: tuple = None
     statement: str = None
     command: str = "dag_start"
@@ -135,7 +136,7 @@ class DagStart:
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
 class DagStop:
-    dag: DagORM
+    dag: DAG
     parameters: tuple = None
     statement: str = None
     command: str = "dag_stop"
@@ -150,7 +151,7 @@ class DagStop:
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
 class TaskInsert:
-    entity: TaskORM
+    task: Operator
     statement: str = None
     parameters: tuple = None
     command: str = "task_insert"
@@ -162,14 +163,14 @@ class TaskInsert:
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
             """
         self.parameters = (
-            self.entity.seq,
-            self.entity.name,
-            self.entity.desc,
-            self.entity.dag_id,
-            self.entity.start,
-            self.entity.stop,
-            self.entity.duration,
-            self.entity.created,
+            self.task.seq,
+            self.task.name,
+            self.task.desc,
+            self.task.dag_id,
+            self.task.start,
+            self.task.stop,
+            self.task.duration,
+            self.task.created,
         )
 
 
@@ -198,7 +199,7 @@ class TaskSelectByColumn:
         d = {
             "id": """SELECT * FROM `task` WHERE `id`=%s;""",
             "name": """SELECT * FROM `task` WHERE `name`=%s;""",
-            "task_id": """SELECT * FROM `task` WHERE `dag_id`=%s;""",
+            "dag_id": """SELECT * FROM `task` WHERE `dag_id`=%s;""",
         }
         try:
             self.statement = d[self.column]
@@ -256,7 +257,7 @@ class TaskExists:
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
 class TaskStart:
-    task: TaskORM
+    task: Operator
     parameters: tuple = None
     statement: str = None
     command: str = "task_start"
@@ -269,7 +270,7 @@ class TaskStart:
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
 class TaskStop:
-    task: TaskORM
+    task: Operator
     parameters: tuple = None
     statement: str = None
     command: str = "task_stop"
@@ -287,7 +288,7 @@ class TaskStop:
 
 @dataclass
 class LocalFileInsert:
-    entity: LocalFile
+    file: LocalFile
     statement: str = None
     parameters: tuple = None
     command: str = "localfile_insert"
@@ -295,26 +296,25 @@ class LocalFileInsert:
     def __post_init__(self) -> None:
         self.statement = """
             INSERT INTO localfile
-            (`name`, `dataset`, `dataset_id`, `datasource`, `stage`, `storage_type`, `filename`, `filepath`, `format`,
-            `compressed`, `size`, `dag_id`, `task_id`, `home`, `created`)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            (`name`, `source`, `dataset`, `stage_id`, `stage_name`, `filepath`, `directory`, `filename`, `format`,
+            `compressed`, `size`, `dag_id`, `task_id`, `created`)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
             """
         self.parameters = (
-            self.entity.name,
-            self.entity.dataset,
-            self.entity.dataset_id,
-            self.entity.datasource,
-            self.entity.stage,
-            self.entity.storage_type,
-            self.entity.filename,
-            self.entity.filepath,
-            self.entity.format,
-            self.entity.compressed,
-            self.entity.size,
-            self.entity.dag_id,
-            self.entity.task_id,
-            self.entity.home,
-            self.entity.created,
+            self.file.name,
+            self.file.source,
+            self.file.dataset,
+            self.file.stage_id,
+            self.file.stage_name,
+            self.file.filepath,
+            self.file.directory,
+            self.file.filename,
+            self.file.format,
+            self.file.compressed,
+            self.file.size,
+            self.file.dag_id,
+            self.file.task_id,
+            self.file.created,
         )
 
 
@@ -344,9 +344,9 @@ class LocalFileSelectByColumn:
             "id": """SELECT * FROM `localfile` WHERE `id`=%s;""",
             "name": """SELECT * FROM `localfile` WHERE `name`=%s;""",
             "dataset": """SELECT * FROM `localfile` WHERE `dataset`=%s;""",
-            "datasource": """SELECT * FROM `localfile` WHERE `datasource`=%s;""",
-            "stage": """SELECT * FROM `localfile` WHERE `stage` =%s;""",
-            "storage_type": """SELECT * FROM `localfile` WHERE `storage_type`=%s;""",
+            "source": """SELECT * FROM `localfile` WHERE `source`=%s;""",
+            "stage_id": """SELECT * FROM `localfile` WHERE `stage_id` =%s;""",
+            "stage_name": """SELECT * FROM `localfile` WHERE `stage_name` =%s;""",
         }
         try:
             self.statement = d[self.column]
@@ -369,8 +369,8 @@ class LocalFileSelectByKey:
     def __post_init__(self) -> None:
         self.statement = """SELECT * FROM `localfile` WHERE `name`=%s AND
                                                             `dataset`=%s AND
-                                                            `datasource`=%s AND
-                                                            `stage` =%s;"""
+                                                            `source`=%s AND
+                                                            `stage_id` =%s;"""
         self.parameters(self.name, self.dataset, self.datasource, self.stage)
 
 
@@ -408,10 +408,9 @@ class LocalFileExists:
 
     def __post_init__(self) -> None:
         self.statement = """SELECT EXISTS(SELECT * FROM `localfile` WHERE `name`=%s AND
-                                                                   `dataset_id`=%s AND
-                                                                   `datasource`=%s AND
-                                                                   `storage_type` =%s);"""
-        self.parameters = (self.name, self.dataset, self.datasource, self.stage)
+                                                                   `dataset`=%s AND
+                                                                   `source`=%s);"""
+        self.parameters = (self.name, self.dataset, self.source)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -421,7 +420,7 @@ class LocalFileExists:
 
 @dataclass
 class S3FileInsert:
-    entity: S3File
+    file: S3File
     statement: str = None
     parameters: tuple = None
     command: str = "s3file_insert"
@@ -434,19 +433,20 @@ class S3FileInsert:
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
                 """
         self.parameters = (
-            self.entity.name,
-            self.entity.dataset,
-            self.entity.dataset_id,
-            self.entity.datasource,
-            self.entity.storage_type,
-            self.entity.bucket,
-            self.entity.object_key,
-            self.entity.format,
-            self.entity.compressed,
-            self.entity.size,
-            self.entity.dag_id,
-            self.entity.task_id,
-            self.entity.created,
+            self.file.name,
+            self.file.source,
+            self.file.dataset,
+            self.file.stage_id,
+            self.file.stage_name,
+            self.file.bucket,
+            self.file.object_key,
+            self.file.filename,
+            self.file.format,
+            self.file.compressed,
+            self.file.size,
+            self.file.dag_id,
+            self.file.task_id,
+            self.file.created,
         )
 
 
@@ -476,9 +476,9 @@ class S3FileSelectByColumn:
             "id": """SELECT * FROM `s3file` WHERE `id`=%s;""",
             "name": """SELECT * FROM `s3file` WHERE `name`=%s;""",
             "dataset": """SELECT * FROM `s3file` WHERE `dataset`=%s;""",
-            "datasource": """SELECT * FROM `s3file` WHERE `datasource`=%s;""",
-            "stage": """SELECT * FROM `s3file` WHERE `stage` =%s;""",
-            "storage_type": """SELECT * FROM `s3file` WHERE `storage_type`=%s;""",
+            "source": """SELECT * FROM `s3file` WHERE `source`=%s;""",
+            "stage_id": """SELECT * FROM `s3file` WHERE `stage_id` =%s;""",
+            "stage_name": """SELECT * FROM `s3file` WHERE `stage_name` =%s;""",
         }
         try:
             self.statement = d[self.column]
@@ -501,7 +501,7 @@ class S3FileSelectByKey:
     def __post_init__(self) -> None:
         self.statement = """SELECT * FROM `s3file` WHERE `name`=%s AND
                                                             `dataset`=%s AND
-                                                            `datasource`=%s AND
+                                                            `source`=%s AND
                                                             `bucket`=%s;"""
         self.parameters(self.name, self.dataset, self.datasource, self.bucket)
 
@@ -519,20 +519,17 @@ class S3FileSelectAll:
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
 class S3FileExists:
-    name: str
-    dataset: str
-    datasource: str
+    bucket: str
+    object_key: str
     statement: str = None
     parameters: tuple = None
     bucket: str = "deepctr"
     command: str = "s3file_exists"
 
     def __post_init__(self) -> None:
-        self.statement = """SELECT EXISTS(SELECT * FROM `s3file` WHERE `name`=%s AND
-                                                                   `dataset_id`=%s AND
-                                                                   `datasource`=%s AND
-                                                                   `storage_type`=%s);"""
-        self.parameters = (self.name, self.dataset, self.datasource, self.bucket)
+        self.statement = """SELECT EXISTS(SELECT * FROM `s3file` WHERE `bucket`=%s AND
+                                                                   `object_key`=%s);"""
+        self.parameters = (self.bucket, self.object_key)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -544,432 +541,3 @@ class S3FileDelete:
 
     def __post_init__(self) -> None:
         self.statement = """DELETE FROM `s3file` WHERE `id`=%s;"""
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                         DATASET                                                  #
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class DatasetInsert:
-    entity: Dataset
-    statement: str = None
-    parameters: tuple = None
-    command: str = "dataset_insert"
-
-    def __post_init__(self) -> None:
-        self.statement = """
-                    INSERT INTO dataset
-                    (`name`, `desc`, `status`, `datasource`, `storage_type`,`table`, `dag_id`, `task_id`, `created`)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
-                    """
-        self.parameters = (
-            self.entity.name,
-            self.entity.desc,
-            self.entity.status,
-            self.entity.datasource,
-            self.entity.storage_type,
-            self.entity.table,
-            self.entity.dag_id,
-            self.entity.task_id,
-            self.entity.created,
-        )
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class DatasetSelectOne:
-    parameters: tuple
-    statement: str
-    command: str = "dataset_selectone"
-
-    def __post_init__(self) -> None:
-        self.statement = """SELECT * FROM `dataset` WHERE `id`=%s;"""
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class DatasetSelectByColumn:
-    column: str
-    value: Any
-    parameters: tuple = None
-    statement: str = None
-    command: str = "dataset_select_by_column"
-
-    def __post_init__(self) -> None:
-        self.parameters = self.value
-        d = {
-            "id": """SELECT * FROM `dataset` WHERE `id`=%s;""",
-            "name": """SELECT * FROM `dataset` WHERE `name`=%s;""",
-            "datasource": """SELECT * FROM `dataset` WHERE `datasource`=%s;""",
-            "storage_type": """SELECT * FROM `dataset` WHERE `storage_type`=%s;""",
-        }
-        try:
-            self.statement = d[self.column]
-        except KeyError as e:
-            logger.error("{} is not a valid search column.".format(self.by))
-            raise ValueError(e)
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class DatasetSelectByKey:
-    name: str
-    datasource: str
-    stage: str
-    statement: str = None
-    parameters: tuple = None
-    command: str = "dataset_select_by_key"
-
-    def __post_init__(self) -> None:
-        self.statement = """SELECT * FROM `dataset` WHERE `name`=%s AND
-                                                            `datasource`=%s;"""
-        self.parameters(self.name, self.datasource, self.stage)
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class DatasetSelectAll:
-    statement: str = None
-    command: str = "dataset_selectall"
-
-    def __post_init__(self) -> None:
-        self.statement = """SELECT * FROM `dataset`;"""
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class DatasetUpdate:
-    name: str
-    desc: str
-    status: str
-    datasource: str
-    storage_type: str
-    table: str
-    dag_id: int
-    task_id: int
-    created: datetime
-    parameters: tuple
-    statement: str
-    command: str = "dataset_update"
-
-    def __post_init__(self) -> None:
-        self.parameters = (
-            self.name,
-            self.desc,
-            self.status,
-            self.datasource,
-            self.storage_type,
-            self.table,
-            self.dag_id,
-            self.task_id,
-            self.created,
-        )
-        self.statement = """UPDATE `dataset` SET {`name`, `desc`, `status`, `datasource`,
-        `storage_type`, `table`, `dag_id`, `task_id`, `created`} WHERE `id`=%s;"""
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class DatasetDelete:
-    parameters: tuple
-    statement: str
-    command: str = "dataset_delete"
-
-    def __post_init__(self) -> None:
-        self.statement = """DELETE FROM `dataset` WHERE `id`=%s;"""
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class DatasetExists:
-    name: str
-    datasource: str
-    stage: str
-    statement: str = None
-    parameters: tuple = None
-    command: str = "dataset_exists"
-
-    def __post_init__(self) -> None:
-        self.statement = """SELECT EXISTS(SELECT * FROM `file` WHERE `name`=%s AND
-                                                                   `datasource`=%s AND
-                                                                   `storage_type`=%s);"""
-        self.parameters = (self.name, self.datasource, self.stage)
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                       LOCAL DATASET                                              #
-# ------------------------------------------------------------------------------------------------ #
-
-
-@dataclass
-class LocalDatasetInsert:
-    entity: LocalDataset
-    statement: str = None
-    parameters: tuple = None
-    command: str = "localdataset_insert"
-
-    def __post_init__(self) -> None:
-        self.statement = """
-                    INSERT INTO localdataset
-                    (`name`, `datasource`, `stage`, `storage_type`, `folder`, `size`, `dag_id`, `home`, `created`)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
-                    """
-        self.parameters = (
-            self.entity.name,
-            self.entity.datasource,
-            self.entity.stage,
-            self.entity.storage_type,
-            self.entity.folder,
-            self.entity.size,
-            self.entity.dag_id,
-            self.entity.home,
-            self.entity.created,
-        )
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class LocalDatasetSelectOne:
-    parameters: tuple
-    statement: str
-    command: str = "localdataset_selectone"
-
-    def __post_init__(self) -> None:
-        self.statement = """SELECT * FROM `localdataset` WHERE `id`=%s;"""
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class LocalDatasetSelectByColumn:
-    column: str
-    value: Any
-    parameters: tuple = None
-    statement: str = None
-    command: str = "localdataset_select_by_column"
-
-    def __post_init__(self) -> None:
-        self.parameters = self.value
-        d = {
-            "id": """SELECT * FROM `localdataset` WHERE `id`=%s;""",
-            "name": """SELECT * FROM `localdataset` WHERE `name`=%s;""",
-            "datasource": """SELECT * FROM `localdataset` WHERE `datasource`=%s;""",
-            "stage": """SELECT * FROM `localdataset` WHERE `stage` =%s;""",
-            "storage_type": """SELECT * FROM `localdataset` WHERE `storage_type`=%s;""",
-        }
-        try:
-            self.statement = d[self.column]
-        except KeyError as e:
-            logger.error("{} is not a valid search column.".format(self.by))
-            raise ValueError(e)
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class LocalDatasetSelectByKey:
-    name: str
-    datasource: str
-    stage: str
-    statement: str = None
-    parameters: tuple = None
-    command: str = "localdataset_select_by_key"
-
-    def __post_init__(self) -> None:
-        self.statement = """SELECT * FROM `localdataset` WHERE `name`=%s AND
-                                                            `datasource`=%s AND
-                                                            `stage` =%s;"""
-        self.parameters(self.name, self.datasource, self.stage)
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class LocalDatasetSelectAll:
-    statement: str = None
-    command: str = "localdataset_selectall"
-
-    def __post_init__(self) -> None:
-        self.statement = """SELECT * FROM `localdataset`;"""
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class LocalDatasetUpdate:
-    name: str
-    desc: str
-    status: str
-    datasource: str
-    stage: str
-    storage_type: str
-    folder: str
-    size: int
-    dag_id: int
-    task_id: int
-    home: str
-    created: datetime
-    parameters: tuple
-    statement: str
-    command: str = "local_dataset_update"
-
-    def __post_init__(self) -> None:
-        self.parameters = (
-            self.name,
-            self.desc,
-            self.status,
-            self.datasource,
-            self.stage,
-            self.storage_type,
-            self.folder,
-            self.size,
-            self.dag_id,
-            self.task_id,
-            self.home,
-            self.created,
-        )
-        self.statement = """UPDATE `localdataset` SET {`name`, `desc`, `status`, `datasource`,
-        `stage`, `storage_type`, `folder`,`size`, `dag_id`, `task_id`,`home`, `created`} WHERE `id`=%s;"""
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class LocalDatasetDelete:
-    parameters: tuple
-    statement: str
-    command: str = "localdataset_delete"
-
-    def __post_init__(self) -> None:
-        self.statement = """DELETE FROM `localdataset` WHERE `id`=%s;"""
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class LocalDatasetExists:
-    name: str
-    datasource: str
-    stage: str
-    statement: str = None
-    parameters: tuple = None
-    command: str = "localdataset_exists"
-
-    def __post_init__(self) -> None:
-        self.statement = """SELECT EXISTS(SELECT * FROM `localfile` WHERE `name`=%s AND
-                                                                   `datasource`=%s AND
-                                                                   `storage_type` =%s);"""
-        self.parameters = (self.name, self.datasource, self.stage)
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                       S3 DATASET                                                 #
-# ------------------------------------------------------------------------------------------------ #
-
-
-@dataclass
-class S3DatasetInsert:
-    entity: S3Dataset
-    statement: str = None
-    parameters: tuple = None
-    command: str = "s3dataset_insert"
-
-    def __post_init__(self) -> None:
-        self.statement = """
-                INSERT INTO s3dataset
-                (`name`, `datasource`, `storage_type`, `bucket`, `folder`, `size`, `dag_id`, `created`)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
-                """
-        self.parameters = (
-            self.entity.name,
-            self.entity.datasource,
-            self.entity.storage_type,
-            self.entity.bucket,
-            self.entity.folder,
-            self.entity.size,
-            self.entity.dag_id,
-            self.entity.created,
-        )
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class S3DatasetSelectOne:
-    parameters: tuple
-    statement: str = None
-    command: str = "s3dataset_selectone"
-
-    def __post_init__(self) -> None:
-        self.statement = """SELECT * FROM `s3dataset` WHERE `id`=%s;"""
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class S3DatasetSelectByColumn:
-    column: str
-    value: Any
-    parameters: tuple = None
-    statement: str = None
-    command: str = "s3dataset_select_by_column"
-
-    def __post_init__(self) -> None:
-        self.parameters = self.value
-        d = {
-            "id": """SELECT * FROM `s3dataset` WHERE `id`=%s;""",
-            "name": """SELECT * FROM `s3dataset` WHERE `name`=%s;""",
-            "datasource": """SELECT * FROM `s3dataset` WHERE `datasource`=%s;""",
-            "stage": """SELECT * FROM `s3dataset` WHERE `stage` =%s;""",
-            "storage_type": """SELECT * FROM `s3dataset` WHERE `storage_type`=%s;""",
-        }
-        try:
-            self.statement = d[self.column]
-        except KeyError as e:
-            logger.error("{} is not a valid search column.".format(self.by))
-            raise ValueError(e)
-
-
-@dataclass
-class S3DatasetSelectByKey:
-    name: str
-    datasource: str
-    bucket: str = "deepctr"
-    statement: str = None
-    parameters: tuple = None
-    command: str = "s3dataset_select_by_key"
-
-    def __post_init__(self) -> None:
-        self.statement = """SELECT * FROM `s3file` WHERE `name`=%s AND
-                                                            `datasource`=%s AND
-                                                            `bucket`=%s;"""
-        self.parameters(self.name, self.datasource, self.bucket)
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class S3DatasetSelectAll:
-    statement: str = None
-    command: str = "s3dataset_selectall"
-
-    def __post_init__(self) -> None:
-        self.statement = """SELECT * FROM `s3dataset`;"""
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class S3DatasetDelete:
-    parameters: tuple
-    statement: str = None
-    command: str = "s3dataset_delete"
-
-    def __post_init__(self) -> None:
-        self.statement = """DELETE FROM `s3dataset` WHERE `id`=%s;"""
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class S3DatasetExists:
-    name: str
-    datasource: str
-    statement: str = None
-    parameters: tuple = None
-    command: str = "s3dataset_exists"
-
-    def __post_init__(self) -> None:
-        self.statement = """SELECT EXISTS(SELECT * FROM `s3dataset` WHERE `name`=%s AND
-                                                                   `datasource`=%s AND
-                                                                   `storage_type` = %s);"""
-        self.parameters = (self.name, self.datasource)

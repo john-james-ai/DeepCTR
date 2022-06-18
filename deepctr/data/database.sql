@@ -29,7 +29,7 @@ CREATE TABLE `localfile` (
     `stage_id` INTEGER, NOT NULL,
     `stage_name` VARCHAR(16) NOT NULL,
     `filepath` VARCHAR(256) NOT NULL,
-    `directory` VARCHAR(256) NOT NULL,
+    `folder` VARCHAR(256) NOT NULL,
     `filename` VARCHAR(256) NOT NULL,
     `format` VARCHAR(16) NOT NULL,
     `compressed` BOOLEAN NOT NULL,
@@ -68,7 +68,6 @@ CREATE TABLE `s3file` (
 
 CREATE TABLE `dag` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `seq` INTEGER NULL,
     `name` VARCHAR(64) NOT NULL,
     `desc` VARCHAR(256) NULL,
     `start` DATETIME NULL,

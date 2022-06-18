@@ -18,11 +18,16 @@ tasks:
     task_description: Downloads Alibaba Display Ad Data from Amazon S3
     task_params:
       source:
+        name: vesuvio
+        source: alibaba
+        stage_id: 0
+        stage_name: external
+        format: csv
         bucket: deepctr
         folder: alibaba/vesuvio/
       destination:
         home: data
-        datasource: alibaba
+        source: alibaba
         dataset: vesuvio
         stage: extract
       force: False
@@ -42,7 +47,7 @@ tasks:
         home: data
         name: raw_sample
         dataset: vesuvio
-        datasource: alibaba
+        source: alibaba
         storage_type: local
         compressed: False
         stage: raw
@@ -75,7 +80,7 @@ tasks:
         home: data
         name: impression
         dataset: vesuvio
-        datasource: alibaba
+        source: alibaba
         storage_type: local
         compressed: False
         stage: staged
@@ -98,7 +103,7 @@ tasks:
         home: data
         name: user_profile
         dataset: vesuvio
-        datasource: alibaba
+        source: alibaba
         storage_type: local
         compressed: False
         stage: raw
@@ -133,7 +138,7 @@ tasks:
         home: data
         name: user
         dataset: vesuvio
-        datasource: alibaba
+        source: alibaba
         storage_type: local
         compressed: False
         stage: staged
@@ -155,7 +160,7 @@ tasks:
         home: data
         name: ad_feature
         dataset: vesuvio
-        datasource: alibaba
+        source: alibaba
         storage_type: local
         compressed: False
         stage: raw
@@ -188,7 +193,7 @@ tasks:
         home: data
         name: ad
         dataset: vesuvio
-        datasource: alibaba
+        source: alibaba
         storage_type: local
         compressed: False
         stage: staged
@@ -211,7 +216,7 @@ tasks:
         home: data
         name: behavior_log
         dataset: vesuvio
-        datasource: alibaba
+        source: alibaba
         storage_type: local
         compressed: False
         stage: raw
@@ -243,7 +248,7 @@ tasks:
         home: data
         name: behavior
         dataset: vesuvio
-        datasource: alibaba
+        source: alibaba
         storage_type: local
         compressed: False
         stage: staged
