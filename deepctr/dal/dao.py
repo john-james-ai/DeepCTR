@@ -10,390 +10,428 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday May 21st 2022 11:10:43 pm                                                  #
-# Modified   : Saturday June 18th 2022 02:47:49 pm                                                 #
+# Modified   : Tuesday June 21st 2022 02:21:01 am                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
-from typing import Union
-from datetime import datetime
+from abc import ABC, abstractmethod
 import logging
-from typing import Any
+import pandas as pd
 from pymysql.connections import Connection
 
-from deepctr.dal.base import DAO
-from deepctr.utils.decorators import tracer
-
-from deepctr.dal.dto import DTO
-from deepctr.dal.sequel import (
-    DagInsert,
-    DagSelectOne,
-    DagSelectByColumn,
-    DagSelectAll,
-    DagDelete,
-    DagExists,
-    DagStart,
-    DagStop,
-)
-from deepctr.dal.sequel import (
-    TaskInsert,
-    TaskSelectOne,
-    TaskSelectByColumn,
-    TaskSelectByKey,
-    TaskSelectAll,
-    TaskDelete,
-    TaskExists,
-    TaskStart,
-    TaskStop,
-)
-
-
-from deepctr.dal.sequel import (
-    LocalFileInsert,
-    LocalFileSelectOne,
-    LocalFileSelectByColumn,
-    LocalFileSelectByKey,
-    LocalFileSelectAll,
-    LocalFileDelete,
-    LocalFileExists,
-)
-
-from deepctr.dal.sequel import (
-    S3FileInsert,
-    S3FileSelectOne,
-    S3FileSelectByColumn,
-    S3FileSelectByKey,
-    S3FileSelectAll,
-    S3FileDelete,
-    S3FileExists,
-)
-
-
+from deepctr.data.database import Database
+from deepctr.dal.entity import Entity, DagEntity, TaskEntity, LocalFileEntity, S3FileEntity
+from deepctr.dal.sequel import DagSQL, TaskSQL, LocalFileSQL, S3FileSQL
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
 logging.config.dictConfig(LOG_CONFIG)
 logger = logging.getLogger(__name__)
 
-# ------------------------------------------------------------------------------------------------ #
-#                                           DAG                                                    #
-# ------------------------------------------------------------------------------------------------ #
+# ================================================================================================ #
+#                                          DAO                                                     #
+# ================================================================================================ #
+
+
+class DAO(ABC):
+    """Table level access to the database."""
+
+    def __init__(self, connection: Connection) -> None:
+        self._connection = connection
+        self._connection.begin()
+        self._database = Database(self._connection)
+
+    # -------------------------------------------------------------------------------------------- #
+    @abstractmethod
+    def add(self, entity: Entity) -> None:
+        pass
+
+    # -------------------------------------------------------------------------------------------- #
+    @abstractmethod
+    def find(self, id: int) -> Entity:
+        pass
+
+    # -------------------------------------------------------------------------------------------- #
+    @abstractmethod
+    def findall(self, todf: bool = False) -> list:
+        pass
+
+    # -------------------------------------------------------------------------------------------- #
+    @abstractmethod
+    def update(self, entity: Entity) -> int:
+        pass
+
+    # -------------------------------------------------------------------------------------------- #
+    @abstractmethod
+    def delete(self, id: int) -> int:
+        pass
+
+    # -------------------------------------------------------------------------------------------- #
+    def begin_transaction(self) -> None:
+        self._connection.begin()
+
+    # -------------------------------------------------------------------------------------------- #
+    def rollback(self) -> None:
+        self._connection.rollback()
+
+    # -------------------------------------------------------------------------------------------- #
+    def commit(self) -> None:
+        self._connection.commit()
+
+
+# ================================================================================================ #
+#                                         DAGDAO                                                   #
+# ================================================================================================ #
 
 
 class DagDAO(DAO):
     """Provides access to dag table ."""
 
     def __init__(self, connection: Connection) -> None:
+        self.sql = DagSQL()
         super(DagDAO, self).__init__(connection)
 
-    def create(self, data: Union[dict, DTO]) -> Dag:
-        factory = DagFactory()
-        return factory.create_dag(data)
+    def add(self, entity: Entity) -> Entity:
+        """Adds an entity to the database
 
-    def add(self, dag: DagORM) -> None:
-        """Sets state of LocalDataset entity to 'added' and stores and adds its local store."""
-        sequel = DagInsert(dag)
-        id = self._database.insert(sequel.statement, sequel.parameters)
-        dag.id = id
-        logger.info("Executed command: {} with id: {}".format(sequel.command, str(id)))
-        return dag
+        Args:
+            entity (Entity): The entity to add to the database
 
-    def find(self, id: int) -> Union[DagORM, None]:
-        """Finds a LocalDataset entity by the designated column and value"""
-        sequel = DagSelectOne(parameters=(id))
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
+        Returns
+            Entity with the id updated with id from the database.
+        """
+        command = self.sql.insert(entity)
+        entity.id = self._database.insert(command.statement, command.parameters)
+        return entity
 
-    def find_by_column(self, column: str, value: Any) -> Union[DagORM, list]:
-        """Finds a Dag entity by the designated column and value"""
-        sequel = DagSelectByColumn(column=column, value=value)
-        return self._database.select(sequel.statement, sequel.parameters)
+    def find(self, id: int) -> Entity:
+        """Finds an entity based on the id and returns it as an entity dataclass.
 
-    def findall(self) -> list:
-        """Returns all datasets in the database."""
-        sequel = DagSelectAll()
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select_all(sequel.statement)
+        Args:
+            id (int): The id that uniquely identifies an entity
 
-    def remove(self, id: int) -> None:
-        """Removes the dataset based upon the selection criteria"""
-        sequel = DagDelete(id=id)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.execute(sequel.statement, sequel.parameters)
+        Returns
+            Entity
+        """
 
-    def exists(self, id: int) -> bool:
-        """Determines if a dataset exists"""
-        sequel = DagExists(id=id)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.exists(sequel.statement, sequel.parameters)
+        command = self.sql.select(id)
+        entity = self._database.select_one(command.statement, command.parameters)
+        return self.factory(entity)
 
-    def start(self, dag: DagORM) -> None:
-        dag.start = datetime.now()
-        sequel = DagStart(dag=dag)
-        logger.info("Executed command: {}".format(sequel.command))
-        self._database.execute(sequel.statement, sequel.parameters)
-        return dag
+    def findall(self, todf: bool = False) -> list:
+        """Returns all entities from the designated entity table."""
+        command = self.sql.select_all()
+        entities = self._database.select_all(command.statement)
+        if todf:
+            return pd.DataFrame.from_dict(entities)
+        return [self.factory(entity) for entity in entities]
 
-    def stop(self, dag: DagORM) -> None:
-        dag.stop = datetime.now()
-        dag.duration = (dag.stop - dag.start).total_seconds()
-        sequel = DagStop(dag=dag)
-        logger.info("Executed command: {}".format(sequel.command))
-        self._database.execute(sequel.statement, sequel.parameters)
-        return dag
+    def update(self, entity: Entity) -> None:
+        """Updates the entity
 
-    def begin_transaction(self) -> None:
-        self._database.begin_transaction()
+        Args:
+            entity (Entity): The entity to update. The entity is overwritten.
 
-    def rollback(self) -> None:
-        self._database.rollback()
+        """
+        command = self.sql.update(entity)
+        return self._database.execute(command.statement, command.parameters)
 
-    def save(self) -> None:
-        self._database.save()
+    def delete(self, id: int) -> None:
+        """Removes an entity from the database based upon id
+
+        Args:
+            id (int): The unique identifier for the entity
+
+        """
+        command = self.sql.delete(id)
+        return self._database.execute(command.statement, command.parameters)
+
+    def factory(self, entity: Entity) -> Entity:
+        """Factory method to convert database result to an entity object.
+
+        Args:
+            entity (Entity): An entity object of the derived type
+        """
+        return DagEntity(
+            id=entity["id"],
+            name=entity["name"],
+            desc=entity["desc"],
+            n_tasks=entity["n_tasks"],
+            n_tasks_done=entity["n_tasks_done"],
+            created=entity["created"],
+            modified=entity["modified"],
+            started=entity["started"],
+            stopped=entity["stopped"],
+            duration=entity["duration"],
+            return_code=entity["return_code"],
+        )
 
 
-# ------------------------------------------------------------------------------------------------ #
-#                                          TASK                                                    #
-# ------------------------------------------------------------------------------------------------ #
-
-
+# ================================================================================================ #
+#                                        TASKDAO                                                   #
+# ================================================================================================ #
 class TaskDAO(DAO):
     """Provides access to task table ."""
 
     def __init__(self, connection: Connection) -> None:
+        self.sql = TaskSQL()
         super(TaskDAO, self).__init__(connection)
 
-    def create(self, data: Union[dict, DTO]) -> TaskORM:
-        factory = DagFactory()
-        return factory.create_task(data)
+    def add(self, entity: Entity) -> Entity:
+        """Adds an entity to the database
 
-    def add(self, task: TaskORM) -> None:
-        """Sets state of LocalDataset entity to 'added' and stores and adds its local store."""
-        sequel = TaskInsert(task)
-        id = self._database.insert(sequel.statement, sequel.parameters)
-        task.id = id
-        logger.info("Executed command: {}".format(sequel.command))
-        return task
+        Args:
+            entity (Entity): The entity to add to the database
 
-    def find(self, id: int) -> Union[TaskORM, None]:
-        """Finds a LocalDataset entity by the designated column and value"""
-        sequel = TaskSelectOne(parameters=(id))
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
+        Returns
+            Entity with the id updated with id from the database.
+        """
+        command = self.sql.insert(entity)
+        entity.id = self._database.insert(command.statement, command.parameters)
+        return entity
 
-    def find_by_key(self, task_id: int, dag_id: int) -> Union[TaskORM, None]:
-        """Finds a Task entity by the dag and task id"""
-        sequel = TaskSelectByKey(task_id=task_id, dag_id=dag_id)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
+    def find(self, id: int) -> Entity:
+        """Finds an entity based on the id and returns it as an entity dataclass.
 
-    def find_by_column(self, column: str, value: Any) -> Union[TaskORM, list]:
-        """Finds a Task entity by the designated column and value"""
-        sequel = TaskSelectByColumn(column=column, value=value)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
+        Args:
+            id (int): The id that uniquely identifies an entity
 
-    def findall(self) -> list:
-        """Returns all datasets in the database."""
-        sequel = TaskSelectAll()
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select_all(sequel.statement)
+        Returns
+            Entity
+        """
 
-    def remove(self, id: int) -> None:
-        """Removes the dataset based upon the selection criteria"""
-        sequel = TaskDelete(id=id)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.execute(sequel.statement, sequel.parameters)
+        command = self.sql.select(id)
+        entity = self._database.select_one(command.statement, command.parameters)
+        return self.factory(entity)
 
-    def exists(self, id: int) -> bool:
-        """Determines if a dataset exists"""
-        sequel = TaskExists(id=id)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.exists(sequel.statement, sequel.parameters)
+    def findall(self, todf: bool = False) -> list:
+        """Returns all entities from the designated entity table."""
+        command = self.sql.select_all()
+        entities = self._database.select_all(command.statement)
+        if todf:
+            return pd.DataFrame.from_dict(entities)
+        return [self.factory(entity) for entity in entities]
 
-    def begin_transaction(self) -> None:
-        self._database.begin_transaction()
+    def update(self, entity: Entity) -> None:
+        """Updates the entity
 
-    def rollback(self) -> None:
-        self._database.rollback()
+        Args:
+            entity (Entity): The entity to update. The entity is overwritten.
 
-    def save(self) -> None:
-        self._database.save()
+        """
+        command = self.sql.update(entity)
+        return self._database.execute(command.statement, command.parameters)
 
-    def start(self, task: TaskORM) -> None:
-        task.start = datetime.now()
-        sequel = TaskStart(task=task)
-        logger.info("Executed command: {}".format(sequel.command))
-        self._database.execute(sequel.statement, sequel.parameters)
-        return task
+    def delete(self, id: int) -> None:
+        """Removes an entity from the database based upon id
 
-    def stop(self, task: TaskORM) -> None:
-        task.stop = datetime.now()
-        task.duration = (task.stop - task.start).total_seconds()
-        sequel = TaskStop(task=task)
-        logger.info("Executed command: {}".format(sequel.command))
-        self._database.execute(sequel.statement, sequel.parameters)
-        return task
+        Args:
+            id (int): The unique identifier for the entity
+
+        """
+        command = self.sql.delete(id)
+        return self._database.execute(command.statement, command.parameters)
+
+    def factory(self, entity: Entity) -> Entity:
+        """Factory method to convert database result to an entity object.
+
+        Args:
+            entity (Entity): An entity object of the derived type
+        """
+        return TaskEntity(
+            id=entity["id"],
+            name=entity["name"],
+            desc=entity["desc"],
+            seq=entity["seq"],
+            dag_id=entity["dag_id"],
+            created=entity["created"],
+            modified=entity["modified"],
+            started=entity["started"],
+            stopped=entity["stopped"],
+            duration=entity["duration"],
+            return_code=entity["return_code"],
+        )
 
 
-# ------------------------------------------------------------------------------------------------ #
-#                                         LOCAL FILE DAO                                           #
-# ------------------------------------------------------------------------------------------------ #
+# ================================================================================================ #
+#                                      LOCALFILE DAO                                               #
+# ================================================================================================ #
 class LocalFileDAO(DAO):
-    """Provides access to local file table."""
+    """Provides access to localfile table ."""
 
     def __init__(self, connection: Connection) -> None:
+        self.sql = LocalFileSQL()
         super(LocalFileDAO, self).__init__(connection)
 
-    def create(self, data: Union[dict, DTO]) -> LocalFile:
-        factory = LocalEntityFactory()
-        return factory.create_file(data)
-
-    def add(self, file: LocalFile) -> None:
-        """Sets state of LocalFile entity to 'added' and stores and adds its local store."""
-        sequel = LocalFileInsert(file)
-        id = self._database.insert(sequel.statement, sequel.parameters)
-        file.id = id
-        logger.info("Executed command: {}".format(sequel.command))
-        return id
-
-    def find(self, id: int) -> Union[LocalFile, None]:
-        """Finds a LocalFile entity by the designated column and value"""
-        sequel = LocalFileSelectOne(parameters=(id))
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
-
-    def find_by_key(
-        self, name: str, dataset: str, datasource: str, stage: str
-    ) -> Union[LocalFile, None]:
-        """Finds a LocalFile entity by the designated column and value"""
-        sequel = LocalFileSelectByKey(
-            name=name, dataset=dataset, datasource=datasource, stage=stage
-        )
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
-
-    def find_by_column(self, column: str, value: Any) -> Union[LocalFile, list]:
-        """Finds a LocalFile entity by the designated column and value"""
-        sequel = LocalFileSelectByColumn(column=column, value=value)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
-
-    def findall(self) -> list:
-        """Returns all files in the database."""
-        sequel = LocalFileSelectAll()
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select_all(sequel.statement)
-
-    def remove(self, id: int) -> None:
-        """Removes the file based upon the selection criteria"""
-        sequel = LocalFileDelete(id=id)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.execute(sequel.statement, sequel.parameters)
-
-    def exists(self, file: File, id: bool = False) -> bool:
-        """Determines if a file exists.
+    def add(self, entity: Entity) -> Entity:
+        """Adds an entity to the database
 
         Args:
-            file (File): The FileORM object
-            id (bool): If True, the primary key for the object matching if exists.
+            entity (Entity): The entity to add to the database
+
+        Returns
+            Entity with the id updated with id from the database.
+        """
+        command = self.sql.insert(entity)
+        entity.id = self._database.insert(command.statement, command.parameters)
+        return entity
+
+    def find(self, id: int) -> Entity:
+        """Finds an entity based on the id and returns it as an entity dataclass.
+
+        Args:
+            id (int): The id that uniquely identifies an entity
+
+        Returns
+            Entity
         """
 
-        """Determines if a file exists"""
-        sequel = LocalFileExists(
-            name=file.name,
-            dataset=file.dataset,
-            datasource=file.datasource,
-            storage_type=file.storage_type,
+        command = self.sql.select(id)
+        entity = self._database.select_one(command.statement, command.parameters)
+        return self.factory(entity)
+
+    def findall(self, todf: bool = False) -> list:
+        """Returns all entities from the designated entity table."""
+        command = self.sql.select_all()
+        entities = self._database.select_all(command.statement)
+        if todf:
+            return pd.DataFrame.from_dict(entities)
+        return [self.factory(entity) for entity in entities]
+
+    def update(self, entity: Entity) -> None:
+        """Updates the entity
+
+        Args:
+            entity (Entity): The entity to update. The entity is overwritten.
+
+        """
+        command = self.sql.update(entity)
+        return self._database.execute(command.statement, command.parameters)
+
+    def delete(self, id: int) -> None:
+        """Removes an entity from the database based upon id
+
+        Args:
+            id (int): The unique identifier for the entity
+
+        """
+        command = self.sql.delete(id)
+        return self._database.execute(command.statement, command.parameters)
+
+    def factory(self, entity: Entity) -> Entity:
+        """Factory method to convert database result to an entity object.
+
+        Args:
+            entity (Entity): An entity object of the derived type
+        """
+        localfile = LocalFileEntity(
+            id=entity["id"],
+            name=entity["name"],
+            source=entity["source"],
+            dataset=entity["dataset"],
+            stage_id=entity["stage_id"],
+            stage_name=entity["stage_name"],
+            filepath=entity["filepath"],
+            format=entity["format"],
+            compressed=entity["compressed"],
+            size=entity["size"],
+            created=entity["created"],
         )
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.exists(sequel.statement, sequel.parameters)
-
-    def begin_transaction(self) -> None:
-        self._database.begin_transaction()
-
-    def rollback(self) -> None:
-        self._database.rollback()
-
-    def save(self) -> None:
-        self._database.save()
+        if localfile.compressed == 1:
+            localfile.compressed = True
+        else:
+            localfile.compressed = False
+        return localfile
 
 
-# ------------------------------------------------------------------------------------------------ #
-#                                         S3 FILE DAO                                           #
-# ------------------------------------------------------------------------------------------------ #
+# ================================================================================================ #
+#                                      S3FILE DAO                                                  #
+# ================================================================================================ #
 class S3FileDAO(DAO):
-    """Provides access to s3 file table."""
+    """Provides access to localfile table ."""
 
     def __init__(self, connection: Connection) -> None:
+        self.sql = S3FileSQL()
         super(S3FileDAO, self).__init__(connection)
 
-    def create(self, data: Union[dict, DTO]) -> S3File:
-        factory = S3EntityFactory()
-        return factory.create_file(data)
-
-    def add(self, file: S3File) -> None:
-        """Sets state of S3File entity to 'added' and stores and adds its s3 store."""
-        sequel = S3FileInsert(file)
-        id = self._database.insert(sequel.statement, sequel.parameters)
-        file.id = id
-        logger.info("Executed command: {}".format(sequel.command))
-        return id
-
-    def find(self, id: int) -> Union[S3File, None]:
-        """Finds a S3File entity by the designated column and value"""
-        sequel = S3FileSelectOne(parameters=(id))
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
-
-    def find_by_key(
-        self, name: str, dataset: str, datasource: str, stage: str
-    ) -> Union[S3File, None]:
-        """Finds a S3File entity by the designated column and value"""
-        sequel = S3FileSelectByKey(name=name, dataset=dataset, datasource=datasource, stage=stage)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
-
-    def find_by_column(self, column: str, value: Any) -> Union[S3File, list]:
-        """Finds a S3File entity by the designated column and value"""
-        sequel = S3FileSelectByColumn(column=column, value=value)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select(sequel.statement, sequel.parameters)
-
-    def findall(self) -> list:
-        """Returns all files in the database."""
-        sequel = S3FileSelectAll()
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.select_all(sequel.statement)
-
-    def remove(self, id: int) -> None:
-        """Removes the file based upon the selection criteria"""
-        sequel = S3FileDelete(id=id)
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.execute(sequel.statement, sequel.parameters)
-
-    def exists(self, file: File, id: bool = False) -> bool:
-        """Determines if a file exists.
+    def add(self, entity: Entity) -> Entity:
+        """Adds an entity to the database
 
         Args:
-            file (File): The FileORM object
-            id (bool): If True, the primary key for the object matching if exists.
+            entity (Entity): The entity to add to the database
+
+        Returns
+            Entity with the id updated with id from the database.
+        """
+        command = self.sql.insert(entity)
+        entity.id = self._database.insert(command.statement, command.parameters)
+        return entity
+
+    def find(self, id: int) -> Entity:
+        """Finds an entity based on the id and returns it as an entity dataclass.
+
+        Args:
+            id (int): The id that uniquely identifies an entity
+
+        Returns
+            Entity
         """
 
-        sequel = S3FileExists(
-            name=file.name,
-            dataset=file.dataset,
-            datasource=file.datasource,
-            storage_type=file.storage_type,
+        command = self.sql.select(id)
+        entity = self._database.select_one(command.statement, command.parameters)
+        return self.factory(entity)
+
+    def findall(self, todf: bool = False) -> list:
+        """Returns all entities from the designated entity table."""
+        command = self.sql.select_all()
+        entities = self._database.select_all(command.statement)
+        if todf:
+            return pd.DataFrame.from_dict(entities)
+        return [self.factory(entity) for entity in entities]
+
+    def update(self, entity: Entity) -> None:
+        """Updates the entity
+
+        Args:
+            entity (Entity): The entity to update. The entity is overwritten.
+
+        """
+        command = self.sql.update(entity)
+        return self._database.execute(command.statement, command.parameters)
+
+    def delete(self, id: int) -> None:
+        """Removes an entity from the database based upon id
+
+        Args:
+            id (int): The unique identifier for the entity
+
+        """
+        command = self.sql.delete(id)
+        return self._database.execute(command.statement, command.parameters)
+
+    def factory(self, entity: Entity) -> Entity:
+        """Factory method to convert database result to an entity object.
+
+        Args:
+            entity (Entity): An entity object of the derived type
+        """
+        s3file = S3FileEntity(
+            id=entity["id"],
+            name=entity["name"],
+            source=entity["source"],
+            dataset=entity["dataset"],
+            stage_id=entity["stage_id"],
+            stage_name=entity["stage_name"],
+            bucket=entity["bucket"],
+            object_key=entity["object_key"],
+            format=entity["format"],
+            compressed=entity["compressed"],
+            size=entity["size"],
+            created=entity["created"],
         )
-        logger.info("Executed command: {}".format(sequel.command))
-        return self._database.exists(sequel.statement, sequel.parameters)
-
-    def begin_transaction(self) -> None:
-        self._database.begin_transaction()
-
-    def rollback(self) -> None:
-        self._database.rollback()
-
-    def save(self) -> None:
-        self._database.save()
+        if s3file.compressed == 1:
+            s3file.compressed = True
+        else:
+            s3file.compressed = False
+        return s3file

@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday May 13th 2022 02:51:48 pm                                                    #
-# Modified   : Saturday June 18th 2022 02:20:39 pm                                                 #
+# Modified   : Sunday June 19th 2022 04:27:06 pm                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -47,12 +47,10 @@ class Dataset:
     stage_id: int  # The data processing stage number
     stage_name: str  # The data processing stage name
     storage_type: str  # Where the data are stored. Either 's3', or 'local'
-    folder: str  # The folder containing the files
     format: str  # The format, either csv or parquet
     compressed: bool  # Indicates whether the data are compressed.
-    dag_id: int = 0  # The dag id for the dag that created the Dataset object.
-    task_id: int  # The task_id for the task that created the Dataset.
-    bucket: str = None  # The bucket containing the files if the dataset has an 's3' storage type.
+    bucket: str = None  # The bucket containing the files. Used for aws datasets.
+    folder: str = None  # The folder containing the files. Used for aws datasets.
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -67,15 +65,17 @@ class File(ABC):
     dataset: str  # The collection to which the file belongs
     stage_id: int  # The stage identifier. See lab_book.md for stage_ids
     stage_name: str  # The human readable name of the stage
-    folder: str  # The folder containing the file.
     format: str  # The format of the data, i.e. csv, parquet
     dag_id: int  # The dag_id for the dag in which the file was created.
     task_id: int  # The task_id for the task that created the file.
+    size: int = 0  # The size of the file in bytes
+    id: int = 0  # The id assigned by the database
+    created: datetime = datetime.now()  # Should be overwritten if file exists.
 
     __sources: ClassVar[list[str]] = ["alibaba", "avazu", "criteo"]
     __stage_ids: ClassVar[list[int]] = list(STATES.keys())
     __stage_names: ClassVar[list[str]] = list(STATES.values())
-    __formats: ClassVar[list[str]] = ["csv", "parquet"]
+    __formats: ClassVar[list[str]] = ["csv", "parquet", "tar.gz"]
 
     def _validate(self) -> None:
         if self.source not in File.__sources:
@@ -97,6 +97,11 @@ class File(ABC):
                 )
             )
 
+        if self.format not in File.__formats:
+            raise ValueError(
+                "{} is not a valid format. Valid values are {}.".format(self.format, File.__formats)
+            )
+
     @abstractmethod
     def _set_size(self) -> None:
         pass
@@ -107,7 +112,7 @@ class File(ABC):
 
     @staticmethod
     def factory(dataset: Dataset, filepath: str):
-        """Creates an object of the LocalFile or S3File class.
+        """Creates an object of the LocalFile or S3File class from a Dataset object
 
         Args:
             dataset (Dataset): The dataset containing the file
@@ -158,11 +163,7 @@ class LocalFile(File):
     """Defines the file objects stored locally."""
 
     filepath: str = None  # Path to the file
-    filename: str = None  # The name of the file i.e basename from filepath
     compressed: bool = False  # Indicates if the file is compressed
-    size: int = 0  # The size of the file in bytes
-    id: int = 0
-    created: datetime = datetime.now()
 
     def __post_init__(self) -> None:
         self._validate()
@@ -202,6 +203,18 @@ class LocalFile(File):
             "created": self.created,
         }
         return d
+
+    @staticmethod
+    def factory(dataset: Dataset, filepath: str):
+        """Creates an object of the LocalFile or S3File class.
+
+        Args:
+            dataset (Dataset): The dataset containing the file
+            filepath (str): The path to the file if local. If an S3File, the filepath
+                is synonymous with object_key.
+        """
+        # The name of the File is given by the filepath with the extension removed.
+        name = os.path.splitext(os.path.basename(filepath))[0]
 
 
 # ------------------------------------------------------------------------------------------------ #

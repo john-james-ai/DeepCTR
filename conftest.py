@@ -19,22 +19,14 @@
 # ================================================================================================ #
 """Includes fixtures, classes and functions supporting testing."""
 import pytest
-from datetime import datetime
 from pyspark.sql import SparkSession
 from sklearn.datasets import load_iris
-from deepctr.dal.dto import LocalFileDTO, S3FDatasetDTO, LocalDatasetDTO, S3FileDTO
 from deepctr.data.database import ConnectionFactory
 from deepctr.utils.database import parse_sql
 
-CONNECTIONS = {
-    "DATA": {
-        "setup": "tests/test_data/test_db_setup.sql",
-        "teardown": "tests/test_data/test_db_teardown.sql",
-    },
-    "DAL": {
-        "setup": "tests/test_dal/test_db_setup.sql",
-        "teardown": "tests/test_dal/test_db_teardown.sql",
-    },
+CONNECTION = {
+    "setup": "tests/test_dal/test_db_setup.sql",
+    "teardown": "tests/test_dal/test_db_teardown.sql",
 }
 
 # ------------------------------------------------------------------------------------------------ #
@@ -57,257 +49,25 @@ def spark_dataframe():
     return spark.createDataFrame(df)
 
 
-# ================================================================================================ #
-#                                          DATABASE                                                #
-# ================================================================================================ #
-@pytest.fixture(scope="module")
-def connection_data():
-    connection = ConnectionFactory().get_connection()
-    statements = parse_sql(filename=CONNECTIONS["DATA"].get("setup"))
-    with connection.cursor() as cursor:
-        for statement in statements:
-            cursor.execute(statement)
-        connection.commit()
-    connection.close()
-    connection = ConnectionFactory().get_connection(database="testdb")
-    yield connection
-    statements = parse_sql(filename=CONNECTIONS["DATA"].get("teardown"))
-    with connection.cursor() as cursor:
-        for statement in statements:
-            cursor.execute(statement)
-        connection.commit()
-    connection.close()
-
-
+# ------------------------------------------------------------------------------------------------ #
+#                                     CONNECTION                                                   #
 # ------------------------------------------------------------------------------------------------ #
 @pytest.fixture(scope="module")
-def connection_dal():
+def connection():
     connection = ConnectionFactory().get_connection()
-    statements = parse_sql(filename=CONNECTIONS["DAL"].get("setup"))
+    statements = parse_sql(filename=CONNECTION.get("setup"))
     with connection.cursor() as cursor:
         for statement in statements:
             cursor.execute(statement)
         connection.commit()
     connection.close()
-    connection = ConnectionFactory().get_connection(database="testdb")
+
+    connection = ConnectionFactory(database="testdal").get_connection()
     connection.begin()
     yield connection
-    statements = parse_sql(filename=CONNECTIONS["DAL"].get("teardown"))
+    statements = parse_sql(filename=CONNECTION.get("teardown"))
     with connection.cursor() as cursor:
         for statement in statements:
             cursor.execute(statement)
         connection.commit()
     connection.close()
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                          FILE DTOs                                               #
-# ------------------------------------------------------------------------------------------------ #
-@pytest.fixture(scope="module")
-def valid_local_file_dto():
-    return LocalFileDTO(
-        name="test_file",
-        dataset="test_dataset",
-        dataset_id=101,
-        datasource="avazu",
-        stage="staged",
-        format="csv",
-        size=100,
-        compressed=False,
-        storage_type="local",
-        dag_id=99,
-        task_id=22,
-        home="test/data",
-    )
-
-
-@pytest.fixture(scope="module")
-def valid_local_file_result():
-    result = {
-        "name": "test_file",
-        "dataset": "test_dataset",
-        "dataset_id": 101,
-        "datasource": "avazu",
-        "stage": "staged",
-        "format": "csv",
-        "size": 100,
-        "compressed": False,
-        "filename": "test_file.csv",
-        "filepath": "test/data/avazu/test_dataset/staged/test_file.csv",
-        "folder": "test/data/avazu/test_dataset/staged",
-        "bucket": None,
-        "object_key": None,
-        "storage_type": "local",
-        "dag_id": 99,
-        "task_id": 22,
-        "home": "test/data",
-        "created": datetime.now(),
-    }
-    return result
-
-
-@pytest.fixture(scope="module")
-def invalid_local_file_dto():
-    return LocalFileDTO(
-        name="test_file",
-        dataset="test_dataset",
-        dataset_id=101,
-        datasource="avazu",
-        stage="xxx",
-        format="csv",
-        size=100,
-        compressed=False,
-        storage_type="local",
-        dag_id=99,
-        task_id=22,
-        home="test/data",
-    )
-
-
-@pytest.fixture(scope="module")
-def valid_s3_file_dto():
-    return S3FileDTO(
-        name="test_file",
-        dataset="test_dataset",
-        dataset_id=101,
-        datasource="avazu",
-        format="csv",
-        stage="staged",
-        size=100,
-        object_key="avazu/test_dataset/test_file.csv.tar.gz",
-        bucket="deepctr",
-        compressed=True,
-        storage_type="s3",
-        dag_id=99,
-        task_id=22,
-    )
-
-
-@pytest.fixture(scope="module")
-def valid_s3_file_result():
-    result = {
-        "name": "test_file",
-        "dataset": "test_dataset",
-        "dataset_id": 101,
-        "datasource": "avazu",
-        "stage": "staged",
-        "format": "csv",
-        "size": 100,
-        "compressed": True,
-        "folder": "avazu/test_dataset",
-        "bucket": "deepctr",
-        "object_key": "avazu/test_dataset/test_file.csv.tar.gz",
-        "storage_type": "s3",
-        "dag_id": 99,
-        "task_id": 22,
-        "created": datetime.now(),
-    }
-    return result
-
-
-@pytest.fixture(scope="module")
-def invalid_s3_file_dto():
-    return S3FileDTO(
-        name="test_file",
-        dataset="test_dataset",
-        dataset_id=101,
-        datasource="avazu",
-        format="csv",
-        stage="XXXX",
-        size=100,
-        object_key="test_dataset/test_file.csv.tar.gz",
-        bucket="deepctr",
-        compressed=True,
-        storage_type="s3",
-        dag_id=99,
-        task_id=22,
-    )
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                        DATASET DTOs                                              #
-# ------------------------------------------------------------------------------------------------ #
-@pytest.fixture(scope="module")
-def valid_local_dataset_dto():
-    return LocalDatasetDTO(
-        name="test_dataset",
-        datasource="avazu",
-        stage="staged",
-        size=100,
-        storage_type="local",
-        dag_id=99,
-        home="test/data",
-    )
-
-
-@pytest.fixture(scope="module")
-def valid_local_dataset_result():
-    result = {
-        "name": "test_dataset",
-        "datasource": "avazu",
-        "stage": "staged",
-        "size": 100,
-        "folder": "test/data/avazu/test_dataset/staged",
-        "storage_type": "local",
-        "dag_id": 99,
-        "home": "test/data",
-        "created": datetime.now(),
-    }
-    return result
-
-
-@pytest.fixture(scope="module")
-def invalid_local_dataset_dto():
-    return LocalDatasetDTO(
-        name="test_dataset",
-        datasource="XXX",
-        stage="staged",
-        size=100,
-        storage_type="local",
-        dag_id=99,
-        home="test/data",
-    )
-
-
-@pytest.fixture(scope="module")
-def valid_s3_dataset_dto():
-    return S3FDatasetDTO(
-        name="test_dataset",
-        datasource="avazu",
-        stage="staged",
-        size=400,
-        folder="avazu/test_dataset",
-        bucket="deepctr",
-        storage_type="s3",
-        dag_id=99,
-    )
-
-
-@pytest.fixture(scope="module")
-def valid_s3_dataset_result():
-    result = {
-        "name": "test_dataset",
-        "datasource": "avazu",
-        "stage": "staged",
-        "size": 400,
-        "folder": "avazu/test_dataset",
-        "bucket": "deepctr",
-        "storage_type": "s3",
-        "dag_id": 99,
-        "created": datetime.now(),
-    }
-    return result
-
-
-@pytest.fixture(scope="module")
-def invalid_s3_dataset_dto():
-    return S3FDatasetDTO(
-        name="test_dataset",
-        datasource="xxxx",
-        stage="staged",
-        size=400,
-        folder="avazu/test_dataset",
-        bucket="deepctr",
-        storage_type="s3",
-        dag_id=99,
-    )

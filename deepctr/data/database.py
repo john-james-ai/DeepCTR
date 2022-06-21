@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 19th 2022 06:39:17 pm                                                  #
-# Modified   : Saturday May 28th 2022 04:49:01 am                                                  #
+# Modified   : Monday June 20th 2022 09:23:56 pm                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -48,20 +48,42 @@ class DBConfig:
 class ConnectionFactory:
     """MySQL database connections context manager."""
 
-    def get_connection(self, database: str = "deepctr", config: DBConfig = DBConfig()) -> None:
+    def __init__(self, database: str = None) -> None:
+        self._database = database
+        self._connection = None
+
+    def get_connection(self) -> pymysql.connect:
+        if self._connection is None:
+            return self._create()
+        elif self._connection.open:
+            return self._connection
+        else:
+            self._connection.close()
+            return self._create()
+
+    def _create(self) -> pymysql.connect:
+
+        load_dotenv()
+        host = os.getenv("HOST")
+        user = os.getenv("USER")
+        password = os.getenv("PASSWORD")
+        # port = os.getenv("PORT")
+        database = self._database if self._database is not None else os.getenv("DATABASE")
+
         try:
-            connection = pymysql.connect(
-                host=config.host,
-                user=config.user,
-                password=config.password,
+            self._connection = pymysql.connect(
+                host=host,
+                user=user,
+                password=password,
                 database=database,
                 cursorclass=pymysql.cursors.DictCursor,
                 charset="utf8mb4",
             )
-            logger.info("Database {} opened by {}".format(database, config.user))
-            return connection
-        except pymysql.err.MySQLError as e:
+            logger.info("Database {} opened by {}".format(database, user))
+        except pymysql.MySQLError as e:
             logger.error("Execute error %d: %s" % (e.args[0], e.args[1]))
+            raise ConnectionError(e)
+        return self._connection
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -198,5 +220,5 @@ class Database:
     def rollback(self) -> None:
         self._connection.rollback()
 
-    def save(self) -> None:
+    def commit(self) -> None:
         self._connection.commit()

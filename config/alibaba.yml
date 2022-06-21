@@ -22,15 +22,50 @@ tasks:
         source: alibaba
         stage_id: 0
         stage_name: external
+        storage_type: aws
         format: csv
+        compressed: True
         bucket: deepctr
         folder: alibaba/vesuvio/
       destination:
-        home: data
+        name: vesuvio
         source: alibaba
-        dataset: vesuvio
-        stage: extract
+        stage_id: 0
+        stage_name: external
+        storage_type: local
+        format: csv
+        compressed: True
       force: False
+
+  # ============================================================================================ #
+  #                                      DECOMPRESS                                              #
+  # ============================================================================================ #
+  2:
+    task: DecompressTARGZ
+    module: deepctr.dag.data_operators
+    task_no: 2
+    task_name: decompresstargz
+    task_description: Decompress tar.gz files 
+    task_params:
+      source:
+        name: vesuvio
+        source: alibaba
+        stage_id: 0
+        stage_name: external
+        storage_type: local
+        format: csv
+        compressed: True
+      destination:
+        name: vesuvio
+        source: alibaba
+        stage_id: 0
+        stage_name: external
+        storage_type: local
+        format: csv
+        compressed: True
+      force: False
+
+
 
   # ============================================================================================ #
   #                            RAW SAMPLES -> IMPRESSIONS                                        #

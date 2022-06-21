@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday May 10th 2022 03:30:15 pm                                                   #
-# Modified   : Saturday June 18th 2022 09:39:17 am                                                 #
+# Modified   : Monday June 20th 2022 01:16:20 am                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -46,53 +46,28 @@ class DAG(ABC):
 
     """
 
-    def __init__(self, name: str, desc: str, tasks: list) -> None:
+    def __init__(self, name: str, desc: str, tasks: list, context: Context) -> None:
         self._id = 0
         self._name = name
         self._desc = desc
         self._tasks = tasks
-        self._start = None
-        self._stop = None
+        self._context = context
+        self._started = None
+        self._stopped = None
         self._duration = None
         self._created = datetime.now()
 
-    @property
-    def name(self) -> str:
-        return self._name
+    def run(self, started: int = 0, stopped: float = float("inf")) -> None:
+        self._start()
+        self.execute(started=started, stopped=stopped, context=self._context)
+        self._stop()
 
-    @property
-    def desc(self) -> str:
-        return self._desc
+    def _start(self) -> None:
+        """Sets start time,  creates the dag db entry, and updates the id from the database."""
 
-    @property
-    def start(self) -> datetime:
-        return self._start
-
-    @property
-    def stop(self) -> datetime:
-        return self._stop
-
-    @property
-    def duration(self) -> datetime:
-        return self._duration
-
-    @property
-    def created(self) -> datetime:
-        return self._created
-
-    @property
-    def context(self) -> Context:
-        return self._context
-
-    @context.setter
-    def context(self, context: Context) -> None:
-        self._context = context
-
-    def run(self, start: int = 0, stop: float = float("inf")) -> None:
-        self._start = datetime.now()
-        self.execute(start=start, stop=stop, context=self._context)
-        self._stop = datetime.now()
-        self._duration = (self._stop - self._start).total_seconds()
+    def _insert_dag(self) -> int:
+        """Inserts the dag into the database and returns the dag id."""
+        dao = self._context.dag
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -112,11 +87,13 @@ class DataDAG(DAG):
     def __init__(self, name: str, desc: str, tasks: list) -> None:
         super(DataDAG, self).__init__(name=name, desc=desc, tasks=tasks)
 
-    def execute(self, start: int = 0, stop: float = float("inf"), context: Context = None) -> None:
+    def execute(
+        self, started: int = 0, stopped: float = float("inf"), context: Context = None
+    ) -> None:
         data = None
         with context as c:
             for task in self._tasks:
-                if task.seq >= start and task.seq <= stop:
+                if task.seq >= started and task.seq <= stopped:
                     result = task.run(data=data, context=c)
                     data = result if result is not None else data
 

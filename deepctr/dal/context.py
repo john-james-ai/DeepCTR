@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday May 22nd 2022 12:30:45 am                                                    #
-# Modified   : Saturday May 28th 2022 06:31:15 am                                                  #
+# Modified   : Monday June 20th 2022 02:21:46 am                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -18,11 +18,11 @@
 """Dataset context object that implements the Repository/Unit of Work Pattern."""
 from abc import ABC, abstractmethod
 import logging
-from deepctr.utils.log_config import LOG_CONFIG
 from pymysql.connections import Connection
-from deepctr.dal.entity import DagORM, Dataset, TaskORM
-from deepctr.dal.dao import LocalDatasetDAO, LocalFileDAO, S3DatasetDAO, S3FileDAO, DagDAO, TaskDAO
-from deepctr.dal.base import DAO
+
+
+from deepctr.dal.dao import LocalFileDAO, S3FileDAO, DagDAO, TaskDAO
+from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
 logging.config.dictConfig(LOG_CONFIG)
@@ -34,31 +34,33 @@ class Context(ABC):
     """Base class defining the interface for all context objects.
 
     Context controls the database connection and transactions, as well as the
-    data access objects (DAOs), one for each table. Microsoft EF Framework calls these dbSets. subclasses
-    assign the specific DAOs required for the class and context.
-
-    Contexts are created as global variables and instantiated by the client. They are then passed
-    to the DagBuilder through the 'and_context' method. It can then be obtained by
-    calling the globals() function and indexing on the 'context' member.
-
-    Usage:
-    ------
-    connection = ConnectionFactory(name='deepctr')
-    globals context
-    context = DataContext(connection)
+    data access objects (DAOs), one for each table.
 
     """
 
-    def __init__(self, connection: Connection) -> None:
-        self._name = self.__class__.__name__.lower()
-        self._connection = connection
-        self.connect()
-        self._entities = {}
-        logger.info("Instantiated {}".format(self._name))
+    def __init__(self, database: str = "deepctr") -> None:
+        self._database = database
+        self._connection = None
 
-    def __enter__(self):
-        self._connection.begin()
-        return self
+    def connect(self):
+        load_dotenv()
+        host = os.getenv("HOST")
+        user = os.getenv("USER")
+        password = os.getenv("PASSWORD")
+        port = os.getenv("PORT")
+        database = os.getenv("DATABASE")
+        try:
+            self._connection = pymysql.connect(
+                host=config.host,
+                user=config.user,
+                password=config.password,
+                database=database,
+                cursorclass=pymysql.cursors.DictCursor,
+                charset="utf8mb4",
+            )
+        except pymysql.Error as e:
+            logger.error("Could not open {} database. Error: {}".format(self._dbname, e))
+            raise
 
     def __exit__(self, exception_type=None, exception_value=None, traceback=None):
         if exception_type is None:
@@ -77,14 +79,6 @@ class Context(ABC):
     @property
     def connection(self):
         return self._connection
-
-    @connection.setter
-    def connection(self, connection: Connection):
-        self._connection = connection
-
-    @property
-    def dag(self) -> DagORM:
-        return self._dag
 
     @dag.setter
     def dag(self, dag: DagORM) -> None:
@@ -132,42 +126,6 @@ class DataContext(Context):
 
     def __init__(self, connection: Connection) -> None:
         super(DataContext, self).__init__(connection)
-
-    @property
-    def datasets(self) -> DAO:
-        return self._datasets
-
-    @datasets.setter
-    def datasets(self, datasets):
-        self._datasets = datasets
-
-    @property
-    def files(self) -> DAO:
-        return self._files
-
-    @property
-    def localfiles(self) -> DAO:
-        return self._localfiles
-
-    @property
-    def localdatasets(self) -> DAO:
-        return self._localdatasets
-
-    @property
-    def s3files(self) -> DAO:
-        return self._s3files
-
-    @property
-    def s3datasets(self) -> DAO:
-        return self._s3datasets
-
-    @property
-    def dags(self) -> DAO:
-        return self._dags
-
-    @property
-    def tasks(self) -> DAO:
-        return self._tasks
 
     def connect(self) -> None:
         self._localfiles = LocalFileDAO(self._connection)

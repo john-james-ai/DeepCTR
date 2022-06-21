@@ -21,8 +21,6 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any
 
-from deepctr.dal.dto import TaskDTO
-from deepctr.utils.decorators import tracer
 from deepctr.dal.context import Context
 
 # ------------------------------------------------------------------------------------------------ #
@@ -45,9 +43,9 @@ class Operator(ABC):
         self._desc = desc
         self._params = params
         self._created = datetime.now()
-        self._start = None
-        self._stop = None
-        self._task_orm = None
+        self._task_id = None  # This is the id assigned by the database
+        self._started = None
+        self._stopped = None
         self._context = None
 
     def __str__(self) -> str:
@@ -59,14 +57,13 @@ class Operator(ABC):
 
     def run(self, data: Any = None, context: Context = None) -> Any:
         self._context = context
-        self.create_task_orm()
-        self.start_task_orm()
+        self._setup()
         data = self.execute(data=data, context=context)
-        self.stop_task_orm()
+        self._teardown()
         return data
 
     @abstractmethod
-    def execute(self, data: Any = None) -> Any:
+    def execute(self, data: Any = None, context: Context = None) -> Any:
         pass
 
     @property
@@ -101,39 +98,6 @@ class Operator(ABC):
     def duration(self) -> datetime:
         return self._duration
 
-    @tracer
-    def create_task_orm(self) -> None:
-
-        # Obtaining the DAG ORM object from context for its dag_id
-        dag = self._context.dag
-        # Create Data Transfer Object carrying the task information
-        dto = TaskDTO(
-            seq=self._seq, name=self._name, desc=self._desc, dag_id=dag.id, created=self._created,
-        )
-        # Convert the DTO into a TaskORM object
-        self._task_orm = self._context.tasks.create(data=dto)
-        # Add the task to the context
-        self._context.task = self._task_orm
-
-    @tracer
-    def start_task_orm(self) -> None:
-        # Starting the TaskORM object sets the start time
-        self._task_orm = self._context.tasks.start(task=self._task_orm)
-        # Add the task to the database
-        self._task_orm = self._context.tasks.add(task=self._task_orm)
-        # Set the property on the task object
-        self._start = self._task_orm.start
-        # Update the task on the context
-        self._context.task = self._task_orm
-
-    @tracer
-    def stop_task_orm(self) -> None:
-        # Stopping the TaskORM object sets the stop time and computes task duration
-        self._task_orm = self._context.tasks.stop(task=self._task_orm)
-        # Update the database
-        self._task_orm = self._context.tasks.add(task=self._task_orm)
-        # Set the stop time and duration on the task properties
-        self._stop = self._task_orm.stop
-        self._duration = self._task_orm.duration
-        # Final update of the task on the context
-        self._context.task = self._task_orm
+    def _start(self) -> None:
+        self._started = datetime.now()
+        dao = self._context.task
