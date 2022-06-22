@@ -10,11 +10,12 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Monday June 20th 2022 02:23:53 am                                                   #
-# Modified   : Tuesday June 21st 2022 02:07:14 am                                                  #
+# Modified   : Wednesday June 22nd 2022 05:02:43 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
+"""Dataclass entities that encapsulate Task, DAG, and File info for database representation."""
 from abc import ABC
 from dataclasses import dataclass
 from datetime import datetime
@@ -77,7 +78,7 @@ class S3FileEntity(Entity):
 
 
 @dataclass
-class LocalFileEntity(Entity):
+class FileEntity(Entity):
     """Instantiated in the start method from instance variables"""
 
     source: str  # External source of data, i.e. alibaba, avazu, etc...
