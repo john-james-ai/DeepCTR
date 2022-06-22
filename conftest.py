@@ -71,18 +71,3 @@ def connection():
             cursor.execute(statement)
         connection.commit()
     connection.close()
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                     SPARK FIXTURES                                               #
-# ------------------------------------------------------------------------------------------------ #
-
-
-@pytest.fixture(scope="module")
-def spark_dataframe():
-    data = load_iris(return_X_y=False, as_frame=True)
-    df = data["data"]
-    df.columns = ["sepal_length", "sepal_width", "petal_length", "petal_width"]
-    spark = SparkSession.builder.master("local[18]").appName("Spark DataFrame").getOrCreate()
-    spark.sparkContext.setLogLevel("ERROR")
-    return spark.createDataFrame(df)

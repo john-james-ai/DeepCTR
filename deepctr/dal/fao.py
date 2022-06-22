@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday May 13th 2022 02:51:48 pm                                                    #
-# Modified   : Wednesday June 22nd 2022 09:34:23 am                                                #
+# Modified   : Wednesday June 22nd 2022 10:56:17 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -218,7 +218,7 @@ class FAOBase(ABC):
         """
         pass
 
-    def get_io(self, format: str) -> Union[SparkCSV, SparkParquet]:
+    def _get_io(self, format: str) -> Union[SparkCSV, SparkParquet]:
         try:
             return IO[format.replace(".", "")]
         except KeyError as e:
@@ -251,7 +251,7 @@ class FAO(FAOBase):
             logger.error(msg)
             raise FileExistsError(msg)
 
-        io = self._get_io(file_format=file.format)
+        io = self._get_io(format=file.format)
         io.write(data=data, filepath=file.filepath)
 
     # -------------------------------------------------------------------------------------------- #
@@ -264,7 +264,7 @@ class FAO(FAOBase):
         Returns (DataFrame)
         """
 
-        io = self._get_io(file_format=file.format)
+        io = self._get_io(format=file.format)
         return io.read(filepath=file.filepath)
 
     # -------------------------------------------------------------------------------------------- #
