@@ -10,20 +10,24 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday May 10th 2022 03:30:15 pm                                                   #
-# Modified   : Saturday June 18th 2022 01:22:07 pm                                                 #
+# Modified   : Wednesday June 22nd 2022 07:44:25 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
-# Data processing states
-STATES = {
+from deepctr.data.io import SparkCSV, SparkParquet
+
+# ------------------------------------------------------------------------------------------------ #
+STAGES = {
     0: "external",
     1: "raw",
     2: "loaded",
-    3: "sampled",
-    4: "prepared",
-    5: "clean",
-    6: "transformed",
-    7: "features",
-    8: "processed",
+    3: "interim",
+    4: "clean",
+    5: "features",
+    6: "processed",
 }
+FORMATS = ["csv", "parquet"]
+SOURCES = ["alibaba", "avazu", "criteo"]
+STORAGE_TYPES = ["local", "s3"]
+IO = {"csv": SparkCSV(), "parquet": SparkParquet()}
