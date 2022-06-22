@@ -18,18 +18,17 @@
 # Copyright: (c) 2022 Bryant St. Labs                                                              #
 # ================================================================================================ #
 """Reading and writing dataframes with progress bars"""
-from abc import ABC, abstractmethod
 import os
 import logging
 import pickle
 import logging.config
-import pandas as pd
 import pyspark
 from pyspark.sql import SparkSession
 import findspark
 from typing import Any
 
 from deepctr.utils.log_config import LOG_CONFIG
+from deepctr.data.base import IO
 
 findspark.init()
 
@@ -37,23 +36,6 @@ findspark.init()
 logging.config.dictConfig(LOG_CONFIG)
 logging.getLogger("py4j").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                              IO                                                  #
-# ------------------------------------------------------------------------------------------------ #
-
-
-class IO(ABC):
-    """Base class for IO classes"""
-
-    @abstractmethod
-    def read(self, filepath: str, **kwargs) -> pd.DataFrame:
-        pass
-
-    @abstractmethod
-    def write(self, data: Any, filepath: str, **kwargs) -> None:
-        pass
 
 
 # ------------------------------------------------------------------------------------------------ #

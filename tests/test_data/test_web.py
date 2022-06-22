@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday May 22nd 2022 01:40:01 am                                                    #
-# Modified   : Friday June 17th 2022 11:16:39 pm                                                   #
+# Modified   : Wednesday June 22nd 2022 12:14:37 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -24,7 +24,7 @@ import logging.config
 
 import time
 from deepctr.utils.log_config import LOG_CONFIG
-from deepctr.data.web import S3
+from deepctr.data.remote import S3
 from deepctr.utils.aws import upload_file, delete_file
 
 # ------------------------------------------------------------------------------------------------ #
@@ -37,7 +37,7 @@ FILEPATH = "tests/data/test_web/exists.csv"
 OBJECT_KEY = "test/exists.csv"
 
 
-@pytest.mark.web
+@pytest.mark.remote
 class TestWeb:
     def test_setup(self, caplog) -> None:
         caplog.set_level(logging.INFO)

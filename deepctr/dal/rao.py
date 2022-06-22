@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday May 13th 2022 02:51:48 pm                                                    #
-# Modified   : Sunday June 19th 2022 08:18:34 pm                                                   #
+# Modified   : Wednesday June 22nd 2022 12:15:32 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -22,7 +22,8 @@ import logging
 import logging.config
 import shutil
 
-from deepctr.data.web import S3
+from deepctr.data.remote import S3
+from deepctr.dal.fao import S3File, LocalFile, Dataset
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
@@ -39,7 +40,7 @@ class RAO(ABC):
 
     @abstractmethod
     def download_file(
-        source: S3File, destination: File, expand: bool = True, force: bool = False
+        source: S3File, destination: LocalFile, expand: bool = True, force: bool = False
     ) -> None:
         pass
 
@@ -51,7 +52,7 @@ class RAO(ABC):
 
     @abstractmethod
     def upload_file(
-        self, source: File, destination: S3File, compress: bool = True, force: bool = False
+        self, source: LocalFile, destination: S3File, compress: bool = True, force: bool = False
     ) -> None:
         pass
 

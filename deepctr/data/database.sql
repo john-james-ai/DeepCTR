@@ -21,32 +21,16 @@ DROP TABLE IF EXISTS `dag`;
 DROP TABLE IF EXISTS `task`;
 SET FOREIGN_KEY_CHECKS = 1;
 
-CREATE TABLE `localfile` (
+CREATE TABLE `file` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(64) NOT NULL,
     `source` VARCHAR(32) NOT NULL,
     `dataset` VARCHAR(32) NOT NULL,
     `stage_id` INTEGER NOT NULL,
     `stage_name` VARCHAR(16) NOT NULL,
-    `filepath` VARCHAR(256) NULL,
-    `format` VARCHAR(16) NOT NULL,
-    `compressed` BOOLEAN NOT NULL,
-    `size` BIGINT NULL,
-    `created` DATETIME NOT NULL,
-    PRIMARY KEY (`id`),
-    UNIQUE (`id`),
-    INDEX `idx` (`source`, `dataset`, `name`)
-) ENGINE=InnoDB;
-
-CREATE TABLE `s3file` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `name` VARCHAR(64) NOT NULL,
-    `source` VARCHAR(32) NOT NULL,
-    `dataset` VARCHAR(32) NOT NULL,
-    `stage_id` INTEGER NOT NULL,
-    `stage_name` VARCHAR(16) NOT NULL,
+    `storage_type` VARCHAR(8) NOT NULL,
     `bucket` VARCHAR(32) NULL,
-    `object_key` VARCHAR(256) NULL,
+    `filepath` VARCHAR(256) NULL,
     `format` VARCHAR(16) NOT NULL,
     `compressed` BOOLEAN NOT NULL,
     `size` BIGINT NULL,

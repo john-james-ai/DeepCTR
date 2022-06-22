@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday May 10th 2022 03:30:15 pm                                                   #
-# Modified   : Friday May 27th 2022 03:32:21 pm                                                    #
+# Modified   : Wednesday June 22nd 2022 12:15:00 pm                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -24,7 +24,7 @@ from deepctr.utils.decorators import operator
 from deepctr.dag.base import Operator
 from deepctr.dal.entity import File, Dataset
 from deepctr.dal.vfs import FileManager
-from deepctr.dal.web import RemoteAccessObject
+from deepctr.dal.remote import RemoteAccessObject
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #

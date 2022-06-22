@@ -3,31 +3,36 @@
 # ================================================================================================ #
 # Project    : DeepCTR: Deep Learning for CTR Prediction                                           #
 # Version    : 0.1.0                                                                               #
-# Filename   : /__init__.py                                                                        #
+# Filename   : /base.py                                                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Tuesday May 10th 2022 03:30:15 pm                                                   #
-# Modified   : Wednesday June 22nd 2022 12:16:39 pm                                                #
+# Created    : Wednesday June 22nd 2022 11:50:05 am                                                #
+# Modified   : Wednesday June 22nd 2022 11:52:08 am                                                #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
-from deepctr.data.local import SparkCSV, SparkParquet
+"""Reading and writing dataframes with progress bars"""
+from abc import ABC, abstractmethod
+import pandas as pd
+from pyspark.sql import DataFrame
+from typing import Union
 
 # ------------------------------------------------------------------------------------------------ #
-STAGES = {
-    0: "external",
-    1: "raw",
-    2: "loaded",
-    3: "interim",
-    4: "clean",
-    5: "features",
-    6: "processed",
-}
-FORMATS = ["csv", "parquet"]
-SOURCES = ["alibaba", "avazu", "criteo"]
-STORAGE_TYPES = ["local", "s3"]
-IO = {"csv": SparkCSV(), "parquet": SparkParquet()}
+#                                              IO                                                  #
+# ------------------------------------------------------------------------------------------------ #
+
+
+class IO(ABC):
+    """Base class for IO classes"""
+
+    @abstractmethod
+    def read(self, filepath: str, **kwargs) -> Union[pd.DataFrame, DataFrame]:
+        pass
+
+    @abstractmethod
+    def write(self, data: Union[pd.DataFrame, DataFrame], filepath: str, **kwargs) -> None:
+        pass

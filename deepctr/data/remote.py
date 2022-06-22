@@ -18,7 +18,7 @@
 # Copyright: (c) 2022 Bryant St. Labs                                                              #
 # ================================================================================================ #
 """Reading and writing dataframes with progress bars"""
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 import os
 from dotenv import load_dotenv
 import logging
@@ -34,6 +34,7 @@ from boto3.s3.transfer import TransferConfig
 from botocore.exceptions import NoCredentialsError
 
 from deepctr.utils.log_config import LOG_CONFIG
+from deepctr.data.base import IO
 
 # ------------------------------------------------------------------------------------------------ #
 logging.config.dictConfig(LOG_CONFIG)
@@ -44,7 +45,7 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
 
-class Cloud(ABC):
+class Cloud(IO):
     """Base class for Upload / Download operations with cloud storage providers."""
 
     def __init__(self) -> None:
