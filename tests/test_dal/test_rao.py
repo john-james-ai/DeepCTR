@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 26th 2022 07:03:22 pm                                                  #
-# Modified   : Friday June 24th 2022 02:53:03 am                                                   #
+# Modified   : Friday June 24th 2022 11:45:15 am                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -57,4 +57,3 @@ class TestRAOFile:
         assert os.path.exists(local_destination.filepath)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-

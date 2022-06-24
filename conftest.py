@@ -76,7 +76,7 @@ def connection():
 
 
 # ------------------------------------------------------------------------------------------------ #
-#                                         FILE                                                     #
+#                                         RAO TEST                                                 #
 # ------------------------------------------------------------------------------------------------ #
 @pytest.fixture(scope="module")
 def local_source():
@@ -121,5 +121,23 @@ def s3file():
         stage_id=4,
         stage_name=STAGES.get(4),
         bucket="deepctr",
+    )
+    return file
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                         FAO TEST                                                 #
+# ------------------------------------------------------------------------------------------------ #
+@pytest.fixture(scope="module")
+def fao_file():
+    file = File(
+        name="test_fao_create",
+        source="alibaba",
+        dataset="test_dataset",
+        storage_type="local",
+        format="csv",
+        stage_id=2,
+        stage_name=STAGES.get(2),
+        home="tests/data",
     )
     return file
