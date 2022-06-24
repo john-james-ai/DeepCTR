@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Friday May 13th 2022 02:51:48 pm                                                    #
-# Modified   : Wednesday June 22nd 2022 12:15:32 pm                                                #
+# Modified   : Friday June 24th 2022 02:52:25 am                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -23,7 +23,7 @@ import logging.config
 import shutil
 
 from deepctr.data.remote import S3
-from deepctr.dal.fao import S3File, LocalFile, Dataset
+from deepctr.dal.base import File, Dataset
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
@@ -31,16 +31,16 @@ logging.config.dictConfig(LOG_CONFIG)
 logging.getLogger("py4j").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
-#                                        RAO                                                       #
+#                                       RAOBase                                                    #
 # ------------------------------------------------------------------------------------------------ #
 
 
-class RAO(ABC):
+class RAOBase(ABC):
     """Defines interface for remote access objects accessing cloud services."""
 
     @abstractmethod
     def download_file(
-        source: S3File, destination: LocalFile, expand: bool = True, force: bool = False
+        source: File, destination: File, expand: bool = True, force: bool = False
     ) -> None:
         pass
 
@@ -52,7 +52,7 @@ class RAO(ABC):
 
     @abstractmethod
     def upload_file(
-        self, source: LocalFile, destination: S3File, compress: bool = True, force: bool = False
+        self, source: File, destination: File, compress: bool = True, force: bool = False
     ) -> None:
         pass
 
@@ -64,22 +64,22 @@ class RAO(ABC):
 
 
 # ------------------------------------------------------------------------------------------------ #
-#                                    REMOTE ACCESS OBJECT                                          #
+#                                         RAO                                                      #
 # ------------------------------------------------------------------------------------------------ #
 
 
-class RemoteAccessObject(RAO):
+class RAO(RAOBase):
     """Remote access object for Amazon S3 web resources."""
 
     # -------------------------------------------------------------------------------------------- #
     def download_file(
-        source: S3File, destination: LocalFile, expand: bool = True, force: bool = False
+        self, source: File, destination: File, expand: bool = True, force: bool = False
     ) -> None:
         """Downloads data entity from an S3 Resource
 
         Args:
-            source (S3File): An S3File object
-            destination (LocalFile): A local file object
+            source (File): An File object
+            destination (File): A local file object
             expand (bool): If True, the data is decompressed.
             force (bool): If True, existing data will be overwritten.
         """
@@ -87,7 +87,7 @@ class RemoteAccessObject(RAO):
         io = S3()
         io.download_file(
             bucket=source.bucket,
-            object_key=source.object_key,
+            object_key=source.filepath,
             filepath=destination.filepath,
             expand=expand,
             force=force,
@@ -123,13 +123,13 @@ class RemoteAccessObject(RAO):
 
     # -------------------------------------------------------------------------------------------- #
     def upload_file(
-        self, source: LocalFile, destination: S3File, compress: bool = True, force: bool = False
+        self, source: File, destination: File, compress: bool = True, force: bool = False
     ) -> None:
         """Uploads a entity to an S3 bucket.
 
         Args:
-            source (LocalFile): A File object
-            destination (S3File): An S3File object
+            source (File): A File object
+            destination (File): An File object
             compress (bool): If True, the data is decompressed.
             force (bool): If True, existing data will be overwritten.
         """
@@ -138,7 +138,7 @@ class RemoteAccessObject(RAO):
         io.upload_file(
             filepath=source.filepath,
             bucket=destination.bucket,
-            object_key=destination.object_key,
+            object_key=destination.filepath,
             compress=compress,
             force=force,
         )
@@ -173,7 +173,7 @@ class RemoteAccessObject(RAO):
             )
 
     # -------------------------------------------------------------------------------------------- #
-    def delete_object(self, file: S3File) -> None:
+    def delete_object(self, file: File) -> None:
         """Deletes a object from S3 storage
 
         Args:
@@ -181,7 +181,7 @@ class RemoteAccessObject(RAO):
             object (str, force: str = False): The S3 object key
         """
         io = S3()
-        io.delete_object(bucket=file.bucket, object_key=file.object_key)
+        io.delete_object(bucket=file.bucket, object_key=file.filepath)
 
     # -------------------------------------------------------------------------------------------- #
     def delete_dataset(self, dataset: Dataset) -> None:
@@ -200,7 +200,7 @@ class RemoteAccessObject(RAO):
                 self.delete_object(file)
 
     # -------------------------------------------------------------------------------------------- #
-    def exists(self, file: S3File) -> bool:
+    def exists(self, file: File) -> bool:
         """Checks if a entity exists in an S3 bucket
 
         Args:
@@ -210,4 +210,4 @@ class RemoteAccessObject(RAO):
         """
 
         io = S3()
-        return io.exists(bucket=file.bucket, object_key=file.object_key)
+        return io.exists(bucket=file.bucket, object_key=file.filepath)

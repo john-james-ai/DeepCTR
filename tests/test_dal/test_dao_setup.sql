@@ -37,8 +37,7 @@ CREATE TABLE `file` (
     `size` BIGINT NOT NULL,
     `created` DATETIME NOT NULL,
     PRIMARY KEY (`id`),
-    UNIQUE (`id`),
-    INDEX (`source`, `dataset`, `name`)
+    UNIQUE (`id`)
 ) ENGINE=InnoDB;
 
 CREATE TABLE `dag` (

@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday June 23rd 2022 09:28:39 pm                                                 #
-# Modified   : Thursday June 23rd 2022 10:51:33 pm                                                 #
+# Modified   : Friday June 24th 2022 02:21:46 am                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -84,8 +84,6 @@ class File(Entity):
         self.format = validate.format(self.format)
         self.stage_id = validate.stage(self.stage_id)
         self.storage_type = validate.storage_type(self.storage_type)
-        if self.storage_type == "s3":
-            self.filepath = validate.filepath(self.filepath)
 
     def _set_size(self) -> None:
         if self.storage_type == "local":
@@ -99,12 +97,14 @@ class File(Entity):
         self.stage_name = STAGES.get(self.stage_id)
 
     def _set_filepath(self) -> None:
-        if self.storage_type == "local":
+        if not self.filepath:
             stage_name = str(self.stage_id) + "_" + self.stage_name
-            if not self.filepath:
-                self.filename = (self.name + "." + self.format).replace(" ", "").lower()
+            self.filename = (self.name + "." + self.format).replace(" ", "").lower()
+            if self.storage_type == "local":
                 self.folder = os.path.join(self.home, self.source, self.dataset, stage_name)
-                self.filepath = os.path.join(self.folder, self.filename)
+            else:
+                self.folder = os.path.join(self.source, self.dataset, stage_name)
+            self.filepath = os.path.join(self.folder, self.filename)
 
     def to_dict(self) -> dict:
         d = {
@@ -183,15 +183,6 @@ class Validator:
     def stage(self, value: int) -> bool:
         if value not in STAGES.keys():
             self._fail(value, STAGES)
-        else:
-            return value
-
-    def filepath(self, value: int) -> bool:
-        # This is called for S3 files. Filepath is the object key and must not be None.
-        # Could have done this in the File object, but chose to keep all validation
-        # and exception handling for validation errors in the validation object.
-        if value is None:
-            self._fail(value)
         else:
             return value
 

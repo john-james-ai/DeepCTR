@@ -21,6 +21,9 @@
 import pytest
 from pyspark.sql import SparkSession
 from sklearn.datasets import load_iris
+
+from deepctr.dal import STAGES
+from deepctr.dal.base import File  # Dataset
 from deepctr.data.database import ConnectionFactory
 from deepctr.utils.database import parse_sql
 
@@ -70,3 +73,53 @@ def connection():
             cursor.execute(statement)
         connection.commit()
     connection.close()
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                         FILE                                                     #
+# ------------------------------------------------------------------------------------------------ #
+@pytest.fixture(scope="module")
+def local_source():
+    file = File(
+        name="test_upload_file",
+        source="alibaba",
+        dataset="test_dataset",
+        storage_type="local",
+        format="csv",
+        stage_id=4,
+        stage_name=STAGES.get(4),
+        home="tests/data",
+        filepath="tests/data/test_dal/test_rao/test_rao_upload.csv",
+    )
+    return file
+
+
+# ------------------------------------------------------------------------------------------------ #
+@pytest.fixture(scope="module")
+def local_destination():
+    file = File(
+        name="test_download_file",
+        source="alibaba",
+        dataset="test_dataset",
+        storage_type="local",
+        format="csv",
+        stage_id=4,
+        stage_name=STAGES.get(4),
+    )
+    return file
+
+
+# ------------------------------------------------------------------------------------------------ #
+@pytest.fixture(scope="module")
+def s3file():
+    file = File(
+        name="test_upload_file",
+        source="alibaba",
+        dataset="test_dataset",
+        storage_type="s3",
+        format="csv",
+        stage_id=4,
+        stage_name=STAGES.get(4),
+        bucket="deepctr",
+    )
+    return file
