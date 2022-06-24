@@ -63,7 +63,6 @@ def connection():
     connection.close()
 
     connection = ConnectionFactory(database="testdal").get_connection()
-    connection.begin()
     yield connection
     statements = parse_sql(filename=CONNECTION.get("teardown"))
     with connection.cursor() as cursor:

@@ -26,18 +26,18 @@ CREATE TABLE `file` (
     `name` VARCHAR(64) NOT NULL,
     `source` VARCHAR(32) NOT NULL,
     `dataset` VARCHAR(32) NOT NULL,
+    `storage_type` VARCHAR(8) NOT NULL,
+    `format` VARCHAR(16) NOT NULL,
     `stage_id` INTEGER NOT NULL,
     `stage_name` VARCHAR(16) NOT NULL,
-    `storage_type` VARCHAR(8) NOT NULL,
+    `home` VARCHAR(64) NOT NULL,
     `bucket` VARCHAR(32) NULL,
-    `filepath` VARCHAR(256) NULL,
-    `format` VARCHAR(16) NOT NULL,
+    `filepath` VARCHAR(256) NOT NULL,
     `compressed` BOOLEAN NOT NULL,
-    `size` BIGINT NULL,
+    `size` BIGINT NOT NULL,
     `created` DATETIME NOT NULL,
     PRIMARY KEY (`id`),
-    UNIQUE (`id`),
-    INDEX `idx` (`source`, `dataset`, `name`)
+    UNIQUE (`id`)
 ) ENGINE=InnoDB;
 
 CREATE TABLE `dag` (

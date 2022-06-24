@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday May 22nd 2022 08:41:02 pm                                                    #
-# Modified   : Tuesday June 21st 2022 02:32:10 am                                                  #
+# Modified   : Friday June 24th 2022 01:02:10 am                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -217,129 +217,35 @@ class TaskUpdate:
 
 
 # ------------------------------------------------------------------------------------------------ #
-#                                          LOCAL FILE                                              #
+#                                          FILE                                                    #
 # ------------------------------------------------------------------------------------------------ #
 
 
 @dataclass
-class LocalFileInsert:
+class FileInsert:
     entity: Entity
     statement: str = None
     parameters: tuple = None
 
     def __post_init__(self) -> None:
         self.statement = """
-            INSERT INTO localfile
-            (`name`, `source`, `dataset`, `stage_id`, `stage_name`, `filepath`, `format`,
+            INSERT INTO `file`
+            (`name`, `source`, `dataset`, `storage_type`, `format`,
+            `stage_id`, `stage_name`, `home`, `bucket`, `filepath`,
             `compressed`, `size`, `created`)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            VALUES (%s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s, %s);
             """
         self.parameters = (
             self.entity.name,
             self.entity.source,
             self.entity.dataset,
-            self.entity.stage_id,
-            self.entity.stage_name,
-            self.entity.filepath,
+            self.entity.storage_type,
             self.entity.format,
-            self.entity.compressed,
-            self.entity.size,
-            self.entity.created,
-        )
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class LocalFileSelect:
-    parameters: tuple
-    statement: str = None
-
-    def __post_init__(self) -> None:
-        self.statement = """SELECT * FROM `localfile` WHERE `id`= %s;"""
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class LocalFileSelectAll:
-    statement: str = None
-
-    def __post_init__(self) -> None:
-        self.statement = """SELECT * FROM `localfile`;"""
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class LocalFileDelete:
-    parameters: tuple
-    statement: str = None
-
-    def __post_init__(self) -> None:
-        self.statement = """DELETE FROM `localfile` WHERE `id`= %s;"""
-
-
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class LocalFileUpdate:
-    entity: Entity
-    parameters: tuple = None
-    statement: str = None
-
-    def __post_init__(self) -> None:
-        self.statement = """UPDATE `localfile`
-                            SET `name` = %s,
-                                `source` = %s,
-                                `dataset` = %s,
-                                `stage_id` = %s,
-                                `stage_name` = %s,
-                                `filepath` = %s,
-                                `format` = %s,
-                                `compressed` = %s,
-                                `size` = %s,
-                                `created` = %s
-                            WHERE `id`= %s;"""
-
-        self.parameters = (
-            self.entity.name,
-            self.entity.source,
-            self.entity.dataset,
             self.entity.stage_id,
             self.entity.stage_name,
-            self.entity.filepath,
-            self.entity.format,
-            self.entity.compressed,
-            self.entity.size,
-            self.entity.created,
-            self.entity.id,
-        )
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                            S3 FILE                                              #
-# ------------------------------------------------------------------------------------------------ #
-
-
-@dataclass
-class S3FileInsert:
-    entity: Entity
-    statement: str = None
-    parameters: tuple = None
-
-    def __post_init__(self) -> None:
-        self.statement = """
-            INSERT INTO s3file
-            (`name`, `source`, `dataset`, `stage_id`, `stage_name`, `bucket`, `object_key`, `format`,
-            `compressed`, `size`, `created`)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-            """
-        self.parameters = (
-            self.entity.name,
-            self.entity.source,
-            self.entity.dataset,
-            self.entity.stage_id,
-            self.entity.stage_name,
+            self.entity.home,
             self.entity.bucket,
-            self.entity.object_key,
-            self.entity.format,
+            self.entity.filepath,
             self.entity.compressed,
             self.entity.size,
             self.entity.created,
@@ -348,50 +254,52 @@ class S3FileInsert:
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class S3FileSelect:
+class FileSelect:
     parameters: tuple
     statement: str = None
 
     def __post_init__(self) -> None:
-        self.statement = """SELECT * FROM `s3file` WHERE `id`= %s;"""
+        self.statement = """SELECT * FROM `file` WHERE `id`= %s;"""
 
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class S3FileSelectAll:
+class FileSelectAll:
     statement: str = None
 
     def __post_init__(self) -> None:
-        self.statement = """SELECT * FROM `s3file`;"""
+        self.statement = """SELECT * FROM `file`;"""
 
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class S3FileDelete:
+class FileDelete:
     parameters: tuple
     statement: str = None
 
     def __post_init__(self) -> None:
-        self.statement = """DELETE FROM `s3file` WHERE `id`= %s;"""
+        self.statement = """DELETE FROM `file` WHERE `id`= %s;"""
 
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class S3FileUpdate:
+class FileUpdate:
     entity: Entity
     parameters: tuple = None
     statement: str = None
 
     def __post_init__(self) -> None:
-        self.statement = """UPDATE `s3file`
+        self.statement = """UPDATE `file`
                             SET `name` = %s,
                                 `source` = %s,
                                 `dataset` = %s,
+                                `storage_type` = %s,
+                                `format` = %s,
                                 `stage_id` = %s,
                                 `stage_name` = %s,
+                                `home` = %s,
                                 `bucket` = %s,
-                                `object_key` = %s,
-                                `format` = %s,
+                                `filepath` = %s,
                                 `compressed` = %s,
                                 `size` = %s,
                                 `created` = %s
@@ -401,11 +309,13 @@ class S3FileUpdate:
             self.entity.name,
             self.entity.source,
             self.entity.dataset,
+            self.entity.storage_type,
+            self.entity.format,
             self.entity.stage_id,
             self.entity.stage_name,
+            self.entity.home,
             self.entity.bucket,
-            self.entity.object_key,
-            self.entity.format,
+            self.entity.filepath,
             self.entity.compressed,
             self.entity.size,
             self.entity.created,
@@ -485,44 +395,22 @@ class TaskSQL(EntitySQL):
 
 
 # ------------------------------------------------------------------------------------------------ #
-#                                     LOCALFILE COMMAND                                            #
+#                                        FILE COMMAND                                              #
 # ------------------------------------------------------------------------------------------------ #
-class LocalFileSQL(EntitySQL):
+class FileSQL(EntitySQL):
     """Commands for the LOCALFILE table."""
 
-    def insert(self, entity: Entity) -> LocalFileInsert:
-        return LocalFileInsert(entity)
+    def insert(self, entity: Entity) -> FileInsert:
+        return FileInsert(entity)
 
-    def select(self, id: int) -> LocalFileSelect:
-        return LocalFileSelect(parameters=(id,))
+    def select(self, id: int) -> FileSelect:
+        return FileSelect(parameters=(id,))
 
-    def select_all(self) -> LocalFileSelectAll:
-        return LocalFileSelectAll()
+    def select_all(self) -> FileSelectAll:
+        return FileSelectAll()
 
-    def update(self, entity: Entity) -> LocalFileUpdate:
-        return LocalFileUpdate(entity)
+    def update(self, entity: Entity) -> FileUpdate:
+        return FileUpdate(entity)
 
-    def delete(self, id: int) -> LocalFileDelete:
-        return LocalFileDelete(parameters=(id,))
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                     S3FILE COMMAND                                            #
-# ------------------------------------------------------------------------------------------------ #
-class S3FileSQL(EntitySQL):
-    """Commands for the S3FILE table."""
-
-    def insert(self, entity: Entity) -> S3FileInsert:
-        return S3FileInsert(entity)
-
-    def select(self, id: int) -> S3FileSelect:
-        return S3FileSelect(parameters=(id,))
-
-    def select_all(self) -> S3FileSelectAll:
-        return S3FileSelectAll()
-
-    def update(self, entity: Entity) -> S3FileUpdate:
-        return S3FileUpdate(entity)
-
-    def delete(self, id: int) -> S3FileDelete:
-        return S3FileDelete(parameters=(id,))
+    def delete(self, id: int) -> FileDelete:
+        return FileDelete(parameters=(id,))

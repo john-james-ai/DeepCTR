@@ -21,39 +21,24 @@ DROP TABLE IF EXISTS `dag`;
 DROP TABLE IF EXISTS `task`;
 SET FOREIGN_KEY_CHECKS = 1;
 
-CREATE TABLE `localfile` (
+CREATE TABLE `file` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(64) NOT NULL,
     `source` VARCHAR(32) NOT NULL,
     `dataset` VARCHAR(32) NOT NULL,
-    `stage_id` INTEGER NOT NULL,
-    `stage_name` VARCHAR(16) NOT NULL,
-    `filepath` VARCHAR(256) NULL,
+    `storage_type` VARCHAR(8) NOT NULL,
     `format` VARCHAR(16) NOT NULL,
-    `compressed` BOOLEAN NOT NULL,
-    `size` BIGINT NULL,
-    `created` DATETIME NOT NULL,
-    PRIMARY KEY (`id`),
-    UNIQUE (`id`),
-    INDEX `idx` (`source`, `dataset`, `name`)
-) ENGINE=InnoDB;
-
-CREATE TABLE `s3file` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `name` VARCHAR(64) NOT NULL,
-    `source` VARCHAR(32) NOT NULL,
-    `dataset` VARCHAR(32) NOT NULL,
     `stage_id` INTEGER NOT NULL,
     `stage_name` VARCHAR(16) NOT NULL,
+    `home` VARCHAR(64) NOT NULL,
     `bucket` VARCHAR(32) NULL,
-    `object_key` VARCHAR(256) NULL,
-    `format` VARCHAR(16) NOT NULL,
+    `filepath` VARCHAR(256) NOT NULL,
     `compressed` BOOLEAN NOT NULL,
-    `size` BIGINT NULL,
+    `size` BIGINT NOT NULL,
     `created` DATETIME NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE (`id`),
-    INDEX `idx` (`source`, `dataset`, `name`)
+    INDEX (`source`, `dataset`, `name`)
 ) ENGINE=InnoDB;
 
 CREATE TABLE `dag` (
@@ -89,8 +74,9 @@ CREATE TABLE `task` (
 ) ENGINE=InnoDB;
 
 
+
+
 ALTER TABLE `dag` AUTO_INCREMENT=1;
 ALTER TABLE `task` AUTO_INCREMENT=1;
-ALTER TABLE `localfile` AUTO_INCREMENT=1;
-ALTER TABLE `s3file` AUTO_INCREMENT=1;
+ALTER TABLE `file` AUTO_INCREMENT=1;
 GRANT ALL PRIVILEGES ON testdal TO 'john'@'localhost' WITH GRANT OPTION;
