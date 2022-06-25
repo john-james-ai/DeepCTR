@@ -20,13 +20,14 @@
 """Reading and writing dataframes with progress bars"""
 import os
 import logging
-import pickle
+from datetime import datetime
 import logging.config
 import pyspark
 from pyspark.sql import SparkSession
 import findspark
-from typing import Any
+import pyarrow.parquet as pq
 
+from deepctr.data.base import Metadata
 from deepctr.utils.log_config import LOG_CONFIG
 from deepctr.data.base import IO
 
@@ -84,6 +85,33 @@ class SparkParquet(IO):
         """
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         data.write.option("header", header).mode(mode).parquet(filepath)
+
+    def metadata(self, filepath: str) -> dict:
+        """Returns select metadata for a parquet file.
+
+        Args:
+            filepath (str): Path to parquet file
+
+        Returns:
+            dictionary select metadata
+        """
+        if os.path.exists(filepath):
+            pf = pq.ParquetFile(filepath)
+            result = os.stat(filepath)
+            metadata = Metadata(
+                size=result.st_size,
+                rows=pf.metadata.num_rows,
+                cols=pf.metadata.num_columns,
+                created=datetime.fromtimestamp(result.st_ctime),
+                modified=datetime.fromtimestamp(result.st_mtime),
+                accessed=datetime.fromtimestamp(result.st_atime),
+            )
+        else:
+            # A default metadata object is returned if the file doesn't exist
+            # The File object will be updated when the small file containing dataw
+            # is saved to disk.
+            metadata = Metadata()
+        return metadata
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -144,30 +172,30 @@ class SparkCSV(IO):
 
         data.write.csv(path=filepath, header=header, sep=sep, mode=mode)
 
-
-# ------------------------------------------------------------------------------------------------ #
-#                                       PICKLER                                                    #
-# ------------------------------------------------------------------------------------------------ #
-class Pickler(IO):
-    """Wrapper for Pickle class"""
-
-    def read(self, filepath: str) -> Any:
-        """Loads serialized data
+    def metadata(self, filepath: str) -> dict:
+        """Returns select metadata for a spark csv file.
 
         Args:
-            filepath (str): Path to the serialized resource
+            filepath (str): Path to csv file
+
+        Returns:
+            dictionary select metadata
         """
+        if os.path.exists(filepath):
+            result = os.stat(filepath)
+            df = self.read(filepath)
+            metadata = Metadata(
+                size=result.st_size,
+                rows=df.count(),
+                cols=len(df.columns),
+                created=datetime.fromtimestamp(result.st_ctime),
+                modified=datetime.fromtimestamp(result.st_mtime),
+                accessed=datetime.fromtimestamp(result.st_atime),
+            )
+        else:
+            # A default metadata object is returned if the file doesn't exist
+            # The File object will be updated when the small file containing dataw
+            # is saved to disk.
+            metadata = Metadata()
 
-        with open(filepath, "rb") as f:
-            return pickle.load(f)
-
-    def write(self, data: Any, filepath: str) -> None:
-        """Serializes the data using the python pickle module.
-
-        Args:
-            data (Any): The data to be serialized
-            filepath (str): Path to the serialized resource
-        """
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        with open(filepath, "wb") as f:
-            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+        return metadata

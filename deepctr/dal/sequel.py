@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday May 22nd 2022 08:41:02 pm                                                    #
-# Modified   : Friday June 24th 2022 01:02:10 am                                                   #
+# Modified   : Friday June 24th 2022 08:23:16 pm                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -232,8 +232,8 @@ class FileInsert:
             INSERT INTO `file`
             (`name`, `source`, `dataset`, `storage_type`, `format`,
             `stage_id`, `stage_name`, `home`, `bucket`, `filepath`,
-            `compressed`, `size`, `created`)
-            VALUES (%s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s, %s);
+            `compressed`, `rows`, `cols`, `size`, `created`,`modified`,`accessed`)
+            VALUES (%s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
             """
         self.parameters = (
             self.entity.name,
@@ -247,8 +247,12 @@ class FileInsert:
             self.entity.bucket,
             self.entity.filepath,
             self.entity.compressed,
+            self.entity.rows,
+            self.entity.cols,
             self.entity.size,
             self.entity.created,
+            self.entity.modified,
+            self.entity.accessed,
         )
 
 
@@ -260,6 +264,16 @@ class FileSelect:
 
     def __post_init__(self) -> None:
         self.statement = """SELECT * FROM `file` WHERE `id`= %s;"""
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class FileSelectByDatasetName:
+    parameters: tuple
+    statement: str = None
+
+    def __post_init__(self) -> None:
+        self.statement = """SELECT * FROM `file` WHERE `dataset`= %s;"""
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -301,8 +315,12 @@ class FileUpdate:
                                 `bucket` = %s,
                                 `filepath` = %s,
                                 `compressed` = %s,
+                                `rows` = %s,
+                                `cols` = %s,
                                 `size` = %s,
-                                `created` = %s
+                                `created` = %s,
+                                `modified` = %s,
+                                `accessed` = %s
                             WHERE `id`= %s;"""
 
         self.parameters = (
@@ -317,8 +335,124 @@ class FileUpdate:
             self.entity.bucket,
             self.entity.filepath,
             self.entity.compressed,
+            self.entity.rows,
+            self.entity.cols,
             self.entity.size,
             self.entity.created,
+            self.entity.modified,
+            self.entity.accessed,
+            self.entity.id,
+        )
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                         DATASET                                                  #
+# ------------------------------------------------------------------------------------------------ #
+
+
+@dataclass
+class DatasetInsert:
+    entity: Entity
+    statement: str = None
+    parameters: tuple = None
+
+    def __post_init__(self) -> None:
+        self.statement = """
+            INSERT INTO `dataset`
+            (`name`, `source`, `storage_type`, `folder`,`format`,
+             `stage_id`, `stage_name`, `compressed`, `size`,`home`,
+             `bucket`,  `created`,  `modified`,  `accessed`)
+            VALUES (%s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s,
+                    %s, %s,%s, %s);
+            """
+        self.parameters = (
+            self.entity.name,
+            self.entity.source,
+            self.entity.storage_type,
+            self.entity.folder,
+            self.entity.format,
+            self.entity.stage_id,
+            self.entity.stage_name,
+            self.entity.compressed,
+            self.entity.size,
+            self.entity.home,
+            self.entity.bucket,
+            self.entity.created,
+            self.entity.modified,
+            self.entity.accessed,
+        )
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class DatasetSelect:
+    parameters: tuple
+    statement: str = None
+
+    def __post_init__(self) -> None:
+        self.statement = """SELECT * FROM `dataset` WHERE `id`= %s;"""
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class DatasetSelectAll:
+    statement: str = None
+
+    def __post_init__(self) -> None:
+        self.statement = """SELECT * FROM `dataset`;"""
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class DatasetDelete:
+    parameters: tuple
+    statement: str = None
+
+    def __post_init__(self) -> None:
+        self.statement = """DELETE FROM `dataset` WHERE `id`= %s;"""
+
+
+# ------------------------------------------------------------------------------------------------ #
+@dataclass
+class DatasetUpdate:
+    entity: Entity
+    parameters: tuple = None
+    statement: str = None
+
+    def __post_init__(self) -> None:
+        self.statement = """UPDATE `dataset`
+                            SET `name` = %s,
+                                `source` = %s,
+                                `storage_type` = %s,
+                                `folder` = %s,
+                                `format` = %s,
+                                `stage_id` = %s,
+                                `stage_name` = %s,
+                                `compressed` = %s,
+                                `size` = %s,
+                                `home` = %s,
+                                `bucket` = %s,
+                                `created` = %s,
+                                `modified` = %s,
+                                `accessed` = %s
+                            WHERE `id`= %s;"""
+
+        self.parameters = (
+            self.entity.name,
+            self.entity.source,
+            self.entity.storage_type,
+            self.entity.folder,
+            self.entity.format,
+            self.entity.stage_id,
+            self.entity.stage_name,
+            self.entity.compressed,
+            self.entity.size,
+            self.entity.home,
+            self.entity.bucket,
+            self.entity.created,
+            self.entity.modified,
+            self.entity.accessed,
             self.entity.id,
         )
 
@@ -398,13 +532,16 @@ class TaskSQL(EntitySQL):
 #                                        FILE COMMAND                                              #
 # ------------------------------------------------------------------------------------------------ #
 class FileSQL(EntitySQL):
-    """Commands for the LOCALFILE table."""
+    """Commands for the file table."""
 
     def insert(self, entity: Entity) -> FileInsert:
         return FileInsert(entity)
 
     def select(self, id: int) -> FileSelect:
         return FileSelect(parameters=(id,))
+
+    def select_by_dataset_name(self, dataset_name: str) -> FileSelectByDatasetName:
+        return FileSelectByDatasetName(parameters=(dataset_name,))
 
     def select_all(self) -> FileSelectAll:
         return FileSelectAll()
@@ -414,3 +551,25 @@ class FileSQL(EntitySQL):
 
     def delete(self, id: int) -> FileDelete:
         return FileDelete(parameters=(id,))
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                       DATASET COMMAND                                            #
+# ------------------------------------------------------------------------------------------------ #
+class DatasetSQL(EntitySQL):
+    """Commands for the dataset table."""
+
+    def insert(self, entity: Entity) -> DatasetInsert:
+        return DatasetInsert(entity)
+
+    def select(self, id: int) -> DatasetSelect:
+        return DatasetSelect(parameters=(id,))
+
+    def select_all(self) -> DatasetSelectAll:
+        return DatasetSelectAll()
+
+    def update(self, entity: Entity) -> DatasetUpdate:
+        return DatasetUpdate(entity)
+
+    def delete(self, id: int) -> DatasetDelete:
+        return DatasetDelete(parameters=(id,))

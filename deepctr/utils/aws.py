@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday May 25th 2022 12:05:22 am                                                 #
-# Modified   : Saturday June 18th 2022 06:38:16 am                                                 #
+# Modified   : Friday June 24th 2022 04:58:33 pm                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -94,3 +94,4 @@ def get_size_aws(bucket: str, object_key: str) -> int:
     except NoCredentialsError:
         msg = "Credentials not available for {} bucket".format(bucket)
         raise NoCredentialsError(msg)
+

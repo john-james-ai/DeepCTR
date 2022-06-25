@@ -19,7 +19,7 @@ DROP TABLE IF EXISTS `localdataset`;
 DROP TABLE IF EXISTS `s3dataset`;
 DROP TABLE IF EXISTS `dag`;
 DROP TABLE IF EXISTS `task`;
-SET FOREIGN_KEY_CHECKS = 1;
+
 
 CREATE TABLE `file` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
@@ -34,8 +34,31 @@ CREATE TABLE `file` (
     `bucket` VARCHAR(32) NULL,
     `filepath` VARCHAR(256) NOT NULL,
     `compressed` BOOLEAN NOT NULL,
+    `size` BIGINT NULL,
+    `rows` BIGINT NULL,
+    `cols` BIGINT NULL,
+    `created` DATETIME NOT NULL,
+    `modified` DATETIME NOT NULL,
+    `accessed` DATETIME NOT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE (`id`)
+) ENGINE=InnoDB;
+
+CREATE TABLE `dataset` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(64) NOT NULL,
+    `source` VARCHAR(32) NOT NULL,
+    `storage_type` VARCHAR(8) NOT NULL,
+    `stage_id` INTEGER NOT NULL,
+    `stage_name` VARCHAR(16) NOT NULL,
+    `home` VARCHAR(64) NOT NULL,
+    `bucket` VARCHAR(32) NULL,
+    `folder` VARCHAR(256) NOT NULL,
+    `format` VARCHAR(16) NOT NULL,
     `size` BIGINT NOT NULL,
     `created` DATETIME NOT NULL,
+    `modified` DATETIME NOT NULL,
+    `accessed` DATETIME NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE (`id`)
 ) ENGINE=InnoDB;
@@ -46,12 +69,12 @@ CREATE TABLE `dag` (
     `desc` VARCHAR(256) NULL,
     `n_tasks` INTEGER NOT NULL,
     `n_tasks_done` INTEGER NOT NULL,
-    `created` DATETIME NOT NULL,
-    `modified` DATETIME NULL,
     `started` DATETIME NULL,
     `stopped` DATETIME NULL,
     `duration` BIGINT NULL,
     `return_code` INTEGER NOT NULL,
+    `created` DATETIME NOT NULL,
+    `executed` DATETIME NULL,
     PRIMARY KEY (`id`),
     UNIQUE (`id`)
 ) ENGINE=InnoDB;
@@ -62,14 +85,15 @@ CREATE TABLE `task` (
     `desc` VARCHAR(256) NULL,
     `seq` INTEGER NULL,
     `dag_id` INTEGER NULL,
-    `created` DATETIME NOT NULL,
-    `modified` DATETIME NULL,
     `started` DATETIME NULL,
     `stopped` DATETIME NULL,
     `duration` BIGINT NULL,
     `return_code` INTEGER NOT NULL,
+    `created` DATETIME NOT NULL,
+    `modified` DATETIME NULL,
     PRIMARY KEY (`id`),
     UNIQUE (`id`)
 ) ENGINE=InnoDB;
 
-
+ALTER TABLE `file` ADD FOREIGN KEY (`dataset`) REFERENCES `dataset`(`name`);
+SET FOREIGN_KEY_CHECKS = 1;

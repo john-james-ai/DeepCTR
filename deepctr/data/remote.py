@@ -33,6 +33,7 @@ import botocore
 from boto3.s3.transfer import TransferConfig
 from botocore.exceptions import NoCredentialsError
 
+from deepctr.data.base import Metadata
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
@@ -331,7 +332,7 @@ class S3(Cloud):
 
         Args:
             bucket (str, force: str = False): The S3 bucket containing the resource
-            folder (str, force: str = False): The path of the object
+            folder (str, force: str = False): The folder containing the objects of interest
 
         """
 
@@ -345,6 +346,41 @@ class S3(Cloud):
                 objects.append(object.key)
 
         return objects
+
+    def metadata(self, bucket: str, object_key: str) -> dict:
+        """Returns object metadata without returning the object itself.
+
+        Args:
+            bucket (str): The S3 bucket containing the resource
+            object_key (str): The path to an S3 object.
+
+        """
+        try:
+            s3 = self._get_s3_connection(connection_type="client")
+            response = s3.head_object(Bucket=bucket, Key=object_key)
+            return Metadata(
+                rows=0,
+                cols=0,
+                size=response["ContentLength"],
+                created=response["LastModified"],
+                modified=response["LastModified"],
+                accessed=response["LastModified"],
+            )
+
+        except botocore.exceptions.ClientError as e:
+            if e.response["Error"]["Code"] == "404":
+                msg = "Object {} does not exist.".format(object_key)
+                logger.error(msg)
+                raise ValueError(msg)
+            else:
+                operation_name = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
+                raise botocore.exceptions.ClientError(
+                    error_response=e, operation_name=operation_name
+                )
+
+        except NoCredentialsError:
+            msg = "Credentials not available for {} bucket".format(bucket)
+            raise NoCredentialsError(msg)
 
     def _get_object_key(self, filepath: str, object_key, compress: bool) -> str:
         """Returns the object_name name given a filepath, folder and compress flag"""
