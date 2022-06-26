@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday June 23rd 2022 09:28:39 pm                                                 #
-# Modified   : Sunday June 26th 2022 05:22:00 pm                                                   #
+# Modified   : Sunday June 26th 2022 07:30:57 pm                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -173,7 +173,6 @@ class Dataset(Entity):
 
     def __post_init__(self) -> None:
         self._validate()
-        self._add_files()
 
     def _validate(self) -> None:
         validate = Validator()
@@ -186,35 +185,6 @@ class Dataset(Entity):
     def add_file(self, file) -> None:
         self._update_metadata(file)
         self.files[file.name] = file
-
-    def _add_files(self) -> None:
-        if self.storage_type == "local":
-            self._add_files_local()
-        else:
-            self._add_files_remote()
-
-    def _add_files_local(self) -> None:
-        if os.path.exists(self.folder):
-            io = SparkCSV() if self.format == "csv" else SparkParquet()
-            filenames = os.listdir(self.folder)
-            for filename in filenames:
-                filepath = os.path.join(self.folder, filename)
-                metadata = io.metadata(filepath)
-                file = File(
-                    name=filename.splitext(".")[0],
-                    source=self.source,
-                    storage_type=self.storage_type,
-                    format=self.format,
-                    stage_id=self.stage_id,
-                    stage_name=self.stage_name,
-                    home=self.home,
-                    bucket=self.bucket,
-                    filepath=filepath,
-                    compressed=self.compressed,
-                    size=metadata.size,
-                    rows=metadata.rows,
-                    cols=metadata.cols,
-                )
 
     def _update_metadata(self, file: File) -> None:
         if self.created is None:

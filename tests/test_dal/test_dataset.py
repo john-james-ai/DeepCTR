@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 26th 2022 07:03:22 pm                                                  #
-# Modified   : Sunday June 26th 2022 04:30:20 pm                                                   #
+# Modified   : Sunday June 26th 2022 07:38:11 pm                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -64,15 +64,14 @@ class TestDataset:
         assert isinstance(dataset.created, datetime)
         assert isinstance(dataset.modified, datetime)
         assert isinstance(dataset.accessed, datetime)
-        assert isinstance(dataset.files[0], File)
 
         size = 0
-        for i, name, file in enumerate(dataset.files.items()):
+        for i, (_, file) in enumerate(dataset.files.items()):
+            i += 1
             size += file.size
             filename = "csvfile{}.csv".format(i)
-            name = filename.splitext(".")[0]
-            assert i in range(1, 5)
-            assert file.name == name
+            assert isinstance(file, File)
+            assert file.name == os.path.splitext(filename)[0]
             assert file.source == SOURCE
             assert file.format == FORMAT
             assert file.storage_type == STORAGE_TYPE
@@ -139,4 +138,3 @@ def test_dataset_invalid(self, caplog, dataset):
         )
 
     logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-

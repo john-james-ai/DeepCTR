@@ -95,11 +95,11 @@ def dataset():
         filename = "csvfile{}.csv".format(i)
         filepath = os.path.join(datastore, filename)
         file = File(
-            name=filename.splitext(".")[0],
+            name=os.path.splitext(filename)[0],
             source="avazu",
             storage_type="local",
             format="csv",
-            stage=1,
+            stage_id=1,
             home="tests/data",
             filepath=filepath,
             dataset_id=0,
