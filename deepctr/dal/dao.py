@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday May 21st 2022 11:10:43 pm                                                  #
-# Modified   : Saturday June 25th 2022 03:03:47 am                                                 #
+# Modified   : Sunday June 26th 2022 01:02:39 pm                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -21,9 +21,8 @@ import pandas as pd
 from pymysql.connections import Connection
 
 from deepctr import Entity
-from deepctr.dal.base import File, Dataset
 from deepctr.data.database import Database
-from deepctr.dal.sequel import FileSQL, DatasetSQL  # , DagSQL, TaskSQL,  S3FileSQL
+from deepctr.dal.mapper import FileSQL, DatasetSQL  # , DagSQL, TaskSQL,  S3FileSQL
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
@@ -36,12 +35,14 @@ logger = logging.getLogger(__name__)
 
 
 class DAO(ABC):
-    """Table level access to the database."""
+    """Table level access to the database.
 
-    def __init__(self, connection: Connection) -> None:
-        self._connection = connection
-        self._connection.begin()
-        self._database = Database(self._connection)
+    Args:
+        database (Database): Database instantiated with a connection.
+    """
+
+    def __init__(self, database: Database) -> None:
+        self._database = database
 
     # -------------------------------------------------------------------------------------------- #
     @abstractmethod
@@ -50,7 +51,7 @@ class DAO(ABC):
 
     # -------------------------------------------------------------------------------------------- #
     @abstractmethod
-    def find(self, id: int) -> Entity:
+    def find(self, id: int) -> dict:
         pass
 
     # -------------------------------------------------------------------------------------------- #
@@ -67,23 +68,6 @@ class DAO(ABC):
     @abstractmethod
     def delete(self, id: int) -> int:
         pass
-
-    # -------------------------------------------------------------------------------------------- #
-    @abstractmethod
-    def factory(self, entity) -> None:
-        self._connection.begin()
-
-    # -------------------------------------------------------------------------------------------- #
-    def begin_transaction(self) -> None:
-        self._connection.begin()
-
-    # -------------------------------------------------------------------------------------------- #
-    def rollback(self) -> None:
-        self._connection.rollback()
-
-    # -------------------------------------------------------------------------------------------- #
-    def commit(self) -> None:
-        self._connection.commit()
 
 
 # # ================================================================================================ #
@@ -266,9 +250,9 @@ class DAO(ABC):
 class FileDAO(DAO):
     """Provides access to localfile table ."""
 
-    def __init__(self, connection: Connection) -> None:
+    def __init__(self, database: Database) -> None:
         self._sql = FileSQL()
-        super(FileDAO, self).__init__(connection)
+        super(FileDAO, self).__init__(database)
 
     def add(self, entity: Entity) -> Entity:
         """Adds an entity to the database
@@ -283,42 +267,35 @@ class FileDAO(DAO):
         entity.id = self._database.insert(command.statement, command.parameters)
         return entity
 
-    def find(self, id: int) -> Entity:
+    def find(self, id: int) -> dict:
         """Finds an entity based on the id and returns it as an entity dataclass.
 
         Args:
             id (int): The id that uniquely identifies an entity
 
-        Returns
-            Entity
+        Returns a dictionary containing data for the specified row.
         """
 
         command = self._sql.select(id)
-        entity = self._database.select_one(command.statement, command.parameters)
-        return self.factory(entity)
+        return self._database.select_one(command.statement, command.parameters)
 
-    def find_by_dataset(self, dataset: int) -> Entity:
+    def find_by_dataset_id(self, dataset_id: int) -> Entity:
         """Finds an entity based on dataset and returns it as an entity dataclass.
 
         Args:
             dataset (str): The dataset name
 
-        Returns
+        Returns list of dictionaries containing the
             Entity
         """
 
-        command = self._sql.select_by_dataset_name(dataset)
-        files = self._database.select(command.statement, command.parameters)
-        file_objects = [self.factory(file) for file in files]
-        return file_objects
+        command = self._sql.select_by_dataset_id(dataset_id)
+        return self._database.select(command.statement, command.parameters)
 
     def findall(self, todf: bool = False) -> list:
         """Returns all entities from the designated entity table."""
         command = self._sql.select_all()
-        entities = self._database.select_all(command.statement)
-        if todf:
-            return pd.DataFrame.from_dict(entities)
-        return [self.factory(entity) for entity in entities]
+        return self._database.select_all(command.statement)
 
     def update(self, entity: Entity) -> None:
         """Updates the entity
@@ -339,38 +316,6 @@ class FileDAO(DAO):
         """
         command = self._sql.delete(id)
         return self._database.execute(command.statement, command.parameters)
-
-    def factory(self, entity: Entity) -> Entity:
-        """Factory method to convert database result to an entity object.
-
-        Args:
-            entity (Entity): An entity object of the derived type
-        """
-        file = File(
-            id=entity["id"],
-            name=entity["name"],
-            source=entity["source"],
-            dataset=entity["dataset"],
-            storage_type=entity["storage_type"],
-            format=entity["format"],
-            stage_id=entity["stage_id"],
-            stage_name=entity["stage_name"],
-            home=entity["home"],
-            bucket=entity["bucket"],
-            filepath=entity["filepath"],
-            compressed=entity["compressed"],
-            rows=entity["rows"],
-            cols=entity["cols"],
-            size=entity["size"],
-            created=entity["created"],
-            modified=entity["modified"],
-            accessed=entity["accessed"],
-        )
-        if file.compressed == 1:
-            file.compressed = True
-        else:
-            file.compressed = False
-        return file
 
 
 # ================================================================================================ #
@@ -392,35 +337,26 @@ class DatasetDAO(DAO):
         Returns
             Entity with the id updated with id from the database.
         """
-        for file in entity.files:
-            file = self._file_dao.add(file)
-            entity.files[file.name] = file  # We re-add the file with id to the dataset entity.
         command = self._sql.insert(entity)
         entity.id = self._database.insert(command.statement, command.parameters)
         return entity
 
-    def find(self, id: int) -> Entity:
+    def find(self, id: int) -> dict:
         """Finds an entity based on the id and returns it as an entity dataclass.
 
         Args:
             id (int): The id that uniquely identifies an entity
 
-        Returns
-            Entity
+        Returns a dictionary containing the results of the query.
         """
 
         command = self._sql.select(id)
-        entity = self._database.select_one(command.statement, command.parameters)
-        entity = self.factory(entity)
-        return entity
+        return self._database.select_one(command.statement, command.parameters)
 
     def findall(self, todf: bool = False) -> list:
         """Returns all entities from the designated entity table."""
         command = self._sql.select_all()
-        entities = self._database.select_all(command.statement)
-        if todf:
-            return pd.DataFrame.from_dict(entities)
-        return [self.factory(entity) for entity in entities]
+        return self._database.select_all(command.statement)
 
     def update(self, entity: Entity) -> None:
         """Updates the entity
@@ -441,33 +377,3 @@ class DatasetDAO(DAO):
         """
         command = self._sql.delete(id)
         return self._database.execute(command.statement, command.parameters)
-
-    def factory(self, entity: Entity) -> Entity:
-        """Factory method to convert database result to an entity object.
-
-        Args:
-            entity (Entity): An entity object of the derived type
-        """
-        compute_size = False
-        dataset = Dataset(
-            id=entity["id"],
-            name=entity["name"],
-            source=entity["source"],
-            storage_type=entity["storage_type"],
-            stage_id=entity["stage_id"],
-            stage_name=entity["stage_name"],
-            home=entity["home"],
-            bucket=entity["bucket"],
-            folder=entity["folder"],
-            size=entity["size"],
-            created=entity["created"],
-            modified=entity["modified"],
-            accessed=entity["accessed"],
-        )
-        files = self._file_dao.find_by_dataset_name(dataset.name)
-        compute_size = dataset.size == 0
-        for file in files:
-            dataset.files[file.name] = file
-            if compute_size:
-                dataset.size = dataset.size + file.size
-        return dataset
