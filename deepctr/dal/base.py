@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday June 23rd 2022 09:28:39 pm                                                 #
-# Modified   : Friday June 24th 2022 09:05:01 pm                                                   #
+# Modified   : Sunday June 26th 2022 12:58:22 pm                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -62,7 +62,6 @@ class File(Entity):
 
     # name: str Inherited from Entity class
     source: str  # The name as the dataset as externally recognized. i.e. alibaba
-    dataset: str  # The collection to which the file belongs
     storage_type: str  # Either 'local' or 's3'
     format: str  # The uncompressed format of the data, i.e. csv, parquet
     stage_id: int  # The stage identifier. See deepctr/dal/__init__.py
@@ -75,6 +74,7 @@ class File(Entity):
     rows: int = 0  # The number of rows in the file.
     cols: int = 0  # The number of columns in the file.
     id: int = 0  # The id assigned by the database
+    dataset_id: int = 0  # The identifier for the dataset to which this file belongs.
     created: datetime = None
     modified: datetime = None
     accessed: datetime = None

@@ -3,14 +3,14 @@
 # ================================================================================================ #
 # Project    : DeepCTR: Deep Learning for CTR Prediction                                           #
 # Version    : 0.1.0                                                                               #
-# Filename   : /sequel.py                                                                          #
+# Filename   : /mapper.py                                                                          #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday May 22nd 2022 08:41:02 pm                                                    #
-# Modified   : Friday June 24th 2022 08:23:16 pm                                                   #
+# Modified   : Sunday June 26th 2022 01:02:14 pm                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -20,7 +20,8 @@ from abc import ABC, abstractmethod
 import logging
 from dataclasses import dataclass
 from deepctr.utils.log_config import LOG_CONFIG
-from deepctr.dal.entity import Entity
+from deepctr import Entity
+from deepctr.dal.base import File, Dataset
 
 # ------------------------------------------------------------------------------------------------ #
 logging.config.dictConfig(LOG_CONFIG)
@@ -230,7 +231,7 @@ class FileInsert:
     def __post_init__(self) -> None:
         self.statement = """
             INSERT INTO `file`
-            (`name`, `source`, `dataset`, `storage_type`, `format`,
+            (`name`, `source`, `dataset_id`, `storage_type`, `format`,
             `stage_id`, `stage_name`, `home`, `bucket`, `filepath`,
             `compressed`, `rows`, `cols`, `size`, `created`,`modified`,`accessed`)
             VALUES (%s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
@@ -238,7 +239,7 @@ class FileInsert:
         self.parameters = (
             self.entity.name,
             self.entity.source,
-            self.entity.dataset,
+            self.entity.dataset_id,
             self.entity.storage_type,
             self.entity.format,
             self.entity.stage_id,
@@ -268,12 +269,12 @@ class FileSelect:
 
 # ------------------------------------------------------------------------------------------------ #
 @dataclass
-class FileSelectByDatasetName:
+class FileSelectByDatasetId:
     parameters: tuple
     statement: str = None
 
     def __post_init__(self) -> None:
-        self.statement = """SELECT * FROM `file` WHERE `dataset`= %s;"""
+        self.statement = """SELECT * FROM `file` WHERE `dataset_id`= %s;"""
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -306,7 +307,7 @@ class FileUpdate:
         self.statement = """UPDATE `file`
                             SET `name` = %s,
                                 `source` = %s,
-                                `dataset` = %s,
+                                `dataset_id` = %s,
                                 `storage_type` = %s,
                                 `format` = %s,
                                 `stage_id` = %s,
@@ -326,7 +327,7 @@ class FileUpdate:
         self.parameters = (
             self.entity.name,
             self.entity.source,
-            self.entity.dataset,
+            self.entity.dataset_id,
             self.entity.storage_type,
             self.entity.format,
             self.entity.stage_id,
@@ -458,9 +459,9 @@ class DatasetUpdate:
 
 
 # ------------------------------------------------------------------------------------------------ #
-#                                          COMMAND                                                 #
+#                                          MAPPER                                                  #
 # ------------------------------------------------------------------------------------------------ #
-class EntitySQL(ABC):
+class EntityMapper(ABC):
     """Abstract base class for command classes, one for each entity."""
 
     @abstractmethod
@@ -483,11 +484,15 @@ class EntitySQL(ABC):
     def delete(self, id: int):
         pass
 
+    @abstractmethod
+    def factory(self, record: dict) -> Entity:
+        pass
+
 
 # ------------------------------------------------------------------------------------------------ #
-#                                         DAG COMMAND                                              #
+#                                         DAG MAPPER                                               #
 # ------------------------------------------------------------------------------------------------ #
-class DagSQL(EntitySQL):
+class DagMapper(EntityMapper):
     """Commands for the DAG table."""
 
     def insert(self, entity: Entity) -> DagInsert:
@@ -505,11 +510,14 @@ class DagSQL(EntitySQL):
     def delete(self, id: int) -> DagDelete:
         return DagDelete(parameters=(id,))
 
+    def factory(self, record: dict) -> Entity:
+        pass
+
 
 # ------------------------------------------------------------------------------------------------ #
-#                                        TASK COMMAND                                              #
+#                                        TASK MAPPER                                               #
 # ------------------------------------------------------------------------------------------------ #
-class TaskSQL(EntitySQL):
+class TaskMapper(EntityMapper):
     """Commands for the Task table."""
 
     def insert(self, entity: Entity) -> TaskInsert:
@@ -527,11 +535,14 @@ class TaskSQL(EntitySQL):
     def delete(self, id: int) -> TaskDelete:
         return TaskDelete(parameters=(id,))
 
+    def factory(self, record: dict) -> Entity:
+        pass
+
 
 # ------------------------------------------------------------------------------------------------ #
-#                                        FILE COMMAND                                              #
+#                                        FILE MAPPER                                               #
 # ------------------------------------------------------------------------------------------------ #
-class FileSQL(EntitySQL):
+class FileMapper(EntityMapper):
     """Commands for the file table."""
 
     def insert(self, entity: Entity) -> FileInsert:
@@ -540,8 +551,8 @@ class FileSQL(EntitySQL):
     def select(self, id: int) -> FileSelect:
         return FileSelect(parameters=(id,))
 
-    def select_by_dataset_name(self, dataset_name: str) -> FileSelectByDatasetName:
-        return FileSelectByDatasetName(parameters=(dataset_name,))
+    def select_by_dataset_id(self, dataset_id: int) -> FileSelectByDatasetId:
+        return FileSelectByDatasetId(parameters=(dataset_id,))
 
     def select_all(self) -> FileSelectAll:
         return FileSelectAll()
@@ -552,11 +563,33 @@ class FileSQL(EntitySQL):
     def delete(self, id: int) -> FileDelete:
         return FileDelete(parameters=(id,))
 
+    def factory(self, record: dict) -> Entity:
+        return File(
+            id=record["id"],
+            name=record["name"],
+            source=record["source"],
+            storage_type=record["storage_type"],
+            format=record["format"],
+            stage_id=record["stage_id"],
+            stage_name=record["stage_name"],
+            home=record["home"],
+            bucket=record["bucket"],
+            filepath=record["filepath"],
+            compressed=record["compressed"],
+            size=record["size"],
+            rows=record["rows"],
+            cols=record["cols"],
+            dataset_id=record["dataset_id"],
+            created=record["created"],
+            modified=record["modified"],
+            accessed=record["accessed"],
+        )
+
 
 # ------------------------------------------------------------------------------------------------ #
-#                                       DATASET COMMAND                                            #
+#                                       DATASET MAPPER                                             #
 # ------------------------------------------------------------------------------------------------ #
-class DatasetSQL(EntitySQL):
+class DatasetMapper(EntityMapper):
     """Commands for the dataset table."""
 
     def insert(self, entity: Entity) -> DatasetInsert:
@@ -573,3 +606,22 @@ class DatasetSQL(EntitySQL):
 
     def delete(self, id: int) -> DatasetDelete:
         return DatasetDelete(parameters=(id,))
+
+    def factory(self, record: dict) -> Entity:
+        return Dataset(
+            id=record["id"],
+            name=record["name"],
+            source=record["source"],
+            storage_type=record["storage_type"],
+            folder=record["folder"],
+            format=record["format"],
+            stage_id=record["stage_id"],
+            stage_name=record["stage_name"],
+            compressed=record["compressed"],
+            size=record["size"],
+            home=record["home"],
+            bucket=record["bucket"],
+            created=record["created"],
+            modified=record["modified"],
+            accessed=record["accessed"],
+        )

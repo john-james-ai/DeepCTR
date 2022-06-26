@@ -25,7 +25,7 @@ CREATE TABLE `file` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(64) NOT NULL,
     `source` VARCHAR(32) NOT NULL,
-    `dataset` VARCHAR(32) NOT NULL,
+    `dataset_id` INTEGER NOT NULL,
     `storage_type` VARCHAR(8) NOT NULL,
     `format` VARCHAR(16) NOT NULL,
     `stage_id` INTEGER NOT NULL,
