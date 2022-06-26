@@ -10,18 +10,14 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Wednesday June 22nd 2022 11:50:05 am                                                #
-# Modified   : Friday June 24th 2022 08:50:35 pm                                                   #
+# Modified   : Sunday June 26th 2022 01:33:01 pm                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
 """Reading and writing dataframes with progress bars"""
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-import pandas as pd
-from pyspark.sql import DataFrame
-from typing import Union
 
 # ------------------------------------------------------------------------------------------------ #
 #                                          METADATA                                                #
@@ -36,24 +32,3 @@ class Metadata:
     created: datetime = None
     modified: datetime = None
     accessed: datetime = None
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                              IO                                                  #
-# ------------------------------------------------------------------------------------------------ #
-
-
-class IO(ABC):
-    """Base class for IO classes"""
-
-    @abstractmethod
-    def read(self, filepath: str, **kwargs) -> Union[pd.DataFrame, DataFrame]:
-        pass
-
-    @abstractmethod
-    def write(self, data: Union[pd.DataFrame, DataFrame], filepath: str, **kwargs) -> None:
-        pass
-
-    @abstractmethod
-    def metadata(self, filepath: str, **kwargs) -> dict:
-        pass

@@ -371,7 +371,7 @@ class S3(Cloud):
             if e.response["Error"]["Code"] == "404":
                 msg = "Object {} does not exist.".format(object_key)
                 logger.error(msg)
-                raise ValueError(msg)
+                raise FileNotFoundError(msg)
             else:
                 operation_name = "{}: {}".format(self.__class__.__name__, inspect.stack()[0][3])
                 raise botocore.exceptions.ClientError(

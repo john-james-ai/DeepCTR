@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 26th 2022 07:03:22 pm                                                  #
-# Modified   : Thursday June 23rd 2022 09:41:06 pm                                                 #
+# Modified   : Sunday June 26th 2022 03:57:26 pm                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 # ================================================================================================ #
 FILE_NAME = "test_fao_input"
 FILE_SOURCE = "alibaba"
+FILE_DATASET_ID = 0
 FILE_DATASET = "test_dataset"
 FILE_STORAGE_TYPE = "local"
 FILE_FORMAT = ".csv"
@@ -61,34 +62,38 @@ DATASET_STORAGE_TYPE = "s3"
 @pytest.mark.dal
 @pytest.mark.file
 class TestFile:
-    def test_local_file_valid(self, caplog):
-        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+    def test_local_file_valid_exists(self, caplog, file):
 
-        # Test w/ minimal input
-        file = File(
-            name=FILE_NAME,
-            source=FILE_SOURCE,
-            dataset=FILE_DATASET,
-            storage_type=FILE_STORAGE_TYPE,
-            format=FILE_FORMAT,
-            stage_id=FILE_STAGE_ID,
-            home=FILE_HOME,
-        )
-        assert file.name == FILE_NAME
-        assert file.source == FILE_SOURCE
-        assert file.dataset == FILE_DATASET
-        assert file.storage_type == FILE_STORAGE_TYPE
-        assert file.format == FILE_FORMAT.replace(".", "")
-        assert file.stage_id == FILE_STAGE_ID
-        assert file.stage_name == FILE_STAGE_NAME
-        assert file.home == FILE_HOME
-        assert file.filepath == FILE_FILEPATH
+        assert file.name == "test_file"
+        assert file.source == "alibaba"
+        assert file.storage_type == "local"
+        assert file.format == "csv"
+        assert file.stage_id == 2
+        assert file.stage_name == STAGES.get(2)
         assert file.compressed is False
         assert file.size != 0
-        assert file.id == 0
+        assert file.rows != 0
+        assert file.cols != 0
+        assert os.path.exists(file.filepath)
         assert isinstance(file.created, datetime)
+        assert isinstance(file.modified, datetime)
+        assert isinstance(file.accessed, datetime)
 
-        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+    def test_local_file_valid_not_exists(self, caplog, file2):
+
+        assert file2.name == "test_file"
+        assert file2.source == "alibaba"
+        assert file2.storage_type == "local"
+        assert file2.format == "csv"
+        assert file2.stage_id == 2
+        assert file2.stage_name == STAGES.get(2)
+        assert file2.compressed is False
+        assert file2.size == 0
+        assert file2.rows == 0
+        assert file2.cols == 0
+        assert file2.created is None
+        assert file2.modified is None
+        assert file2.accessed is None
 
     def test_local_file_invalid(self, caplog):
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
@@ -169,7 +174,7 @@ class TestFile:
         assert file.compressed is True
         assert file.size != 0
         assert file.id == 0
-        assert file.created == FILE_CREATED
+        assert isinstance(file.created, datetime)
 
         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 

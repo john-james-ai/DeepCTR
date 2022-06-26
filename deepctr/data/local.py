@@ -18,18 +18,20 @@
 # Copyright: (c) 2022 Bryant St. Labs                                                              #
 # ================================================================================================ #
 """Reading and writing dataframes with progress bars"""
+from abc import ABC, abstractmethod
 import os
 import logging
 from datetime import datetime
+import pandas as pd
 import logging.config
 import pyspark
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, DataFrame
 import findspark
 import pyarrow.parquet as pq
+from typing import Union
 
 from deepctr.data.base import Metadata
 from deepctr.utils.log_config import LOG_CONFIG
-from deepctr.data.base import IO
 
 findspark.init()
 
@@ -37,6 +39,27 @@ findspark.init()
 logging.config.dictConfig(LOG_CONFIG)
 logging.getLogger("py4j").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                              IO                                                  #
+# ------------------------------------------------------------------------------------------------ #
+
+
+class IO(ABC):
+    """Base class for IO classes"""
+
+    @abstractmethod
+    def read(self, filepath: str, **kwargs) -> Union[pd.DataFrame, DataFrame]:
+        pass
+
+    @abstractmethod
+    def write(self, data: Union[pd.DataFrame, DataFrame], filepath: str, **kwargs) -> None:
+        pass
+
+    @abstractmethod
+    def metadata(self, filepath: str, **kwargs) -> dict:
+        pass
 
 
 # ------------------------------------------------------------------------------------------------ #

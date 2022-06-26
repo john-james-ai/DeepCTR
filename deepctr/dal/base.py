@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday June 23rd 2022 09:28:39 pm                                                 #
-# Modified   : Sunday June 26th 2022 12:58:22 pm                                                   #
+# Modified   : Sunday June 26th 2022 05:22:00 pm                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -75,6 +75,8 @@ class File(Entity):
     cols: int = 0  # The number of columns in the file.
     id: int = 0  # The id assigned by the database
     dataset_id: int = 0  # The identifier for the dataset to which this file belongs.
+    dataset: str = None  # The name of the dataset
+    exists: bool = False  # Defaults to False until otherwise...
     created: datetime = None
     modified: datetime = None
     accessed: datetime = None
@@ -92,6 +94,9 @@ class File(Entity):
         self.stage_id = validate.stage(self.stage_id)
         self.storage_type = validate.storage_type(self.storage_type)
 
+    def _set_stage_name(self) -> None:
+        self.stage_name = STAGES.get(self.stage_id, None)
+
     def _set_filepath(self) -> None:
         if not self.filepath:
             stage_name = str(self.stage_id) + "_" + self.stage_name
@@ -105,19 +110,41 @@ class File(Entity):
     def _set_metadata(self) -> None:
         """Sets the metadata variables including size, dates, and stage_name"""
         self.stage_name = STAGES.get(self.stage_id)
-        if self.storage_type == "local":
-            io = SparkCSV() if self.format == "csv" else SparkParquet()
-            metadata = io.metadata(self.filepath)
-        else:
-            io = S3()
-            metadata = io.metadata(bucket=self.bucket, object_key=self.filepath)
 
-        self.rows = metadata.rows
-        self.cols = metadata.cols
-        self.size = metadata.size
-        self.created = metadata.created
-        self.modified = metadata.modified
-        self.accessed = metadata.accessed
+        if self.storage_type == "local":
+            self._set_metadata_local()
+        else:
+            self._set_metadata_remote()
+
+    def _set_metadata_local(self) -> None:
+        io = SparkCSV() if self.format == "csv" else SparkParquet()
+        try:
+            metadata = io.metadata(self.filepath)
+            self.rows = metadata.rows
+            self.cols = metadata.cols
+            self.size = metadata.size
+            self.created = metadata.created
+            self.modified = metadata.modified
+            self.accessed = metadata.accessed
+        except FileNotFoundError as e:
+            logger.info(
+                "File {} does not exist. Metadata set to default values.\n{}".format(self.name, e)
+            )
+
+    def _set_metadata_remote(self) -> None:
+        io = S3()
+        try:
+            metadata = io.metadata(bucket=self.bucket, object_key=self.filepath)
+            self.rows = metadata.rows
+            self.cols = metadata.cols
+            self.size = metadata.size
+            self.created = metadata.created
+            self.modified = metadata.modified
+            self.accessed = metadata.accessed
+        except FileNotFoundError as e:
+            logger.info(
+                "File {} does not exist. Metadata set to default values.\n{}".format(self.name, e)
+            )
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -144,8 +171,6 @@ class Dataset(Entity):
     modified: datetime = None
     accessed: datetime = None
 
-    files: list = field(default_factory=list)  # List of file objects
-
     def __post_init__(self) -> None:
         self._validate()
         self._add_files()
@@ -158,17 +183,50 @@ class Dataset(Entity):
         self.stage_id = validate.stage(self.stage_id)
         self.stage_name = STAGES.get(self.stage_id)
 
-    def _add_files(self) -> None:
-        if self.storage_type == "s3":
-            self._add_files_remote()
-        else:
-            self._add_files_local()
+    def add_file(self, file) -> None:
+        self._update_metadata(file)
+        self.files[file.name] = file
 
-    def _add_files_remote(self) -> None:
-        pass
+    def _add_files(self) -> None:
+        if self.storage_type == "local":
+            self._add_files_local()
+        else:
+            self._add_files_remote()
 
     def _add_files_local(self) -> None:
-        pass
+        if os.path.exists(self.folder):
+            io = SparkCSV() if self.format == "csv" else SparkParquet()
+            filenames = os.listdir(self.folder)
+            for filename in filenames:
+                filepath = os.path.join(self.folder, filename)
+                metadata = io.metadata(filepath)
+                file = File(
+                    name=filename.splitext(".")[0],
+                    source=self.source,
+                    storage_type=self.storage_type,
+                    format=self.format,
+                    stage_id=self.stage_id,
+                    stage_name=self.stage_name,
+                    home=self.home,
+                    bucket=self.bucket,
+                    filepath=filepath,
+                    compressed=self.compressed,
+                    size=metadata.size,
+                    rows=metadata.rows,
+                    cols=metadata.cols,
+                )
+
+    def _update_metadata(self, file: File) -> None:
+        if self.created is None:
+            self.created = file.created
+            self.modified = file.modified
+            self.accessed = file.accessed
+        else:
+            self.created = file.created if self.created > file.created else self.created
+            self.modified = file.modified if self.modified < file.modified else self.modified
+            self.accessed = file.accessed if self.accessed < file.accessed else self.accessed
+
+        self.size = self.size + file.size
 
 
 # ------------------------------------------------------------------------------------------------ #

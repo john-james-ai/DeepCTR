@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday May 22nd 2022 08:41:02 pm                                                    #
-# Modified   : Sunday June 26th 2022 01:02:14 pm                                                   #
+# Modified   : Sunday June 26th 2022 03:08:54 pm                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -231,15 +231,20 @@ class FileInsert:
     def __post_init__(self) -> None:
         self.statement = """
             INSERT INTO `file`
-            (`name`, `source`, `dataset_id`, `storage_type`, `format`,
+            (`name`, `source`, `dataset_id`, `dataset`, `storage_type`, `format`,
             `stage_id`, `stage_name`, `home`, `bucket`, `filepath`,
-            `compressed`, `rows`, `cols`, `size`, `created`,`modified`,`accessed`)
-            VALUES (%s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            `compressed`, `rows`, `cols`, `size`,`exists`,
+            `created`, `modified`,`accessed`)
+            VALUES (%s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s);
             """
         self.parameters = (
             self.entity.name,
             self.entity.source,
             self.entity.dataset_id,
+            self.entity.dataset,
             self.entity.storage_type,
             self.entity.format,
             self.entity.stage_id,
@@ -251,6 +256,7 @@ class FileInsert:
             self.entity.rows,
             self.entity.cols,
             self.entity.size,
+            self.entity.exists,
             self.entity.created,
             self.entity.modified,
             self.entity.accessed,
@@ -308,6 +314,7 @@ class FileUpdate:
                             SET `name` = %s,
                                 `source` = %s,
                                 `dataset_id` = %s,
+                                `dataset` = %s,
                                 `storage_type` = %s,
                                 `format` = %s,
                                 `stage_id` = %s,
@@ -319,6 +326,7 @@ class FileUpdate:
                                 `rows` = %s,
                                 `cols` = %s,
                                 `size` = %s,
+                                `exists` = %s,
                                 `created` = %s,
                                 `modified` = %s,
                                 `accessed` = %s
@@ -328,6 +336,7 @@ class FileUpdate:
             self.entity.name,
             self.entity.source,
             self.entity.dataset_id,
+            self.entity.dataset,
             self.entity.storage_type,
             self.entity.format,
             self.entity.stage_id,
@@ -339,6 +348,7 @@ class FileUpdate:
             self.entity.rows,
             self.entity.cols,
             self.entity.size,
+            self.entity.exists,
             self.entity.created,
             self.entity.modified,
             self.entity.accessed,

@@ -18,12 +18,13 @@
 # Copyright: (c) 2022 Bryant St. Labs                                                              #
 # ================================================================================================ #
 """Includes fixtures, classes and functions supporting testing."""
+import os
 import pytest
 from pyspark.sql import SparkSession
 from sklearn.datasets import load_iris
 
 from deepctr.dal import STAGES
-from deepctr.dal.base import File  # Dataset
+from deepctr.dal.base import File, Dataset
 from deepctr.data.database import ConnectionFactory
 from deepctr.utils.database import parse_sql
 
@@ -36,6 +37,77 @@ CONNECTION = {
 #                                        IGNORE                                                    #
 # ------------------------------------------------------------------------------------------------ #
 collect_ignore_glob = ["tests/old_tests/**/*.py"]
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                           FILE                                                   #
+# ------------------------------------------------------------------------------------------------ #
+@pytest.fixture(scope="module")
+def file():
+    return File(
+        name="test_file",
+        source="alibaba",
+        storage_type="local",
+        format="csv",
+        stage_id=2,
+        home="tests/data",
+        dataset_id=0,
+        dataset="test_dataset",
+        filepath="tests/data/data_store/csvfile.csv",
+    )
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                           FILE2                                                  #
+# ------------------------------------------------------------------------------------------------ #
+@pytest.fixture(scope="module")
+def file2():
+    """For non-existing file tests"""
+    return File(
+        name="test_file",
+        source="alibaba",
+        storage_type="local",
+        format="csv",
+        stage_id=2,
+        home="tests/data",
+        dataset_id=0,
+        dataset="test_dataset",
+    )
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                         DATASET                                                  #
+# ------------------------------------------------------------------------------------------------ #
+@pytest.fixture(scope="module")
+def dataset():
+    datastore = "tests/data/data_store"
+    dataset = Dataset(
+        name="test_dataset",
+        source="avazu",
+        storage_type="local",
+        folder=datastore,
+        format="csv",
+        stage_id=1,
+        home="tests/data",
+    )
+
+    for i in range(1, 5):
+        filename = "csvfile{}.csv".format(i)
+        filepath = os.path.join(datastore, filename)
+        file = File(
+            name=filename.splitext(".")[0],
+            source="avazu",
+            storage_type="local",
+            format="csv",
+            stage=1,
+            home="tests/data",
+            filepath=filepath,
+            dataset_id=0,
+            dataset="test_dataset",
+        )
+        dataset.add_file(file)
+    return dataset
+
 
 # ------------------------------------------------------------------------------------------------ #
 #                                     SPARK FIXTURES                                               #
