@@ -10,135 +10,107 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday May 22nd 2022 12:30:45 am                                                    #
-# Modified   : Monday June 20th 2022 02:21:46 am                                                   #
+# Modified   : Tuesday June 28th 2022 12:42:45 pm                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
 """Dataset context object that implements the Repository/Unit of Work Pattern."""
-from abc import ABC, abstractmethod
+from abc import ABC
 import logging
-from pymysql.connections import Connection
 
+from deepctr.dal.base import EntityMapper
+from deepctr.data.database import Database
+from deepctr.dal.source import SourceMapper
+from deepctr.dal.file import FileMapper
 
-from deepctr.dal.dao import LocalFileDAO, S3FileDAO, DagDAO, TaskDAO
+# from deepctr.dal.mapper import FileMapper, DatasetMapper, TaskMapper, DagMapper
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
 logging.config.dictConfig(LOG_CONFIG)
 logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
-
-
-class Context(ABC):
-    """Base class defining the interface for all context objects.
+#                                       DBCONTEXT                                                  #
+# ------------------------------------------------------------------------------------------------ #
+class DBContext(ABC):
+    """Base class for database context classes.
 
     Context controls the database connection and transactions, as well as the
-    data access objects (DAOs), one for each table.
+    mappers.
+
+    Args:
+    connection (pymysql.connections.Connection): Connection to the database
+    database (Database): Object that reads and writes to the database
+    mapper (EntityMapper): Contains SQL and factor reconstitute method for the entity.
 
     """
 
-    def __init__(self, database: str = "deepctr") -> None:
+    def __init__(self, database: Database) -> None:
         self._database = database
-        self._connection = None
-
-    def connect(self):
-        load_dotenv()
-        host = os.getenv("HOST")
-        user = os.getenv("USER")
-        password = os.getenv("PASSWORD")
-        port = os.getenv("PORT")
-        database = os.getenv("DATABASE")
-        try:
-            self._connection = pymysql.connect(
-                host=config.host,
-                user=config.user,
-                password=config.password,
-                database=database,
-                cursorclass=pymysql.cursors.DictCursor,
-                charset="utf8mb4",
-            )
-        except pymysql.Error as e:
-            logger.error("Could not open {} database. Error: {}".format(self._dbname, e))
-            raise
-
-    def __exit__(self, exception_type=None, exception_value=None, traceback=None):
-        if exception_type is None:
-            self.commit()
-            self.close()
-        else:
-            logger.error(
-                "Exception type: {}\tException value: {}\n{}".format(
-                    exception_type, exception_value, traceback
-                )
-            )
-            self.rollback()
-            self.close()
-            raise
+        self._mapper = None
 
     @property
-    def connection(self):
-        return self._connection
-
-    @dag.setter
-    def dag(self, dag: DagORM) -> None:
-        self._dag = dag
+    def mapper(self) -> EntityMapper:
+        return self._mapper
 
     @property
-    def task(self) -> TaskORM:
-        return self._task
+    def database(self) -> Database:
+        return self._database
 
-    @task.setter
-    def task(self, task: TaskORM) -> None:
-        self._task = task
-
-    @property
-    def dataset(self) -> Dataset:
-        return self._dataset
-
-    @dataset.setter
-    def dataset(self, dataset: Dataset) -> None:
-        self._dataset = dataset
+    def begin_transaction(self) -> None:
+        self._database.begin_transaction()
 
     def commit(self) -> None:
-        self._connection.commit()
+        self._database.commit()
 
     def close(self) -> None:
-        self._connection.close()
+        self._database.close()
 
     def rollback(self) -> None:
-        self._connection.rollback()
-
-    @abstractmethod
-    def connect(self) -> None:
-        """Adds connections to all the data access objects."""
-        pass
-
-    @abstractmethod
-    def save(self) -> None:
-        """Runs save to commit changes on all data access objects."""
-        pass
+        self._database.rollback()
 
 
 # ------------------------------------------------------------------------------------------------ #
-class DataContext(Context):
-    """Defines the context for data related DAGs"""
+#                                  SOURCE DBCONTEXT                                                #
+# ------------------------------------------------------------------------------------------------ #
+class SourceDBContext(DBContext):
+    def __init__(self, database: Database) -> None:
+        super(SourceDBContext, self).__init__(database=database)
+        self._mapper = SourceMapper()
 
-    def __init__(self, connection: Connection) -> None:
-        super(DataContext, self).__init__(connection)
 
-    def connect(self) -> None:
-        self._localfiles = LocalFileDAO(self._connection)
-        self._localdatasets = LocalDatasetDAO(self._connection)
-        self._s3files = S3FileDAO(self._connection)
-        self._s3datasets = S3DatasetDAO(self._connection)
-        self._dags = DagDAO(self._connection)
-        self._tasks = TaskDAO(self._connection)
+# ------------------------------------------------------------------------------------------------ #
+#                                    DBCONTEXT FILE                                                #
+# ------------------------------------------------------------------------------------------------ #
+class FileDBContext(DBContext):
+    def __init__(self, database: Database) -> None:
+        super(FileDBContext, self).__init__(database=database)
+        self._mapper = FileMapper()
 
-    def save(self) -> None:
-        self._localfiles.save()
-        self._localdatasets.save()
-        self._s3files.save()
-        self._s3datasets.save()
-        self._dags.save()
-        self._tasks.save()
+
+# # ------------------------------------------------------------------------------------------------ #
+# #                                  DBCONTEXT DATASET                                               #
+# # ------------------------------------------------------------------------------------------------ #
+# class DatasetDBContext(DBContext):
+#     def __init__(self, database: Database) -> None:
+#         super(DatasetDBContext, self).__init__(database=database)
+#         self._mapper = DatasetMapper()
+
+
+# # ------------------------------------------------------------------------------------------------ #
+# #                                   DBCONTEXT DAG                                                  #
+# # ------------------------------------------------------------------------------------------------ #
+# class DagDBContext(DBContext):
+#     def __init__(self, database: Database) -> None:
+#         super(DagDBContext, self).__init__(database=database)
+#         self._mapper = DagMapper()
+
+
+# # ------------------------------------------------------------------------------------------------ #
+# #                                   DBCONTEXT DAG                                                  #
+# # ------------------------------------------------------------------------------------------------ #
+# class TaskDBContext(DBContext):
+#     def __init__(self, database: Database) -> None:
+#         super(TaskDBContext, self).__init__(database=database)
+#         self._mapper = TaskMapper()

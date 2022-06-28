@@ -3,19 +3,18 @@
 # ================================================================================================ #
 # Project    : DeepCTR: Deep Learning for CTR Prediction                                           #
 # Version    : 0.1.0                                                                               #
-# Filename   : /test_file.py                                                                       #
+# Filename   : /test_source.py                                                                     #
 # ------------------------------------------------------------------------------------------------ #
 # Author     : John James                                                                          #
 # Email      : john.james.ai.studio@gmail.com                                                      #
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
-# Created    : Tuesday June 28th 2022 12:18:55 pm                                                  #
-# Modified   : Tuesday June 28th 2022 12:50:43 pm                                                  #
+# Created    : Tuesday June 28th 2022 07:41:10 am                                                  #
+# Modified   : Tuesday June 28th 2022 10:05:28 am                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
-import os
 import inspect
 import pytest
 import logging
@@ -35,29 +34,28 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------ #
 
 # ================================================================================================ #
-#                                       TEST FILE                                                  #
+#                                      TEST SOURCE                                                 #
 # ================================================================================================ #
 @pytest.mark.dal
-@pytest.mark.file
-class TestFile:
-    def test_create(self, caplog, parquet_file):
-        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
-        assert parquet_file.name == "test_parquet_file"
-        assert parquet_file.desc == "Test Parquet File"
-        assert parquet_file.folder == "tests/data/data_store"
-        assert parquet_file.format == "parquet"
-        assert parquet_file.filename == "file.parquet"
-        assert parquet_file.compressed is False
-        assert parquet_file.filepath == os.path.join(parquet_file.folder, parquet_file.filename)
-        assert parquet_file.size != 0
-        assert isinstance(parquet_file.created, datetime)
-        assert isinstance(parquet_file.modified, datetime)
-        assert isinstance(parquet_file.accessed, datetime)
-        assert isinstance(parquet_file.file_created, datetime)
-        assert isinstance(parquet_file.file_modified, datetime)
-        assert isinstance(parquet_file.file_accessed, datetime)
+@pytest.mark.source
+class TestSource:
+    def name(self, i):
+        return "source_" + str(i)
 
-        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+    def desc(self, i):
+        return "Source {}".format(str(i))
+
+    def url(self, i):
+        return "www.source_{}.com".format(str(i))
+
+    def check_result(self, source, i) -> str:
+        assert source.id == i
+        assert source.name == "source_" + str(i)
+        assert source.desc == "Source {}".format(str(i))
+        assert source.url == "www.source_{}.com".format(str(i))
+        assert isinstance(source.created, datetime)
+        assert isinstance(source.modified, datetime)
+        assert isinstance(source.accessed, datetime)
 
     def test_add(self, caplog, sourcecontext):
         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))

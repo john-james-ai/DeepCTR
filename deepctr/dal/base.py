@@ -10,193 +10,138 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday June 23rd 2022 09:28:39 pm                                                 #
-# Modified   : Sunday June 26th 2022 07:30:57 pm                                                   #
+# Modified   : Tuesday June 28th 2022 11:27:54 am                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
-#!/usr/bin/env python3
-# -*- coding:utf-8 -*-
-# ================================================================================================ #
-# Project    : DeepCTR: Deep Learning for CTR Prediction                                           #
-# Version    : 0.1.0                                                                               #
-# Filename   : /fao.py                                                                             #
-# ------------------------------------------------------------------------------------------------ #
-# Author     : John James                                                                          #
-# Email      : john.james.ai.studio@gmail.com                                                      #
-# URL        : https://github.com/john-james-ai/DeepCTR                                            #
-# ------------------------------------------------------------------------------------------------ #
-# Created    : Friday May 13th 2022 02:51:48 pm                                                    #
-# Modified   : Thursday June 23rd 2022 09:24:42 pm                                                 #
-# ------------------------------------------------------------------------------------------------ #
-# License    : BSD 3-clause "New" or "Revised" License                                             #
-# Copyright  : (c) 2022 John James                                                                 #
-# ================================================================================================ #
-"""Defines File and Dataset objects used throughout the DAL package."""
-import os
-from dataclasses import dataclass, field
-from datetime import datetime
+"""Defines classes used in several modules in the dal package."""
+from abc import ABC, abstractmethod
 import inspect
 import logging
 import logging.config
 from typing import Any
+from datetime import datetime
 
-from deepctr import Entity
-from deepctr.dal import STAGES, FORMATS, STORAGE_TYPES, SOURCES
-from deepctr.data.local import SparkCSV, SparkParquet
-from deepctr.data.remote import S3
+from deepctr.dal import STAGES, FORMATS
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
 logging.config.dictConfig(LOG_CONFIG)
-logging.getLogger("py4j").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 
-
 # ------------------------------------------------------------------------------------------------ #
-#                                            FILE                                                  #
+#                                     ENTITY                                                       #
 # ------------------------------------------------------------------------------------------------ #
-@dataclass
-class File(Entity):
-    """Defines the interface for File objects. Note: name is inherited from Entity class."""
+class Entity(ABC):
+    """All entities, File, Dataset, Model, Task, Dags descend from this class."""
 
-    # name: str Inherited from Entity class
-    source: str  # The name as the dataset as externally recognized. i.e. alibaba
-    storage_type: str  # Either 'local' or 's3'
-    format: str  # The uncompressed format of the data, i.e. csv, parquet
-    stage_id: int  # The stage identifier. See deepctr/dal/__init__.py
-    stage_name: str = None  # Associated with stage_id. See STAGES in deepctr/dal/__init__.py
-    home: str = "data"  # The home directory for all data. Can be overidden for testing.
-    bucket: str = None  # The bucket containing the file. Only relevant to s3 storage_type.
-    filepath: str = None  # Path to the file. Synonymous with object_key for s3.
-    compressed: bool = False  # Indicates if the file is compressed
-    size: int = 0  # The size of the file in bytes
-    rows: int = 0  # The number of rows in the file.
-    cols: int = 0  # The number of columns in the file.
-    id: int = 0  # The id assigned by the database
-    dataset_id: int = 0  # The identifier for the dataset to which this file belongs.
-    dataset: str = None  # The name of the dataset
-    exists: bool = False  # Defaults to False until otherwise...
-    created: datetime = None
-    modified: datetime = None
-    accessed: datetime = None
+    def __init__(self, name, desc, from_database: bool = False, **kwargs) -> None:
+        self._id = 0
+        self._name = name
+        self._desc = desc
+        self._from_database = from_database
+        # If from_database is true, then changes do not effect the change, modified, and
+        # accessed dates. Rather these dates are assigned from values in the database. If
+        # from_database is False (Default), access and changes will result in updated
+        # modified and accessed dates.
+        self._created = datetime.now()
+        self._modified = datetime.now()
+        self._accessed = datetime.now()
 
-    def __post_init__(self) -> None:
-        self._validate()
-        self._set_stage_name()
-        self._set_filepath()
-        self._set_metadata()
+    @property
+    def id(self) -> int:
+        self._accessed_date()
+        return self._id
 
-    def _validate(self) -> None:
-        validate = Validator()
-        self.source = validate.source(self.source)
-        self.format = validate.format(self.format)
-        self.stage_id = validate.stage(self.stage_id)
-        self.storage_type = validate.storage_type(self.storage_type)
+    @id.setter
+    def id(self, id) -> None:
+        self._id = id
+        self._update_dates()
 
-    def _set_stage_name(self) -> None:
-        self.stage_name = STAGES.get(self.stage_id, None)
+    @property
+    def name(self) -> str:
+        self._accessed_date()
+        return self._name
 
-    def _set_filepath(self) -> None:
-        if not self.filepath:
-            stage_name = str(self.stage_id) + "_" + self.stage_name
-            self.filename = (self.name + "." + self.format).replace(" ", "").lower()
-            if self.storage_type == "local":
-                self.folder = os.path.join(self.home, self.source, self.dataset, stage_name)
-            else:
-                self.folder = os.path.join(self.source, self.dataset, stage_name)
-            self.filepath = os.path.join(self.folder, self.filename)
+    @name.setter
+    def name(self, name) -> None:
+        self._name = name
+        self._update_dates()
 
-    def _set_metadata(self) -> None:
-        """Sets the metadata variables including size, dates, and stage_name"""
-        self.stage_name = STAGES.get(self.stage_id)
+    @property
+    def desc(self) -> str:
+        self._accessed_date()
+        return self._desc
 
-        if self.storage_type == "local":
-            self._set_metadata_local()
-        else:
-            self._set_metadata_remote()
+    @desc.setter
+    def desc(self, desc) -> None:
+        self._desc = desc
+        self._update_dates()
 
-    def _set_metadata_local(self) -> None:
-        io = SparkCSV() if self.format == "csv" else SparkParquet()
-        try:
-            metadata = io.metadata(self.filepath)
-            self.rows = metadata.rows
-            self.cols = metadata.cols
-            self.size = metadata.size
-            self.created = metadata.created
-            self.modified = metadata.modified
-            self.accessed = metadata.accessed
-        except FileNotFoundError as e:
-            logger.info(
-                "File {} does not exist. Metadata set to default values.\n{}".format(self.name, e)
-            )
+    @property
+    def created(self) -> datetime:
+        return self._created
 
-    def _set_metadata_remote(self) -> None:
-        io = S3()
-        try:
-            metadata = io.metadata(bucket=self.bucket, object_key=self.filepath)
-            self.rows = metadata.rows
-            self.cols = metadata.cols
-            self.size = metadata.size
-            self.created = metadata.created
-            self.modified = metadata.modified
-            self.accessed = metadata.accessed
-        except FileNotFoundError as e:
-            logger.info(
-                "File {} does not exist. Metadata set to default values.\n{}".format(self.name, e)
-            )
+    @created.setter
+    def created(self, created) -> None:
+        self._created = created
+
+    @property
+    def modified(self) -> datetime:
+        return self._modified
+
+    @modified.setter
+    def modified(self, modified) -> None:
+        self._modified = modified
+
+    @property
+    def accessed(self) -> datetime:
+        return self._accessed
+
+    @accessed.setter
+    def accessed(self, accessed) -> None:
+        self._accessed = accessed
+
+    def _accessed_date(self) -> None:
+        if not self._from_database:
+            self._accessed = datetime.now()
+
+    def _update_dates(self) -> None:
+        if not self._from_database:
+            self._modified = datetime.now()
+            self._accessed = self._modified
 
 
 # ------------------------------------------------------------------------------------------------ #
-#                                          DATASET                                                 #
+#                                          MAPPER                                                  #
 # ------------------------------------------------------------------------------------------------ #
-@dataclass()
-class Dataset(Entity):
-    """Defines the parameters of local datasets to which the Files belong. """
+class EntityMapper(ABC):
+    """Abstract base class for command classes, one for each entity."""
 
-    # name: str Inherited from Entity class
-    source: str  # The name as the dataset as externally recognized. i.e. alibaba
-    storage_type: str  # Either 'local' or 's3'
-    folder: str  # The folder containing the files in the dataset.
-    format: str  # Either csv or parquet format.
-    stage_id: int  # The stage identifier. See deepctr/dal/__init__.py for stage_ids
-    stage_name: str = None  # Associated with stage_id. See STAGES in deepctr/dal/__init__.py
-    compressed: bool = False  # Indicates whether the files are compressed.
-    size: int = 0  # The total size of the dataset in bytes.
-    home: str = "data"  # The home directory for all data. Can be overidden for testing.
-    bucket: str = None  # The bucket containing the dataset. Only relevant to s3 storage_type.
-    files: dict = field(default_factory=dict)  # Dictionary of File objects indexed by name.
-    id: int = 0  # The id assigned by the database
-    created: datetime = None
-    modified: datetime = None
-    accessed: datetime = None
+    @abstractmethod
+    def insert(self, entity: Entity):
+        pass
 
-    def __post_init__(self) -> None:
-        self._validate()
+    @abstractmethod
+    def select(self, id: int):
+        pass
 
-    def _validate(self) -> None:
-        validate = Validator()
-        self.source = validate.source(self.source)
-        self.format = validate.format(self.format)
-        self.storage_type = validate.storage_type(self.storage_type)
-        self.stage_id = validate.stage(self.stage_id)
-        self.stage_name = STAGES.get(self.stage_id)
+    @abstractmethod
+    def select_all(self):
+        pass
 
-    def add_file(self, file) -> None:
-        self._update_metadata(file)
-        self.files[file.name] = file
+    @abstractmethod
+    def update(self, entity: Entity):
+        pass
 
-    def _update_metadata(self, file: File) -> None:
-        if self.created is None:
-            self.created = file.created
-            self.modified = file.modified
-            self.accessed = file.accessed
-        else:
-            self.created = file.created if self.created > file.created else self.created
-            self.modified = file.modified if self.modified < file.modified else self.modified
-            self.accessed = file.accessed if self.accessed < file.accessed else self.accessed
+    @abstractmethod
+    def delete(self, id: int):
+        pass
 
-        self.size = self.size + file.size
+    @abstractmethod
+    def factory(self, record: dict) -> Entity:
+        pass
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -205,22 +150,10 @@ class Dataset(Entity):
 class Validator:
     """Provides validation for Dataset and File objects"""
 
-    def source(self, value: str) -> bool:
-        if value not in SOURCES:
-            self._fail(value, SOURCES)
-        else:
-            return value
-
     def format(self, value: str) -> bool:
         value = value.replace(".", "")
         if value not in FORMATS:
             self._fail(value, FORMATS)
-        else:
-            return value
-
-    def storage_type(self, value: str) -> bool:
-        if value not in STORAGE_TYPES:
-            self._fail(value, STORAGE_TYPES)
         else:
             return value
 

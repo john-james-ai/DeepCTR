@@ -10,158 +10,217 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 26th 2022 07:03:22 pm                                                  #
-# Modified   : Sunday June 26th 2022 02:33:31 pm                                                   #
+# Modified   : Tuesday June 28th 2022 09:19:59 am                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
 # Remember to propagate any changes made to the database to test_dao_setup.sql
-# import os
-# import inspect
-# import pytest
-# import logging
-# import logging.config
-# from datetime import datetime
+import inspect
+import pytest
+import logging
+import logging.config
 
-# from deepctr import Entity
-# from deepctr.dal import STAGES
-# from deepctr.dal.base import File
-# from deepctr.utils.log_config import LOG_CONFIG
-# from deepctr.dal.dao import DAO
+from deepctr.dal.file import File
+from deepctr.utils.log_config import LOG_CONFIG
+from deepctr.dal.dao import DAO
 
-# # ------------------------------------------------------------------------------------------------ #
-# logging.config.dictConfig(LOG_CONFIG)
-# logger = logging.getLogger(__name__)
-# # ------------------------------------------------------------------------------------------------ #
+# ------------------------------------------------------------------------------------------------ #
+logging.config.dictConfig(LOG_CONFIG)
+logger = logging.getLogger(__name__)
+# ------------------------------------------------------------------------------------------------ #
 
-# # ================================================================================================ #
-# #                                   TEST FILE DAO                                                  #
-# # ================================================================================================ #
-# FILE_NAME = "test_dao_input"
-# FILE_SOURCE = "alibaba"
-# FILE_DATASET = "test_dataset"
-# FILE_STORAGE_TYPE = "local"
-# FILE_FORMAT = "csv"
-# FILE_STAGE_ID = 2
-# FILE_STAGE_NAME = STAGES.get(FILE_STAGE_ID)
-# FILE_HOME = "tests/data/test_dal/test_fao"
-# FILE_BUCKET = "deepctr"
-# FILE_FILEPATH = os.path.join(FILE_HOME, FILE_SOURCE, FILE_DATASET, "2_loaded", FILE_NAME + ".csv")
-# FILE_COMPRESSED = False
-# FILE_SIZE = 0
-# FILE_ID = 3
-# FILE_CREATED = datetime.now()
-# FILE_OBJECT_KEY = "alibaba/vesuvio/ad_feature.csv.tar.gz"
+# ================================================================================================ #
+#                                   TEST DATASET DAO                                               #
+# ================================================================================================ #
 
 
-# @pytest.mark.dao
-# @pytest.mark.filedao
-# @pytest.mark.skip
-# class TestFileDAO:
-#     def check_filepath(self, entity: Entity) -> None:
-#         stage_name = str(entity.stage_id) + "_" + entity.stage_name
-#         filename = (entity.name + "." + entity.format).replace(" ", "").lower()
-#         folder = os.path.join(entity.home, entity.source, entity.dataset, stage_name)
-#         filepath = os.path.join(folder, filename)
-#         assert filepath == entity.filepath
+@pytest.mark.dao
+@pytest.mark.datasetdao
+class TestDAO:
+    def print_dates(self, a, b):
+        print("\n", 50 * "=")
+        print("{} created: {}\t{} created: {}".format(a.name, a.created, b.name, b.created))
+        print("{} modified: {}\t{} modified: {}".format(a.name, a.modified, b.name, b.modified))
+        print("{} accessed: {}\t{} accessed: {}".format(a.name, a.accessed, b.name, b.accessed))
 
-#     def check_entity(self, entity: Entity, i: int) -> None:
-#         assert entity.id == i
-#         assert entity.name == FILE_NAME + "_" + str(i)
-#         assert entity.source == FILE_SOURCE
-#         assert entity.dataset == FILE_DATASET
-#         assert entity.format == FILE_FORMAT
-#         assert entity.stage_id == FILE_STAGE_ID
-#         assert entity.stage_name == STAGES.get(FILE_STAGE_ID)
-#         assert entity.home == FILE_HOME
-#         assert entity.bucket is None
-#         self.check_filepath(entity)
-#         assert entity.compressed == FILE_COMPRESSED
-#         assert entity.size == 0
-#         assert isinstance(entity.created, datetime)
+    def datasets_equal(self, a, b) -> bool:
+        assert a.name == b.name
+        assert a.source == b.source
+        assert a.file_system == b.file_system
+        assert a.stage_id == b.stage_id
+        assert a.stage_name == b.stage_name
+        assert a.home == b.home
+        assert a.bucket == b.bucket
+        assert a.folder == b.folder
+        assert a.format == b.format
+        assert a.size == b.size
+        return True
 
-#     def test_insert(self, caplog, connection):
-#         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+    def files_equal(self, a, b) -> bool:
+        assert a.name == b.name
+        assert a.source == b.source
+        assert a.dataset_id == b.dataset_id
+        assert a.dataset == b.dataset
+        assert a.file_system == b.file_system
+        assert a.stage_id == b.stage_id
+        assert a.stage_name == b.stage_name
+        assert a.home == b.home
+        assert a.bucket == b.bucket
+        assert a.filepath == b.filepath
+        assert a.compressed == b.compressed
+        assert a.size == b.size
+        assert a.rows == b.rows
+        assert a.cols == b.cols
+        assert a.exists == b.exists
+        assert a.format == b.format
+        assert a.size == b.size
+        assert a.created == b.created
+        assert a.modified == b.modified
+        assert a.accessed == b.accessed
+        return True
 
-#         dao = FileDAO(connection)
+    def dataset_file(self, d, f) -> bool:
 
-#         for i in range(1, 6):
-#             entity = File(
-#                 name=FILE_NAME + "_" + str(i),
-#                 source=FILE_SOURCE,
-#                 dataset=FILE_DATASET,
-#                 storage_type=FILE_STORAGE_TYPE,
-#                 format=FILE_FORMAT,
-#                 stage_id=FILE_STAGE_ID,
-#                 home=FILE_HOME,
-#                 created=datetime.now(),
-#             )
+        assert d.source == f.source
+        assert d.file_system == f.file_system
+        assert d.stage_id == f.stage_id
+        assert d.stage_name == f.stage_name
+        assert d.home == f.home
+        assert d.bucket == f.bucket
+        assert d.format == f.format
+        return True
 
-#             entity = dao.add(entity)
-#             assert isinstance(entity, File)
-#             self.check_entity(entity, i)
+    def test_insert(self, caplog, dataset, filedatasetcontext):
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-#         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+        filecontext = filedatasetcontext["file"]
+        datasetcontext = filedatasetcontext["dataset"]
 
-#     def test_find(self, caplog, connection):
-#         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+        filecontext.begin_transaction()
 
-#         dao = FileDAO(connection)
+        # Insert Dataset
+        dao = DAO(datasetcontext)
+        assert dataset.id == 0
+        dataset2 = dao.add(dataset)
+        assert dataset2.id == 1
+        assert self.datasets_equal(dataset, dataset2)
 
-#         for i in range(1, 6):
-#             entity = dao.find(i)
-#             self.check_entity(entity, i)
-#         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+        # Insert Files
+        dao = DAO(filecontext)
+        files = dataset.files.values()
+        for i, file in enumerate(files):
+            assert file.id == 0
+            file2 = dao.add(file)
+            assert file.id == i + 1
+            self.print_dates(file, file2)
+            assert self.files_equal(file, file2)
 
-#     def test_findall(self, caplog, connection):
-#         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-#         dao = FileDAO(connection)
-#         entities = dao.findall()
-#         assert len(entities) == 5, logger.error(
-#             "Failure {} {}: Didn't find all entities.".format(
-#                 self.__class__.__name__, inspect.stack()[0][3]
-#             )
-#         )
+    def test_find(self, caplog, dataset, filedatasetcontext):
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-#         for entity in entities:
-#             self.check_entity(entity, entity.id)
+        filecontext = filedatasetcontext["file"]
+        datasetcontext = filedatasetcontext["dataset"]
 
-#         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+        # Dataset
+        dao = DAO(datasetcontext)
+        dataset2 = dao.find(1)
+        assert dataset.id == dataset2.id
+        assert self.datasets_equal(dataset, dataset2)
 
-#     def test_update(self, caplog, connection):
-#         logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+        # File
+        dao = DAO(filecontext)
+        files = dataset.files.values()
+        for i in range(1, len(files) + 1):
+            file = dao.find(i)
+            assert file.id == i
+            assert self.dataset_file(dataset, file)
 
-#         dao = FileDAO(connection)
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-#         for i in range(1, 6):
-#             entity_in = dao.find(i)
+    def test_findall(self, caplog, dataset, filedatasetcontext):
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-#             # Filepath
-#             entity_in.filepath = "/some/filepath"
-#             dao.update(entity_in)
+        filecontext = filedatasetcontext["file"]
+        datasetcontext = filedatasetcontext["dataset"]
 
-#             # Compressed
-#             entity_in.compressed = True
-#             dao.update(entity_in)
+        # Dataset
+        dao = DAO(datasetcontext)
+        dataset2 = dao.findall()[0]
+        assert self.datasets_equal(dataset, dataset2)
 
-#             # Size
-#             entity_in.size = 12345
-#             dao.update(entity_in)
+        filecontext.commit()
 
-#             # Get the updated entity
-#             entity = dao.find(i)
+        # Files
+        dao = DAO(filecontext)
+        files = dao.findall()
+        for file in files:
+            assert isinstance(file, File)
+            assert file.id in range(1, len(files) + 1)
+            assert self.dataset_file(dataset, file)
+        # dao.commit()  # I don't think we need this commit. All contexts share same connection.
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-#             assert entity.filepath == "/some/filepath"
-#             assert entity.compressed is True
-#             assert entity.size == 12345
+    def test_update(self, caplog, dataset, filedatasetcontext):
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
 
-#         dao.rollback()
+        filecontext = filedatasetcontext["file"]
+        datasetcontext = filedatasetcontext["dataset"]
 
-#         # Confirm rollback
-#         entities = dao.findall()
-#         for entity in entities:
-#             assert entity.filepath != "/some/filepath/"
-#             assert entity.compressed is False
-#             assert entity.size == 0
-#         logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+        # Dataset
+        dataset2 = dataset
+        dao = DAO(datasetcontext)
+        dataset2.compressed = True
+        dataset2.file_system = "s3"
+        dao.update(dataset2)
+        dataset3 = dao.find(dataset2.id)
+        assert self.datasets_equal(dataset2, dataset3)
+
+        # File
+        dao = DAO(filecontext)
+        files = dataset.files.values()
+        for file in files:
+            file.compressed = True
+            file.file_system = "s3"
+            dao.update(file)
+            file2 = dao.find(file.id)
+            assert file2.id == file.id
+            assert self.files_equal(file, file2)
+
+        filecontext.rollback()
+
+        # Confirm rollback on dataset
+        dao = DAO(datasetcontext)
+        dataset2 = dao.find(dataset.id)
+        assert dataset2.compressed is False
+        assert dataset2.file_system == "local"
+
+        # Confirm rollback on files
+        dao = DAO(filecontext)
+        files = dao.findall()
+        for file in files:
+            assert file.compressed is False
+            assert file.file_system == "local"
+
+        logger.info("\tCompleted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+    def test_delete(self, caplog, dataset, filedatasetcontext):
+        logger.info("\tStarted {} {}".format(self.__class__.__name__, inspect.stack()[0][3]))
+
+        filecontext = filedatasetcontext["file"]
+        datasetcontext = filedatasetcontext["dataset"]
+
+        # Delete Dataset
+        dao = DAO(datasetcontext)
+        dataset = dao.findall()[0]
+        dao.delete(dataset.id)
+        assert not dao.exists(dataset.id)
+
+        # Delete Files
+        dao = DAO(filecontext)
+        files = dao.findall()
+        for file in files:
+            dao.delete(file.id)
+            assert not dao.exists(file.id)

@@ -10,20 +10,8 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday May 10th 2022 03:30:15 pm                                                   #
-# Modified   : Thursday June 23rd 2022 09:35:32 pm                                                 #
+# Modified   : Tuesday June 28th 2022 07:40:26 am                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
 # ================================================================================================ #
-"""Variables and classes shared across packages."""
-from abc import ABC
-from dataclasses import dataclass
-
-# ------------------------------------------------------------------------------------------------ #
-#                                     ENTITY                                                       #
-# ------------------------------------------------------------------------------------------------ #
-@dataclass
-class Entity(ABC):
-    """All entities, File, Dataset, Model, Task, Dags descend from this class."""
-
-    name: str

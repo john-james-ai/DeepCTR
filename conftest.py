@@ -18,42 +18,46 @@
 # Copyright: (c) 2022 Bryant St. Labs                                                              #
 # ================================================================================================ #
 """Includes fixtures, classes and functions supporting testing."""
-import os
 import pytest
 from pyspark.sql import SparkSession
 from sklearn.datasets import load_iris
 
 from deepctr.dal import STAGES
-from deepctr.dal.base import File, Dataset
-from deepctr.data.database import ConnectionFactory
+from deepctr.dal.source import Source
+
+from deepctr.dal.file import File
+from deepctr.dal.context import SourceDBContext, FileDBContext
+from deepctr.data.database import ConnectionFactory, Database
 from deepctr.utils.database import parse_sql
 
 CONNECTION = {
-    "setup": "tests/test_dal/test_dao_setup.sql",
-    "teardown": "tests/test_dal/test_dao_teardown.sql",
+    "setup": "tests/database/test_db_setup.sql",
+    "teardown": "tests/database/test_db_teardown.sql",
 }
 
 # ------------------------------------------------------------------------------------------------ #
 #                                        IGNORE                                                    #
 # ------------------------------------------------------------------------------------------------ #
 collect_ignore_glob = ["tests/old_tests/**/*.py"]
+# ------------------------------------------------------------------------------------------------ #
+#                                          SOURCE                                                  #
+# ------------------------------------------------------------------------------------------------ #
+@pytest.fixture(scope="module")
+def source():
+    return Source(name="alibaba", desc="Alibaba Click Dataset", url="www.alibaba.com")
 
 
 # ------------------------------------------------------------------------------------------------ #
 #                                           FILE                                                   #
 # ------------------------------------------------------------------------------------------------ #
 @pytest.fixture(scope="module")
-def file():
+def parquet_file():
     return File(
-        name="test_file",
-        source="alibaba",
-        storage_type="local",
-        format="csv",
-        stage_id=2,
-        home="tests/data",
-        dataset_id=0,
-        dataset="test_dataset",
-        filepath="tests/data/data_store/csvfile.csv",
+        name="test_parquet_file",
+        desc="Test Parquet File",
+        folder="tests/data/data_store",
+        format="parquet",
+        filename="file.parquet",
     )
 
 
@@ -61,52 +65,15 @@ def file():
 #                                           FILE2                                                  #
 # ------------------------------------------------------------------------------------------------ #
 @pytest.fixture(scope="module")
-def file2():
+def csv_file():
     """For non-existing file tests"""
     return File(
-        name="test_file",
-        source="alibaba",
-        storage_type="local",
+        name="test_csv_file",
+        desc="Test CSV File",
+        folder="tests/data/data_store",
         format="csv",
-        stage_id=2,
-        home="tests/data",
-        dataset_id=0,
-        dataset="test_dataset",
+        filename="csvfile.csv",
     )
-
-
-# ------------------------------------------------------------------------------------------------ #
-#                                         DATASET                                                  #
-# ------------------------------------------------------------------------------------------------ #
-@pytest.fixture(scope="module")
-def dataset():
-    datastore = "tests/data/data_store"
-    dataset = Dataset(
-        name="test_dataset",
-        source="avazu",
-        storage_type="local",
-        folder=datastore,
-        format="csv",
-        stage_id=1,
-        home="tests/data",
-    )
-
-    for i in range(1, 5):
-        filename = "csvfile{}.csv".format(i)
-        filepath = os.path.join(datastore, filename)
-        file = File(
-            name=os.path.splitext(filename)[0],
-            source="avazu",
-            storage_type="local",
-            format="csv",
-            stage_id=1,
-            home="tests/data",
-            filepath=filepath,
-            dataset_id=0,
-            dataset="test_dataset",
-        )
-        dataset.add_file(file)
-    return dataset
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -137,7 +104,7 @@ def connection():
         connection.commit()
     connection.close()
 
-    connection = ConnectionFactory(database="testdal").get_connection()
+    connection = ConnectionFactory(database="testdb").get_connection()
     yield connection
     statements = parse_sql(filename=CONNECTION.get("teardown"))
     with connection.cursor() as cursor:
@@ -145,6 +112,58 @@ def connection():
             cursor.execute(statement)
         connection.commit()
     connection.close()
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                         DBCONTEXTS                                               #
+# ------------------------------------------------------------------------------------------------ #
+@pytest.fixture(scope="module")
+def filecontext(connection):
+    database = Database(connection)
+    context = FileDBContext(database)
+    return context
+
+
+# # ------------------------------------------------------------------------------------------------ #
+# @pytest.fixture(scope="module")
+# def datasetcontext(connection):
+#     database = Database(connection)
+#     context = DatasetDBContext(database)
+#     return context
+
+
+# # ------------------------------------------------------------------------------------------------ #
+# @pytest.fixture(scope="module")
+# def filedatasetcontext(connection):
+#     database = Database(connection)
+#     dataset = DatasetDBContext(database)
+#     file = FileDBContext(database)
+#     context = {"file": file, "dataset": dataset}
+#     return context
+
+
+# # ------------------------------------------------------------------------------------------------ #
+# @pytest.fixture(scope="module")
+# def taskcontext(connection):
+#     database = Database(connection)
+#     context = TaskDBContext(database)
+#     return context
+
+
+# # ------------------------------------------------------------------------------------------------ #
+# @pytest.fixture(scope="module")
+# def dagcontext(connection):
+#     database = Database(connection)
+#     context = DagDBContext(database)
+#     return context
+
+
+# ------------------------------------------------------------------------------------------------ #
+@pytest.fixture(scope="module")
+def sourcecontext(connection):
+    database = Database(connection)
+    context = SourceDBContext(database)
+    return context
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -156,7 +175,7 @@ def local_source():
         name="test_upload_file",
         source="alibaba",
         dataset="test_dataset",
-        storage_type="local",
+        file_system="local",
         format="csv",
         stage_id=4,
         stage_name=STAGES.get(4),
@@ -173,7 +192,7 @@ def local_destination():
         name="test_download_file",
         source="alibaba",
         dataset="test_dataset",
-        storage_type="local",
+        file_system="local",
         format="csv",
         stage_id=4,
         stage_name=STAGES.get(4),
@@ -188,7 +207,7 @@ def s3file():
         name="test_upload_file",
         source="alibaba",
         dataset="test_dataset",
-        storage_type="s3",
+        file_system="s3",
         format="csv",
         stage_id=4,
         stage_name=STAGES.get(4),
@@ -206,7 +225,7 @@ def fao_file():
         name="test_fao_create",
         source="alibaba",
         dataset="test_dataset",
-        storage_type="local",
+        file_system="local",
         format="csv",
         stage_id=2,
         stage_name=STAGES.get(2),

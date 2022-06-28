@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday May 21st 2022 11:10:43 pm                                                  #
-# Modified   : Sunday June 26th 2022 01:10:19 pm                                                   #
+# Modified   : Tuesday June 28th 2022 08:33:58 am                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -18,9 +18,8 @@
 from abc import ABC, abstractmethod
 import logging
 
-from deepctr import Entity
-from deepctr.data.database import Database
-from deepctr.dal.mapper import EntityMapper
+from deepctr.dal.base import Entity
+from deepctr.dal.context import DBContext
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
@@ -40,9 +39,8 @@ class DAOBase(ABC):
         mapper (EntityMapper): Maps Entity objects to Database (SQL) and back to Entity objects.
     """
 
-    def __init__(self, database: Database, mapper: EntityMapper) -> None:
-        self._database = database
-        self._mapper = mapper
+    def __init__(self, dbcontext: DBContext) -> None:
+        self._dbcontext = dbcontext
 
     # -------------------------------------------------------------------------------------------- #
     @abstractmethod
@@ -76,8 +74,10 @@ class DAOBase(ABC):
 class DAO(DAOBase):
     """Provides access to localfile table ."""
 
-    def __init__(self, database: Database, mapper: EntityMapper) -> None:
-        super(DAO, self).__init__(database, mapper)
+    def __init__(self, dbcontext: DBContext) -> None:
+        super(DAO, self).__init__(dbcontext=dbcontext)
+        self._database = self._dbcontext.database
+        self._mapper = self._dbcontext.mapper
 
     def add(self, entity: Entity) -> Entity:
         """Adds an entity to the database
@@ -113,6 +113,7 @@ class DAO(DAOBase):
         for record in records:
             entity = self._mapper.factory(record)
             entities.append(entity)
+        return entities
 
     def update(self, entity: Entity) -> None:
         """Updates the entity
@@ -133,3 +134,14 @@ class DAO(DAOBase):
         """
         command = self._mapper.delete(id)
         return self._database.execute(command.statement, command.parameters)
+
+    def exists(self, id: int) -> None:
+        """Returns true if the entity with id exists in the database and returns False otherwise.
+
+        Args:
+            id (int): The unique identifier for the entity
+
+        """
+        command = self._mapper.select(id)
+        result = self._database.execute(command.statement, command.parameters)
+        return len(result) == 0

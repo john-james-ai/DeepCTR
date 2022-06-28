@@ -9,7 +9,7 @@ a:
   status: qualified
   dataset: mack
   datasource: conceptions
-  storage_type: s3
+  file_system: s3
   table: s3dataset
   folder: cujo/popsicle
   size: 857963
@@ -19,7 +19,7 @@ b:
   status: released
   dataset: mack
   datasource: orbital
-  storage_type: local
+  file_system: local
   table: localdataset
   folder: future/of/sound
   size: 65481
@@ -30,7 +30,7 @@ c:
   status: incomplete
   dataset: mack
   datasource: conceptions
-  storage_type: s3
+  file_system: s3
   table: s3dataset
   folder: cujo/popsicle
   size: 857963
@@ -40,7 +40,7 @@ d:
   status: staged
   dataset: mack
   datasource: conceptions
-  storage_type: local
+  file_system: local
   table: localdataset
   folder: origin/favrelle
   size: 56841
@@ -51,7 +51,7 @@ e:
   status: review
   dataset: mack
   datasource: conceptions
-  storage_type: local
+  file_system: local
   table: localdataset
   folder: hybrid/scifi
   size: 555587
@@ -60,7 +60,7 @@ f:
   asset_type: file
   dataset: mack
   datasource: conceptions
-  storage_type: local
+  file_system: local
   table: localdataset
   folder: aim/cold/water/music
   size: 670059
@@ -71,7 +71,7 @@ g:
   status: errors
   dataset: mack
   datasource: conceptions
-  storage_type: local
+  file_system: local
   table: localdataset
   folder: jam/spoon
   size: 252894
@@ -81,7 +81,7 @@ h:
   status: interim
   dataset: mack
   datasource: conceptions
-  storage_type: local
+  file_system: local
   table: localdataset
   folder: born/slippy
   size: 670059
@@ -92,7 +92,7 @@ i:
   status: interim
   dataset: mack
   datasource: conceptions
-  storage_type: s3
+  file_system: s3
   table: s3dataset
   folder: mighty/atom
   size: 252894
@@ -102,7 +102,7 @@ j:
   status: processed
   dataset: halcyon
   datasource: conceptions
-  storage_type: s3
+  file_system: s3
   table: s3dataset
   folder: zion/spybreaker/trentemoller
   size: 670059
@@ -113,7 +113,7 @@ k:
   status: cleaned
   dataset: mack
   datasource: conceptions
-  storage_type: s3
+  file_system: s3
   table: s3dataset
   folder: attack/hopkins/orchestra
   size: 252894
@@ -123,7 +123,7 @@ l:
   status: sanded
   dataset: mack
   datasource: risotto
-  storage_type: s3
+  file_system: s3
   table: s3dataset
   folder: goldtrix/70007/early
   size: 675559

@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 19th 2022 06:39:17 pm                                                  #
-# Modified   : Friday June 24th 2022 01:24:45 am                                                   #
+# Modified   : Monday June 27th 2022 12:03:10 am                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -223,3 +223,6 @@ class Database:
 
     def commit(self) -> None:
         self._connection.commit()
+
+    def close(self) -> None:
+        self._connection.close()

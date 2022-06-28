@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday May 10th 2022 03:30:15 pm                                                   #
-# Modified   : Wednesday June 22nd 2022 12:16:39 pm                                                #
+# Modified   : Tuesday June 28th 2022 02:25:46 am                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -29,5 +29,5 @@ STAGES = {
 }
 FORMATS = ["csv", "parquet"]
 SOURCES = ["alibaba", "avazu", "criteo"]
-STORAGE_TYPES = ["local", "s3"]
+FILE_SYSTEMS = ["local", "s3"]
 IO = {"csv": SparkCSV(), "parquet": SparkParquet()}

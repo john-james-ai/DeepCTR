@@ -12,8 +12,10 @@ USE deepctr;
 
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `file`;
+DROP TABLE IF EXISTS `fileset`;
 DROP TABLE IF EXISTS `dataset`;
 DROP TABLE IF EXISTS `localfile`;
+DROP TABLE IF EXISTS `source`;
 DROP TABLE IF EXISTS `s3file`;
 DROP TABLE IF EXISTS `localdataset`;
 DROP TABLE IF EXISTS `s3dataset`;
@@ -21,24 +23,33 @@ DROP TABLE IF EXISTS `dag`;
 DROP TABLE IF EXISTS `task`;
 
 
+CREATE TABLE `source` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(64) NOT NULL,
+    `desc` VARCHAR(128) NOT NULL,
+    `url` VARCHAR(256) NOT NULL,
+    `created` DATETIME NOT NULL,
+    `modified` DATETIME NOT NULL,
+    `accessed` DATETIME NOT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE (`id`)
+) ENGINE=InnoDB;
+
+
+
 CREATE TABLE `file` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(64) NOT NULL,
-    `source` VARCHAR(32) NOT NULL,
-    `dataset_id` INTEGER NOT NULL,
-    `dataset` VARCHAR(32) NOT NULL,
-    `storage_type` VARCHAR(8) NOT NULL,
+    `desc` VARCHAR(128) NOT NULL,
+    `folder` VARCHAR(128) NOT NULL,
     `format` VARCHAR(16) NOT NULL,
-    `stage_id` INTEGER NOT NULL,
-    `stage_name` VARCHAR(16) NOT NULL,
-    `home` VARCHAR(64) NOT NULL,
-    `bucket` VARCHAR(32) NULL,
+    `filename` VARCHAR(64) NOT NULL,
     `filepath` VARCHAR(256) NOT NULL,
     `compressed` BOOLEAN NOT NULL,
     `size` BIGINT NULL,
-    `rows` BIGINT NULL,
-    `cols` BIGINT NULL,
-    `exists` BOOLEAN NOT NULL,
+    `file_created` DATETIME NOT NULL,
+    `file_modified` DATETIME NOT NULL,
+    `file_accessed` DATETIME NOT NULL,
     `created` DATETIME NOT NULL,
     `modified` DATETIME NOT NULL,
     `accessed` DATETIME NOT NULL,
@@ -50,17 +61,16 @@ CREATE TABLE `dataset` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(64) NOT NULL,
     `source` VARCHAR(32) NOT NULL,
-    `storage_type` VARCHAR(8) NOT NULL,
+    `file_system` VARCHAR(8) NOT NULL,
     `stage_id` INTEGER NOT NULL,
     `stage_name` VARCHAR(16) NOT NULL,
     `home` VARCHAR(64) NOT NULL,
     `bucket` VARCHAR(32) NULL,
     `folder` VARCHAR(256) NOT NULL,
     `format` VARCHAR(16) NOT NULL,
+    `compressed` BOOLEAN NOT NULL,
     `size` BIGINT NOT NULL,
     `created` DATETIME NOT NULL,
-    `modified` DATETIME NOT NULL,
-    `accessed` DATETIME NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE (`id`)
 ) ENGINE=InnoDB;
@@ -97,5 +107,4 @@ CREATE TABLE `task` (
     UNIQUE (`id`)
 ) ENGINE=InnoDB;
 
-ALTER TABLE `file` ADD FOREIGN KEY (`dataset`) REFERENCES `dataset`(`name`);
 SET FOREIGN_KEY_CHECKS = 1;

@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday May 10th 2022 03:30:15 pm                                                   #
-# Modified   : Wednesday June 22nd 2022 12:15:00 pm                                                #
+# Modified   : Monday June 27th 2022 05:15:28 am                                                   #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -125,7 +125,7 @@ class DataWriter(Operator):
             format=self._params["file"]["format"],
             compressed=self._params["file"]["compressed"],
             home=self._params["file"].get("home", "data"),
-            storage_type=self._params["file"]["storage_type"],
+            file_system=self._params["file"]["file_system"],
         )
 
         return FileManager().create(file=file, data=data, force=self._params.get("force", False))

@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Sunday May 22nd 2022 08:41:02 pm                                                    #
-# Modified   : Sunday June 26th 2022 03:08:54 pm                                                   #
+# Modified   : Tuesday June 28th 2022 08:33:59 am                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -20,7 +20,7 @@ from abc import ABC, abstractmethod
 import logging
 from dataclasses import dataclass
 from deepctr.utils.log_config import LOG_CONFIG
-from deepctr import Entity
+from deepctr.dal.base import Entity
 from deepctr.dal.base import File, Dataset
 
 # ------------------------------------------------------------------------------------------------ #
@@ -231,7 +231,7 @@ class FileInsert:
     def __post_init__(self) -> None:
         self.statement = """
             INSERT INTO `file`
-            (`name`, `source`, `dataset_id`, `dataset`, `storage_type`, `format`,
+            (`name`, `source`, `dataset_id`, `dataset`, `file_system`, `format`,
             `stage_id`, `stage_name`, `home`, `bucket`, `filepath`,
             `compressed`, `rows`, `cols`, `size`,`exists`,
             `created`, `modified`,`accessed`)
@@ -245,7 +245,7 @@ class FileInsert:
             self.entity.source,
             self.entity.dataset_id,
             self.entity.dataset,
-            self.entity.storage_type,
+            self.entity.file_system,
             self.entity.format,
             self.entity.stage_id,
             self.entity.stage_name,
@@ -315,7 +315,7 @@ class FileUpdate:
                                 `source` = %s,
                                 `dataset_id` = %s,
                                 `dataset` = %s,
-                                `storage_type` = %s,
+                                `file_system` = %s,
                                 `format` = %s,
                                 `stage_id` = %s,
                                 `stage_name` = %s,
@@ -337,7 +337,7 @@ class FileUpdate:
             self.entity.source,
             self.entity.dataset_id,
             self.entity.dataset,
-            self.entity.storage_type,
+            self.entity.file_system,
             self.entity.format,
             self.entity.stage_id,
             self.entity.stage_name,
@@ -370,17 +370,17 @@ class DatasetInsert:
     def __post_init__(self) -> None:
         self.statement = """
             INSERT INTO `dataset`
-            (`name`, `source`, `storage_type`, `folder`,`format`,
+            (`name`, `source`, `file_system`, `folder`,`format`,
              `stage_id`, `stage_name`, `compressed`, `size`,`home`,
-             `bucket`,  `created`,  `modified`,  `accessed`)
+             `bucket`,  `created`)
             VALUES (%s, %s, %s, %s, %s,
                     %s, %s, %s, %s, %s,
-                    %s, %s,%s, %s);
+                    %s, %s);
             """
         self.parameters = (
             self.entity.name,
             self.entity.source,
-            self.entity.storage_type,
+            self.entity.file_system,
             self.entity.folder,
             self.entity.format,
             self.entity.stage_id,
@@ -390,8 +390,6 @@ class DatasetInsert:
             self.entity.home,
             self.entity.bucket,
             self.entity.created,
-            self.entity.modified,
-            self.entity.accessed,
         )
 
 
@@ -435,7 +433,7 @@ class DatasetUpdate:
         self.statement = """UPDATE `dataset`
                             SET `name` = %s,
                                 `source` = %s,
-                                `storage_type` = %s,
+                                `file_system` = %s,
                                 `folder` = %s,
                                 `format` = %s,
                                 `stage_id` = %s,
@@ -444,15 +442,13 @@ class DatasetUpdate:
                                 `size` = %s,
                                 `home` = %s,
                                 `bucket` = %s,
-                                `created` = %s,
-                                `modified` = %s,
-                                `accessed` = %s
+                                `created` = %s
                             WHERE `id`= %s;"""
 
         self.parameters = (
             self.entity.name,
             self.entity.source,
-            self.entity.storage_type,
+            self.entity.file_system,
             self.entity.folder,
             self.entity.format,
             self.entity.stage_id,
@@ -462,8 +458,6 @@ class DatasetUpdate:
             self.entity.home,
             self.entity.bucket,
             self.entity.created,
-            self.entity.modified,
-            self.entity.accessed,
             self.entity.id,
         )
 
@@ -578,7 +572,7 @@ class FileMapper(EntityMapper):
             id=record["id"],
             name=record["name"],
             source=record["source"],
-            storage_type=record["storage_type"],
+            file_system=record["file_system"],
             format=record["format"],
             stage_id=record["stage_id"],
             stage_name=record["stage_name"],
@@ -622,7 +616,7 @@ class DatasetMapper(EntityMapper):
             id=record["id"],
             name=record["name"],
             source=record["source"],
-            storage_type=record["storage_type"],
+            file_system=record["file_system"],
             folder=record["folder"],
             format=record["format"],
             stage_id=record["stage_id"],
@@ -632,6 +626,5 @@ class DatasetMapper(EntityMapper):
             home=record["home"],
             bucket=record["bucket"],
             created=record["created"],
-            modified=record["modified"],
-            accessed=record["accessed"],
         )
+

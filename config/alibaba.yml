@@ -22,7 +22,7 @@ tasks:
         source: alibaba
         stage_id: 0
         stage_name: external
-        storage_type: aws
+        file_system: aws
         format: csv
         compressed: True
         bucket: deepctr
@@ -32,7 +32,7 @@ tasks:
         source: alibaba
         stage_id: 0
         stage_name: external
-        storage_type: local
+        file_system: local
         format: csv
         compressed: True
       force: False
@@ -52,7 +52,7 @@ tasks:
         source: alibaba
         stage_id: 0
         stage_name: external
-        storage_type: local
+        file_system: local
         format: csv
         compressed: True
       destination:
@@ -60,7 +60,7 @@ tasks:
         source: alibaba
         stage_id: 0
         stage_name: external
-        storage_type: local
+        file_system: local
         format: csv
         compressed: True
       force: False
@@ -83,7 +83,7 @@ tasks:
         name: raw_sample
         dataset: vesuvio
         source: alibaba
-        storage_type: local
+        file_system: local
         compressed: False
         stage: raw
         format: csv
@@ -116,7 +116,7 @@ tasks:
         name: impression
         dataset: vesuvio
         source: alibaba
-        storage_type: local
+        file_system: local
         compressed: False
         stage: staged
         format: parquet
@@ -139,7 +139,7 @@ tasks:
         name: user_profile
         dataset: vesuvio
         source: alibaba
-        storage_type: local
+        file_system: local
         compressed: False
         stage: raw
         format: csv
@@ -174,7 +174,7 @@ tasks:
         name: user
         dataset: vesuvio
         source: alibaba
-        storage_type: local
+        file_system: local
         compressed: False
         stage: staged
         format: parquet
@@ -196,7 +196,7 @@ tasks:
         name: ad_feature
         dataset: vesuvio
         source: alibaba
-        storage_type: local
+        file_system: local
         compressed: False
         stage: raw
         format: csv
@@ -229,7 +229,7 @@ tasks:
         name: ad
         dataset: vesuvio
         source: alibaba
-        storage_type: local
+        file_system: local
         compressed: False
         stage: staged
         format: parquet
@@ -252,7 +252,7 @@ tasks:
         name: behavior_log
         dataset: vesuvio
         source: alibaba
-        storage_type: local
+        file_system: local
         compressed: False
         stage: raw
         format: csv
@@ -284,7 +284,7 @@ tasks:
         name: behavior
         dataset: vesuvio
         source: alibaba
-        storage_type: local
+        file_system: local
         compressed: False
         stage: staged
         format: parquet
