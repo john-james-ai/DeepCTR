@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Saturday May 21st 2022 11:10:43 pm                                                  #
-# Modified   : Tuesday June 28th 2022 08:33:58 am                                                  #
+# Modified   : Tuesday June 28th 2022 06:28:23 pm                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -103,7 +103,10 @@ class DAO(DAOBase):
 
         command = self._mapper.select(id)
         record = self._database.select_one(command.statement, command.parameters)
-        return self._mapper.factory(record)
+        if record is None:
+            return record
+        else:
+            return self._mapper.factory(record)
 
     def findall(self, todf: bool = False) -> list:
         """Returns all entities from the designated entity table."""

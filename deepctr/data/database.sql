@@ -28,9 +28,9 @@ CREATE TABLE `source` (
     `name` VARCHAR(64) NOT NULL,
     `desc` VARCHAR(128) NOT NULL,
     `url` VARCHAR(256) NOT NULL,
-    `created` DATETIME NOT NULL,
-    `modified` DATETIME NOT NULL,
-    `accessed` DATETIME NOT NULL,
+    `created` DATETIME(6) NOT NULL,
+    `modified` DATETIME(6) NOT NULL,
+    `accessed` DATETIME(6) NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE (`id`)
 ) ENGINE=InnoDB;
@@ -47,12 +47,9 @@ CREATE TABLE `file` (
     `filepath` VARCHAR(256) NOT NULL,
     `compressed` BOOLEAN NOT NULL,
     `size` BIGINT NULL,
-    `file_created` DATETIME NOT NULL,
-    `file_modified` DATETIME NOT NULL,
-    `file_accessed` DATETIME NOT NULL,
-    `created` DATETIME NOT NULL,
-    `modified` DATETIME NOT NULL,
-    `accessed` DATETIME NOT NULL,
+    `created` DATETIME(6) NOT NULL,
+    `modified` DATETIME(6) NOT NULL,
+    `accessed` DATETIME(6) NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE (`id`)
 ) ENGINE=InnoDB;
@@ -70,7 +67,7 @@ CREATE TABLE `dataset` (
     `format` VARCHAR(16) NOT NULL,
     `compressed` BOOLEAN NOT NULL,
     `size` BIGINT NOT NULL,
-    `created` DATETIME NOT NULL,
+    `created` DATETIME(6) NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE (`id`)
 ) ENGINE=InnoDB;
@@ -81,12 +78,12 @@ CREATE TABLE `dag` (
     `desc` VARCHAR(256) NULL,
     `n_tasks` INTEGER NOT NULL,
     `n_tasks_done` INTEGER NOT NULL,
-    `started` DATETIME NULL,
-    `stopped` DATETIME NULL,
+    `started` DATETIME(6) NULL,
+    `stopped` DATETIME(6) NULL,
     `duration` BIGINT NULL,
     `return_code` INTEGER NOT NULL,
-    `created` DATETIME NOT NULL,
-    `executed` DATETIME NULL,
+    `created` DATETIME(6) NOT NULL,
+    `executed` DATETIME(6) NULL,
     PRIMARY KEY (`id`),
     UNIQUE (`id`)
 ) ENGINE=InnoDB;
@@ -97,12 +94,12 @@ CREATE TABLE `task` (
     `desc` VARCHAR(256) NULL,
     `seq` INTEGER NULL,
     `dag_id` INTEGER NULL,
-    `started` DATETIME NULL,
-    `stopped` DATETIME NULL,
+    `started` DATETIME(6) NULL,
+    `stopped` DATETIME(6) NULL,
     `duration` BIGINT NULL,
     `return_code` INTEGER NOT NULL,
-    `created` DATETIME NOT NULL,
-    `modified` DATETIME NULL,
+    `created` DATETIME(6) NOT NULL,
+    `modified` DATETIME(6) NULL,
     PRIMARY KEY (`id`),
     UNIQUE (`id`)
 ) ENGINE=InnoDB;

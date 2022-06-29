@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday June 23rd 2022 09:28:39 pm                                                 #
-# Modified   : Tuesday June 28th 2022 11:27:54 am                                                  #
+# Modified   : Tuesday June 28th 2022 07:49:38 pm                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -24,6 +24,7 @@ from typing import Any
 from datetime import datetime
 
 from deepctr.dal import STAGES, FORMATS
+from deepctr.utils.printing import Printer
 from deepctr.utils.log_config import LOG_CONFIG
 
 # ------------------------------------------------------------------------------------------------ #
@@ -36,81 +37,58 @@ logger = logging.getLogger(__name__)
 class Entity(ABC):
     """All entities, File, Dataset, Model, Task, Dags descend from this class."""
 
-    def __init__(self, name, desc, from_database: bool = False, **kwargs) -> None:
-        self._id = 0
+    def __init__(
+        self,
+        name,
+        desc,
+        id: int = 0,
+        created: datetime = None,
+        modified: datetime = None,
+        accessed: datetime = None,
+        **kwargs
+    ) -> None:
+        self._id = id
         self._name = name
         self._desc = desc
-        self._from_database = from_database
-        # If from_database is true, then changes do not effect the change, modified, and
-        # accessed dates. Rather these dates are assigned from values in the database. If
-        # from_database is False (Default), access and changes will result in updated
-        # modified and accessed dates.
-        self._created = datetime.now()
-        self._modified = datetime.now()
-        self._accessed = datetime.now()
+        self._created = created or datetime.now()
+        self._modified = modified or datetime.now()
+        self._accessed = accessed or datetime.now()
 
     @property
     def id(self) -> int:
-        self._accessed_date()
         return self._id
 
     @id.setter
     def id(self, id) -> None:
         self._id = id
-        self._update_dates()
 
     @property
     def name(self) -> str:
-        self._accessed_date()
         return self._name
-
-    @name.setter
-    def name(self, name) -> None:
-        self._name = name
-        self._update_dates()
 
     @property
     def desc(self) -> str:
-        self._accessed_date()
         return self._desc
-
-    @desc.setter
-    def desc(self, desc) -> None:
-        self._desc = desc
-        self._update_dates()
 
     @property
     def created(self) -> datetime:
         return self._created
 
-    @created.setter
-    def created(self, created) -> None:
-        self._created = created
-
     @property
     def modified(self) -> datetime:
         return self._modified
-
-    @modified.setter
-    def modified(self, modified) -> None:
-        self._modified = modified
 
     @property
     def accessed(self) -> datetime:
         return self._accessed
 
-    @accessed.setter
-    def accessed(self, accessed) -> None:
-        self._accessed = accessed
+    @abstractmethod
+    def to_dict(self) -> dict:
+        pass
 
-    def _accessed_date(self) -> None:
-        if not self._from_database:
-            self._accessed = datetime.now()
-
-    def _update_dates(self) -> None:
-        if not self._from_database:
-            self._modified = datetime.now()
-            self._accessed = self._modified
+    def print(self) -> None:
+        print = Printer()
+        print.print_dictionary(self.to_dict(), title=self.__class__.__name__)
 
 
 # ------------------------------------------------------------------------------------------------ #

@@ -48,7 +48,7 @@ def source():
 
 
 # ------------------------------------------------------------------------------------------------ #
-#                                           FILE                                                   #
+#                                      PARQUET FILE                                                #
 # ------------------------------------------------------------------------------------------------ #
 @pytest.fixture(scope="module")
 def parquet_file():
@@ -57,12 +57,12 @@ def parquet_file():
         desc="Test Parquet File",
         folder="tests/data/data_store",
         format="parquet",
-        filename="file.parquet",
+        filename="parquetfile.parquet",
     )
 
 
 # ------------------------------------------------------------------------------------------------ #
-#                                           FILE2                                                  #
+#                                        CSVFILE                                                   #
 # ------------------------------------------------------------------------------------------------ #
 @pytest.fixture(scope="module")
 def csv_file():

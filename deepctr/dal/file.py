@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Tuesday June 28th 2022 04:54:40 am                                                  #
-# Modified   : Tuesday June 28th 2022 12:18:16 pm                                                  #
+# Modified   : Tuesday June 28th 2022 08:02:23 pm                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pyspark.sql import DataFrame
 
-from deepctr.dal.base import Entity, EntityMapper
+from deepctr.dal.base import Entity, EntityMapper, Validator
 from deepctr.data.local import SparkCSV, SparkParquet
 from deepctr.utils.log_config import LOG_CONFIG
 
@@ -41,151 +41,68 @@ class File(Entity):
         desc: str,
         folder: str,
         format: str,
+        id: int = 0,
         filename: str = None,
         compressed: bool = False,
-        from_database=False,
+        filepath: str = None,
+        size: int = 0,
+        created=None,
+        modified=None,
+        accessed=None,
     ) -> None:
-        super(File).__init__(name=name, desc=desc, from_database=from_database)
+        super(File, self).__init__(
+            name=name, desc=desc, id=id, created=created, modified=modified, accessed=accessed
+        )
         self._folder = folder
         self._format = format
         self._filename = filename
         self._compressed = compressed
+        self._filepath = filepath
+        self._size = size
 
-        self._filepath = None
-        self._size = 0
-        self._file_created = None
-        self._file_modified = None
-        self._file_accessed = None
-        self._io = None
-        # Note: self._name, self._desc, self._created, self._modified and self._accessed are
-        # initialized in the base class.
-
-        self._set_io()
+        self._validate()
         self._set_filepath()
-        self._set_size()
-        self._set_file_dates()
+        if not created or not modified or not accessed:
+            self._set_file_dates()
+
+        if os.path.exists(self._filepath) and not size:
+            self._size = os.path.getsize(self._filepath)
 
     @property
     def folder(self) -> str:
-        self._accessed_date()
         return self._folder
-
-    @folder.setter
-    def folder(self, folder) -> None:
-        self._folder = folder
-        self._update_dates()
 
     @property
     def format(self) -> str:
-        self._accessed_date()
         return self._format
-
-    @format.setter
-    def format(self, format) -> None:
-        self._format = format
-        self._update_dates()
-        self._set_io()
 
     @property
     def filename(self) -> str:
-        self._accessed_date()
         return self._filename
-
-    @filename.setter
-    def filename(self, filename) -> None:
-        self._filename = filename
-        self._update_dates()
 
     @property
     def compressed(self) -> str:
-        self._accessed_date()
         return self._compressed
-
-    @compressed.setter
-    def compressed(self, compressed) -> None:
-        self._compressed = compressed
-        self._update_dates()
 
     @property
     def filepath(self) -> str:
-        self._accessed_date()
         return self._filepath
-
-    @filepath.setter
-    def filepath(self, filepath) -> None:
-        if self._from_database:
-            self._filepath = filepath
-            self._update_dates()
-        else:
-            msg = "The filepath variable is immutable unless loading from database"
-            logger.warning(msg)
 
     @property
     def size(self) -> str:
-        self._accessed_date()
         return self._size
 
-    @size.setter
-    def size(self, size) -> None:
-        if self._from_database:
-            self._size = size
-            self._update_dates()
-        else:
-            msg = "The size variable is immutable unless loading from database"
-            logger.warning(msg)
-
-    @property
-    def file_created(self) -> str:
-        self._accessed_date()
-        return self._file_created
-
-    @file_created.setter
-    def file_created(self, file_created) -> None:
-        if self._from_database:
-            self._file_created = file_created
-            self._update_dates()
-        else:
-            msg = "This setter is limited to database loading."
-            logger.warning(msg)
-
-    @property
-    def file_modified(self) -> str:
-        self._accessed_date()
-        return self._file_modified
-
-    @file_modified.setter
-    def file_modified(self, file_modified) -> None:
-        if self._from_database:
-            self._file_modified = file_modified
-            self._update_dates()
-        else:
-            msg = "This setter is limited to database loading."
-            logger.warning(msg)
-
-    @property
-    def file_accessed(self) -> str:
-        self._accessed_date()
-        return self._file_accessed
-
-    @file_accessed.setter
-    def file_accessed(self, file_accessed) -> None:
-        if self._from_database:
-            self._file_accessed = file_accessed
-            self._update_dates()
-        else:
-            msg = "This setter is limited to database loading."
-            logger.warning(msg)
-
     def read(self) -> DataFrame:
-        self._set_io()
-        data = self._io.read(self._filepath)
-        self._accessed_date()
+        io = self._get_io()
+        data = io.read(self._filepath)
+        self._accessed = datetime.now()
+        self._set_file_dates()
         return data
 
     def write(self, data: DataFrame) -> None:
-        self._set_io()
-        self._io.write(data, self._filepath)
-        self._update_dates()
+        io = self._get_io()
+        io.write(data=data, filepath=self._filepath)
+        self._accessed = datetime.now()
         self._set_size()
         self._set_file_dates()
 
@@ -193,28 +110,49 @@ class File(Entity):
         shutil.rmtree(self._filepath, ignore_errors=True)
 
     def exists(self) -> bool:
-        self._set_d
         exists = os.path.exists(self._filepath)
-        self._accessed_date()
+        self._accessed = datetime.now()
+        self._set_file_dates()
         return exists
 
-    def _set_io(self) -> None:
-        if not self._io:
-            self._io = SparkCSV() if self._format == "csv" else SparkParquet()
+    def to_dict(self) -> dict:
+        return {
+            "id": self._id,
+            "name": self._name,
+            "desc": self._desc,
+            "folder": self._folder,
+            "format": self._format,
+            "filename": self._filename,
+            "compressed": True if self._compressed else False,
+            "filepath": self._filepath,
+            "size": self._size,
+            "created": self._created,
+            "modified": self._modified,
+            "accessed": self._accessed,
+        }
+
+    def _validate(self) -> None:
+        validate = Validator()
+        validate.format(self._format)
+
+    def _get_io(self) -> None:
+        return SparkCSV() if "csv" in self._format else SparkParquet()
 
     def _set_filepath(self) -> None:
-        self._filename = self._filename if self._filename else self._name + "." + self._format
-        self._filepath = os.path.join(self.folder, self._filename)
+        if not self._filepath:
+            self._filename = self._filename if self._filename else self._name + "." + self._format
+            self._filepath = os.path.join(self.folder, self._filename)
 
     def _set_size(self) -> None:
-        self._size = 0 if not os.path.exists(self._filepath) else os.path.getsize(self._filepath)
+        if os.path.exists(self._filepath):
+            self._size = os.path.getsize(self._filepath)
 
     def _set_file_dates(self) -> None:
         if os.path.exists(self._filepath):
             result = os.stat(self._filepath)
-            self._file_created = datetime.fromtimestamp(result.st_ctime)
-            self._file_modified = datetime.fromtimestamp(result.st_mtime)
-            self._file_accessed = datetime.fromtimestamp(result.st_atime)
+            self._created = datetime.fromtimestamp(result.st_ctime)
+            self._modified = datetime.fromtimestamp(result.st_mtime)
+            self._accessed = datetime.fromtimestamp(result.st_atime)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -232,11 +170,10 @@ class FileInsert:
         self.statement = """
             INSERT INTO `file`
             (`name`, `desc`, `folder`, `format`, `filename`, `filepath`,
-            `compressed`, `size`, `file_created`, `file_modified`,`file_accessed`,
-            `created`, `modified`,`accessed`)
+            `compressed`, `size`, `created`, `modified`,`accessed`)
             VALUES (%s, %s, %s, %s, %s,
                     %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s);
+                    %s);
             """
         self.parameters = (
             self.entity.name,
@@ -247,9 +184,6 @@ class FileInsert:
             self.entity.filepath,
             self.entity.compressed,
             self.entity.size,
-            self.entity.file_created,
-            self.entity.file_modified,
-            self.entity.file_accessed,
             self.entity.created,
             self.entity.modified,
             self.entity.accessed,
@@ -302,9 +236,6 @@ class FileUpdate:
                                 `filepath` = %s,
                                 `compressed` = %s,
                                 `size` = %s,
-                                `file_created` = %s,
-                                `file_modified` = %s,
-                                `file_accessed` = %s,
                                 `created` = %s,
                                 `modified` = %s,
                                 `accessed` = %s
@@ -319,9 +250,6 @@ class FileUpdate:
             self.entity.filepath,
             self.entity.compressed,
             self.entity.size,
-            self.entity.file_created,
-            self.entity.file_modified,
-            self.entity.file_accessed,
             self.entity.created,
             self.entity.modified,
             self.entity.accessed,
@@ -352,21 +280,18 @@ class FileMapper(EntityMapper):
 
     def factory(self, record: dict) -> Entity:
         file = File(
+            id=record["id"],
             name=record["name"],
             desc=record["desc"],
             folder=record["folder"],
             format=record["format"],
             filename=record["filename"],
-            compressed=record["compressed"],
-            from_database=True,
+            compressed=True if record["compressed"] else False,
+            filepath=record["filepath"],
+            size=record["size"],
+            created=record["created"],
+            modified=record["modified"],
+            accessed=record["accessed"],
         )
-        file.id = record["id"]
-        file.filepath = record["filepath"]
-        file.size = record["size"]
-        file.file_created = record["file_created"]
-        file.file_modified = record["file_modified"]
-        file.file_accessed = record["file_accessed"]
-        file.created = record["created"]
-        file.modified = record["modified"]
-        file.accessed = record["accessed"]
+
         return file

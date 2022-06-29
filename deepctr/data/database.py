@@ -10,7 +10,7 @@
 # URL        : https://github.com/john-james-ai/DeepCTR                                            #
 # ------------------------------------------------------------------------------------------------ #
 # Created    : Thursday May 19th 2022 06:39:17 pm                                                  #
-# Modified   : Monday June 27th 2022 12:03:10 am                                                   #
+# Modified   : Tuesday June 28th 2022 06:41:28 pm                                                  #
 # ------------------------------------------------------------------------------------------------ #
 # License    : BSD 3-clause "New" or "Revised" License                                             #
 # Copyright  : (c) 2022 John James                                                                 #
@@ -97,8 +97,8 @@ class Database:
         try:
             cursor = self._connection.cursor()
             cursor.execute(statement, parameters)
-            return cursor.lastrowid
-
+            statement = "SELECT LAST_INSERT_ID();"
+            return cursor.execute(statement)
         except pymysql.err.MySQLError as e:
             logger.error("Execute error %d: %s" % (e.args[0], e.args[1]))
 

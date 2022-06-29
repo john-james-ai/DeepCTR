@@ -21,4 +21,4 @@ echo $'\nRestart MySQL...'
 sudo /etc/init.d/mysql restart
 
 echo $'\nOpen MySQL Prompt...'
-sudo mysql -u root -p
+sudo mysql -u john -p
